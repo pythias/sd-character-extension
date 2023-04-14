@@ -32,6 +32,47 @@ code_character_was_blank = 100010
 fashion_table = FashionTable()
 pose_table = PoseTable()
 
+description = """
+
+## 角色形象组件 
+
+### 签名说明
+
+- 签名算法: SHA256
+- 签名数据: POST_RAW + HEAD(X-Signature-Time)
+- 参数 - X-Signature-Name: 调用方名称对应密钥，每个调用方需要提供公钥（2048+）
+- 参数 - X-Signature-Time: 签名时间戳，有效期60秒
+- 参数 - X-Signature: 签名内容，base64
+- 请求数据包: 仅支持json
+
+> 样例代码
+
+```php
+$signatureName = 'my';
+$privateKeyPath = "./x/{$signatureName}-private.pem"
+$signatureTime = time();
+$data = ['user_name' => 'test'];
+$json = json_encode($data);
+$source = $json . $signatureTime;
+$privateKey = openssl_pkey_get_private(file_get_contents($privateKeyPath));
+openssl_sign($source, $signature, $privateKey, OPENSSL_ALGO_SHA256);
+```
+
+> 样例请求
+
+```bash
+curl -XGET 'http://host/character/v1/status' \\
+    --silent \\
+    -H 'Accept: application/json' \\
+    -H 'Content-Type: application/json' \\
+    -H 'X-Signature-Name:my' \\
+    -H 'X-Signature-Time:1681124800' \\
+    -H 'X-Signature:Mb0GO2PcPNLO42ZNLZEaqU92+...fCIx+wig=' \\
+    -d ''
+```
+
+"""
+
 class ApiException(HTTPException):
     def __init__(
         self,
@@ -47,8 +88,21 @@ class ApiException(HTTPException):
 class ApiHijack(api.Api):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.add_api_route("/character/v1/txt2img", self.character_txt2img, methods=["POST"])
-        self.add_api_route("/character/v1/img2img", self.character_img2img, methods=["POST"])
+
+        self.add_api_route("/character/v1/txt2img", self.character_txt2img, tags=["Character"], methods=["POST"])
+        self.add_api_route("/character/v1/img2img", self.character_img2img, tags=["Character"], methods=["POST"])
+
+        if not self.app.openapi_schema['tags']:
+            self.app.openapi_schema['tags'] = []
+
+        self.app.openapi_schema['tags'].append({
+            "name": "Character",
+            "description": "角色形象"
+        })
+
+        # concat description
+        self.app.openapi_schema['info']['description'] = self.app.openapi_schema['info']['description'] + description
+
 
     def character_txt2img(self, request: CharacterTxt2ImgRequest):
         args = vars(request)
@@ -63,15 +117,15 @@ class ApiHijack(api.Api):
 api.Api = ApiHijack
 
 def characterAPI(_: gr.Blocks, app: FastAPI):
-    @app.get('/character/v1/status')
+    @app.get('/character/v1/status', tags=["Character"])
     def status():
         return {"online": True}
 
-    @app.get('/character/v1/poses')
+    @app.get('/character/v1/poses', tags=["Character"])
     def poses():
         return pose_table.poses
 
-    @app.get('/character/v1/fashions')
+    @app.get('/character/v1/fashions', tags=["Character"])
     def fashions():
         return fashion_table.fashions
 
