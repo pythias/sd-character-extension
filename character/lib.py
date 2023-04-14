@@ -9,8 +9,9 @@ import os
 init()
 
 extension_name = "sd-character-extension"
-keys_path = os.path.join(extensions_dir, extension_name, "keys")
-database_path = os.path.join(extensions_dir, extension_name, "database")
+keys_path = os.path.join(extensions_dir, extension_name, "configs/keys")
+database_path = os.path.join(extensions_dir, extension_name, "configs/database")
+images_path = os.path.join(extensions_dir, extension_name, "configs/images")
 
 class LogLevel(Enum):
     DEBUG = (Fore.BLUE, "DEBUG")
