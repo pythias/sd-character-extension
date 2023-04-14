@@ -2,13 +2,13 @@ from datetime import datetime
 from enum import Enum
 from colorama import Fore, Style, init
 from modules.paths_internal import extensions_dir
+
 import os
 
 # Initialize colorama
 init()
 
 extension_name = "sd-character-extension"
-
 keys_path = os.path.join(extensions_dir, extension_name, "keys")
 database_path = os.path.join(extensions_dir, extension_name, "database")
 
