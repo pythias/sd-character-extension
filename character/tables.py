@@ -3,9 +3,9 @@ import json
 import tempfile
 import os
 import shutil
-from typing import List
+from typing import List, Optional
 from dataclasses import dataclass
-from character.lib import database_path
+from character.lib import database_path, log, LogLevel
 
 def list_to_json(rows, path) -> None:
     fd, temp_path = tempfile.mkstemp(".json")
@@ -22,9 +22,9 @@ def list_to_json(rows, path) -> None:
 @dataclass
 class FashionRow:
     name: str
-    image: str
-    model: str
     description: str
+    tags: str
+    image: Optional[str] = ""
 
 
 class FashionTable:
@@ -37,14 +37,16 @@ class FashionTable:
         self.fashions.clear()
 
         if not os.path.exists(self.path):
+            log("No fashion database found.", LogLevel.WARNING)
             return
 
         try:
             with open(self.path, "r") as file:
                 rows = json.load(file)
             self.fashions = [FashionRow(**row) for row in rows]
-        except Exception:
-            print(f"Error: Invalid JSON data in {self.path}")
+            log(f"Loaded {len(self.fashions)} fashions from {self.path}", LogLevel.INFO)
+        except Exception as e:
+            log(f"Error: Invalid JSON data in {self.path}, error: {str(e)}", LogLevel.ERROR)
 
     def save(self) -> None:
         list_to_json(self.fashions, self.path)
@@ -53,9 +55,9 @@ class FashionTable:
 @dataclass
 class PoseRow:
     name: str
-    image: str
-    model: str
     description: str
+    model: str
+    image: Optional[str] = ""
 
 class PoseTable:
     def __init__(self):
@@ -67,14 +69,16 @@ class PoseTable:
         self.poses.clear()
 
         if not os.path.exists(self.path):
+            log("No pose database found.", level=LogLevel.WARNING)
             return
 
         try:
             with open(self.path, "r") as file:
                 rows = json.load(file)
             self.poses = [PoseRow(**row) for row in rows]
-        except Exception:
-            print(f"Error: Invalid JSON data in {self.path}")
+            log(f"Loaded {len(self.poses)} poses from {self.path}", level=LogLevel.INFO)
+        except Exception as e:
+            log(f"Error: Invalid JSON data in {self.path}, error: {str(e)}", level=LogLevel.ERROR)
 
     def save(self) -> None:
         list_to_json(self.poses, self.path)

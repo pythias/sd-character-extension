@@ -32,11 +32,11 @@ def character_api(_: gr.Blocks, app: FastAPI):
     def status():
         return {"online": True}
 
-    @app.get('/character/v1/poses', tags=["Character"])
+    @app.get('/character/v1/poses', tags=["Character"], response_model=List[PoseRow])
     def poses():
         return pose_table.poses
 
-    @app.get('/character/v1/fashions', tags=["Character"])
+    @app.get('/character/v1/fashions', tags=["Character"], response_model=List[FashionRow])
     def fashions():
         return fashion_table.fashions
 

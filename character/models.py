@@ -5,20 +5,6 @@ from enum import Enum
 from pydantic import BaseModel, Field
 
 
-class FashionItem(BaseModel):
-    name: str = Field(title="Name")
-    description: Optional[str] = Field(title="Description")
-    lora: str = Field(title="LoRA model name")
-
-
-class PoseItem(BaseModel):
-    name: str = Field(title="Name")
-    description: Optional[str] = Field(title="Description")
-    # 经过处理以后的图片，砍掉 Preprocessor 的过程
-    image: str = Field(title="ControlNet Image Path")
-    model: str = Field(title="ControlNet Model Name")
-
-
 class CharacterTxt2Img:
     def __init__(self, prompt: str = "", styles: List[str] = None, seed: int = -1, sampler_name: str = "Euler a", batch_size: int = 1, steps: int = 20, cfg_scale: float = 7.0, width: int = 512, height: int = 512, restore_faces: bool = True, negative_prompt: str = "", fashions: list[str] = None, pose: str = None):
         self.prompt = prompt
