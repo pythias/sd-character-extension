@@ -1,5 +1,6 @@
 import pydantic
 from character.tables import *
+from character.lib import log, LogLevel
 from enum import Enum
 from modules.api.models import *
 from pydantic import BaseModel, Field
@@ -39,10 +40,9 @@ class CharacterTxt2Img:
             if negative_prompts:
                 self.negative_prompt += "," + negative_prompts
 
-        if self.pose:
-            pose = pose_table.poses.get(self.pose)
-            if pose:
-                log(f"Use pose: {pose.name} ({pose.model})")
+        if self.pose in pose_table.poses:
+            pose = pose_table.poses[self.pose]
+            log(f"Use pose: {pose.name} ({pose.model})")
 
         return StableDiffusionTxt2ImgProcessingAPI(
             sampler_index="",

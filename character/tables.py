@@ -35,21 +35,21 @@ class FashionTable:
         self.reload()
 
     def get_fashion_tags(self, names: List[str]) -> str:
-        tags = []
+        prompts = []
         for name in names:
             if name not in self.fashions:
                 continue
-            tags += self.fashions[name].tags
-        return tags.join(", ")
+            prompts.append(self.fashions[name].tags)
+        return ",".join(prompts)
 
     def get_fashion_negative_prompts(self, names: List[str]) -> str:
-        tags = []
+        prompts = []
         for name in names:
             if name not in self.fashions:
                 continue
             if self.fashions[name].negative_prompt:
-                tags += self.fashions[name].negative_prompt
-        return tags.join(", ")
+                prompts.append(self.fashions[name].negative_prompt)
+        return ",".join(prompts)
 
     def reload(self):
         self.fashions.clear()
