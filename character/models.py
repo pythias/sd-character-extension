@@ -1,8 +1,9 @@
 import pydantic
-from typing import Any, Optional, Dict, List
-from modules.api.models import *
+from character.tables import *
 from enum import Enum
+from modules.api.models import *
 from pydantic import BaseModel, Field
+from typing import Any, Optional, Dict, List
 
 
 class CharacterTxt2Img:
@@ -25,7 +26,17 @@ class CharacterTxt2Img:
     def to_full(self):
         args = vars(self)
 
-        # todo + controlnet
+        if self.fashions and len(self.fashions) > 0:
+            log("Fashions: " + str(self.fashions))
+            fashion_tags = fashion_table.get_fashion_tags(self.fashions)
+            if len(fashion_tags) > 0:
+                self.prompt += " " + " ".join(fashion_tags)
+
+        if self.pose:
+            pose = pose_table.poses.get(self.pose)
+            if pose:
+                log(f"Use pose: {pose.name} ({pose.model})")
+
         return StableDiffusionTxt2ImgProcessingAPI(
             sampler_index="",
             script_name=None,

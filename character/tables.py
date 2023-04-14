@@ -33,6 +33,13 @@ class FashionTable:
         self.path = os.path.join(database_path, "fashions.json")
         self.reload()
 
+    def get_fashion_tags(self, names: List[str]) -> str:
+        tags = []
+        for name in names:
+            if name in self.fashions:
+                tags += self.fashions[name].tags
+        return tags.join(", ")
+
     def reload(self):
         self.fashions.clear()
 
