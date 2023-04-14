@@ -1,14 +1,21 @@
 # api endpoints
-import gradio as gr
-from fastapi import FastAPI, APIRouter, FastAPI, Request
-from fastapi.exceptions import HTTPException
-from modules.api import api
-from modules import script_callbacks as script_callbacks
+from character.lib import keys_path, log, LogLevel
 from character.models import *
 from character.tables import *
-import character.lib as character
-from character.lib import keys_path
 
+from Crypto.Hash import SHA256
+from Crypto.PublicKey import RSA
+from Crypto.Signature import PKCS1_v1_5
+
+from fastapi import FastAPI, APIRouter, FastAPI, Request
+from fastapi.exceptions import HTTPException
+from modules import script_callbacks as script_callbacks
+from modules.api import api
+
+import base64
+import character.lib as character
+import gradio as gr
+import time
 
 code_error = 100001
 code_invalid_input = 100002
@@ -98,7 +105,7 @@ def characterAPI(_: gr.Blocks, app: FastAPI):
         sign_decoded = base64.b64decode(sign)
 
         if not verifier.verify(data_hash, sign_decoded):
-            character.log(f"Signature is mismatch. sign_name={sign_name}", LogLevel.ERROR)
+            log(f"Signature is mismatch. sign_name={sign_name}", LogLevel.ERROR)
             raise ApiException(code_invalid_signature, "signature is mismatch.")
 
         scope = request.scope
@@ -117,4 +124,4 @@ def characterAPI(_: gr.Blocks, app: FastAPI):
         return await call_next(new_request)
 
 script_callbacks.on_app_started(characterAPI)
-character.log("API loaded")
+log("API loaded")
