@@ -46,12 +46,12 @@ class ApiHijack(api.Api):
     def character_txt2img(self, request: CharacterTxt2ImgRequest):
         args = vars(request)
         lightRequest = CharacterTxt2Img(**args)
-        return self.text_2_image(lightRequest.to_full())
+        return self.text2imgapi(lightRequest.to_full())
 
     def character_img2img(self, request: CharacterTxt2ImgRequest):
         args = vars(request)
         lightRequest = CharacterTxt2Img(**args)
-        return self.text_2_image(lightRequest.to_full())
+        return self.text2imgapi(lightRequest.to_full())
 
 api.Api = ApiHijack
 

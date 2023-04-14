@@ -56,7 +56,6 @@ CharacterTxt2ImgRequest = PydanticModelGenerator(
     CharacterTxt2Img,
     [
         {"key": "sampler_name", "type": str, "default": "Euler a"},
-        {"key": "user_name", "type": str, "default": ""},
         {"key": "fashions", "type": list, "default": []},
         {"key": "pose", "type": str, "default": None},
     ]
