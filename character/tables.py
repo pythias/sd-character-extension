@@ -24,6 +24,7 @@ class FashionRow:
     name: str
     description: str
     tags: str
+    negative_prompt: Optional[str] = ""
     image: Optional[str] = ""
 
 
@@ -36,8 +37,18 @@ class FashionTable:
     def get_fashion_tags(self, names: List[str]) -> str:
         tags = []
         for name in names:
-            if name in self.fashions:
-                tags += self.fashions[name].tags
+            if name not in self.fashions:
+                continue
+            tags += self.fashions[name].tags
+        return tags.join(", ")
+
+    def get_fashion_negative_prompts(self, names: List[str]) -> str:
+        tags = []
+        for name in names:
+            if name not in self.fashions:
+                continue
+            if self.fashions[name].negative_prompt:
+                tags += self.fashions[name].negative_prompt
         return tags.join(", ")
 
     def reload(self):
