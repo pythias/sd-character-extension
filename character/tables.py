@@ -34,22 +34,27 @@ class FashionTable:
         self.path = os.path.join(database_path, "fashions.json")
         self.reload()
 
-    def get_fashion_tags(self, names: List[str]) -> str:
-        prompts = []
-        for name in names:
-            if name not in self.fashions:
-                continue
-            prompts.append(self.fashions[name].tags)
-        return ",".join(prompts)
+    def get_by_name(self, name: str) -> FashionRow:
+        for fashion in self.fashions:
+            if fashion.name == name:
+                return fashion
 
-    def get_fashion_negative_prompts(self, names: List[str]) -> str:
+        return None
+
+    def get_fashion_prompts(self, names: List[str]) -> (str, str):
         prompts = []
+        negative_prompts = []
         for name in names:
-            if name not in self.fashions:
+            fashion = self.get_by_name(name)
+            if not fashion:
+                log(f"get_fashion_tags: {name} not in self.fashions", LogLevel.WARNING)
                 continue
-            if self.fashions[name].negative_prompt:
-                prompts.append(self.fashions[name].negative_prompt)
-        return ",".join(prompts)
+            
+            log(f"get_fashion_tags: {name}")
+            prompts.append(fashion.tags)
+            negative_prompts.append(fashion.negative_prompt)
+
+        return ",".join(prompts), ",".join(negative_prompts)
 
     def reload(self):
         self.fashions.clear()
@@ -82,6 +87,13 @@ class PoseTable:
         self.poses = {}
         self.path = os.path.join(database_path, "poses.json")
         self.reload()
+
+    def get_by_name(self, name: str) -> PoseRow:
+        for pose in self.poses:
+            if pose.name == name:
+                return pose
+
+        return None
 
     def reload(self):
         self.poses.clear()

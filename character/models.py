@@ -31,17 +31,17 @@ class CharacterTxt2Img:
         self.negative_prompt = default_negative_prompt + self.negative_prompt
 
         if self.fashions and len(self.fashions) > 0:
-            log("Fashions: " + str(self.fashions))
-            fashion_tags = fashion_table.get_fashion_tags(self.fashions)
-            if fashion_tags:
-                self.prompt += "," + fashion_tags
+            prompts, negative_prompts = fashion_table.get_fashion_prompts(self.fashions)
+            if prompts:
+                self.prompt += "," + prompts
 
-            negative_prompts = fashion_table.get_fashion_negative_prompts(self.fashions)
             if negative_prompts:
                 self.negative_prompt += "," + negative_prompts
 
-        if self.pose in pose_table.poses:
-            pose = pose_table.poses[self.pose]
+            log(f"Fashions: {str(self.fashions)}, prompts: {prompts}, negative prompts: {negative_prompts}")
+
+        pose = pose_table.get_by_name(self.pose)
+        if pose:
             log(f"Use pose: {pose.name} ({pose.model})")
 
         return StableDiffusionTxt2ImgProcessingAPI(
