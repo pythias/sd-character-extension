@@ -7,9 +7,6 @@ from typing import List
 from dataclasses import dataclass
 from character.lib import database_path
 
-fashion_table = FashionTable()
-pose_table = PoseTable()
-
 def list_to_json(rows, path) -> None:
     fd, temp_path = tempfile.mkstemp(".json")
     with os.fdopen(fd, "w") as file:
@@ -81,3 +78,6 @@ class PoseTable:
 
     def save(self) -> None:
         list_to_json(self.poses, self.path)
+
+fashion_table = FashionTable()
+pose_table = PoseTable()

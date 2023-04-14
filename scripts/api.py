@@ -3,7 +3,7 @@ from character.models import *
 from character.tables import *
 
 from fastapi import FastAPI
-from modules import script_callbacks as script_callbacks
+from modules import script_callbacks
 from modules.api import api
 
 import gradio as gr

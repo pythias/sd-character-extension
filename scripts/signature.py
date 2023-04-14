@@ -6,15 +6,21 @@ from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5
 
 from fastapi import FastAPI, Request
-from modules import script_callbacks as script_callbacks
+from modules import shared, script_callbacks
 
 import base64
 import gradio as gr
 import time
+import os
 
-def api_signature(_: gr.Blocks, app: FastAPI):
+host_name = shared.cmd_opts.character_host
+
+def signature_api(_: gr.Blocks, app: FastAPI):
     @app.middleware("http")
-    async def verify_signature(request: Request, call_next):
+    async def signature_middleware(request: Request, call_next):
+        if request.url.hostname == host_name:
+            return await call_next(request)
+
         if request.url.path.startswith("/docs") or request.url.path.startswith("/openapi.json"):
             return await call_next(request)
 
@@ -61,7 +67,6 @@ def api_signature(_: gr.Blocks, app: FastAPI):
         new_request = Request(scope, receive_with_body)
         return await call_next(new_request)
 
-
-script_callbacks.on_app_started(api_signature)
+script_callbacks.on_app_started(signature_api)
 
 log("Signature loaded")
