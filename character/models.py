@@ -13,6 +13,15 @@ from modules.api.models import TextToImageResponse
 
 default_negative_prompt = "(((nsfw))),(((extra arms))),(((extra legs))),(((missing arms))),(((missing legs))),bad anatomy,bad background,bad clothes,bad face,bad hair,bad hands,bad lighting,bad pose,bandages,nsfw,contact,cropped,extra limbs,jpeg artifacts,less fingers,logo,low quality,low quality,monochrome,normal quality,signature,six fingers,text,watermark,worst quality,"
 
+
+class ImageResponse(BaseModel):
+    images: List[str] = Field(default=None, title="Image", description="The generated image in base64 format.")
+    parameters: dict
+    info: str
+    faces: List[str]
+    nsfw: bool
+
+
 def filter_response(response: TextToImageResponse):
     nsfw = False
     faces = []
@@ -25,13 +34,7 @@ def filter_response(response: TextToImageResponse):
         else:
             nsfw = True
 
-    return {
-        "images": filtered_images,
-        "parameters": response.parameters, 
-        "info": response.info,
-        "faces": faces,
-        "nsfw": nsfw,
-    }
+    return ImageResponse(images=filtered_images, parameters=response.parameters, info=response.info, faces=faces, nsfw=nsfw)
 
 class CharacterTxt2Img:
     def __init__(self, prompt: str = "", styles: List[str] = None, seed: int = -1, sampler_name: str = "Euler a", batch_size: int = 1, steps: int = 20, cfg_scale: float = 7.0, width: int = 512, height: int = 512, restore_faces: bool = True, negative_prompt: str = "", fashions: list[str] = None, pose: str = None):
