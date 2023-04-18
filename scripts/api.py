@@ -5,6 +5,7 @@ from character.tables import *
 from fastapi import FastAPI
 from modules import script_callbacks
 from modules.api import api
+from modules.api.models import TextToImageResponse
 
 import gradio as gr
 
@@ -18,12 +19,14 @@ class ApiHijack(api.Api):
     def character_txt2img(self, request: CharacterTxt2ImgRequest):
         args = vars(request)
         lightRequest = CharacterTxt2Img(**args)
-        return self.text2imgapi(lightRequest.to_full())
+        origin_response = self.text2imgapi(lightRequest.to_full())
+        return filter_response(origin_response)
 
     def character_img2img(self, request: CharacterTxt2ImgRequest):
         args = vars(request)
         lightRequest = CharacterTxt2Img(**args)
-        return self.text2imgapi(lightRequest.to_full())
+        origin_response = self.text2imgapi(lightRequest.to_full())
+        return filter_response(origin_response)
 
 api.Api = ApiHijack
 
