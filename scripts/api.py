@@ -13,8 +13,8 @@ class ApiHijack(api.Api):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.add_api_route("/character/v1/txt2img", self.character_txt2img, tags=["Character"], methods=["POST"])
-        self.add_api_route("/character/v1/img2img", self.character_img2img, tags=["Character"], methods=["POST"])
+        self.add_api_route("/character/v1/txt2img", self.character_txt2img, tags=["Character"], methods=["POST"], response_model=ImageResponse)
+        self.add_api_route("/character/v1/img2img", self.character_img2img, tags=["Character"], methods=["POST"], response_model=ImageResponse)
 
     def character_txt2img(self, request: CharacterTxt2ImgRequest):
         args = vars(request)
