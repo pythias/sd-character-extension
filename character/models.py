@@ -12,7 +12,7 @@ from typing import Any, Optional, Dict, List
 from modules.api.models import TextToImageResponse
 
 negative_default_prompts = "EasyNegative,worst quality,low quality"
-negative_nsfw_prompts = "nsfw,loli,child,teen,baby face"
+negative_nsfw_prompts = "nsfw,naked,nude,sex,ass,pussy,loli,kids,kid,child,children,teenager,teenagers,teen,baby face,big breasts"
 negative_watermark_prompts = "text,watermark,signature,artist name,artist logo"
 negative_body_prompts = "zombie,extra fingers,six fingers,missing fingers,extra arms,missing arms,extra legs,missing legs,bad face,bad hair,bad hands,bad pose"
 
