@@ -1,4 +1,4 @@
 cv2
 colorama
 dataclasses
-opennsfw2
+diffusers

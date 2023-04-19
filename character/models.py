@@ -1,14 +1,16 @@
 import pydantic
 from character.tables import *
 from character.lib import log, LogLevel
-from character.nsfw import predict_image, predict_text
+from character.nsfw import image_has_nsfw, tags_has_nsfw
 from character.face import detect_face_and_crop_base64
+from character.errors import *
 
 from enum import Enum
 from modules.api.models import *
 from pydantic import BaseModel, Field
 from typing import Any, Optional, Dict, List
 
+from modules import shared
 from modules.api.models import TextToImageResponse
 
 negative_default_prompts = "EasyNegative,worst quality,low quality"
@@ -23,22 +25,20 @@ class ImageResponse(BaseModel):
     parameters: dict
     info: str
     faces: List[str]
-    nsfw: bool
 
 
-def filter_response(response: TextToImageResponse):
-    nsfw = False
+def to_image_response(response: TextToImageResponse):
     faces = []
-    filtered_images = []
-    for b64image in response.images:
-        faces.extend(detect_face_and_crop_base64(b64image))
-        if not predict_image(b64image):
-            filtered_images.append(b64image)
-            nsfw = nsfw or False
-        else:
-            nsfw = True
+    safety_images = []
+    for base64_image in response.images:
+        if image_has_nsfw(base64_image):
+            raise ApiException(code_character_nsfw, "has nsfw concept.")
 
-    return ImageResponse(images=filtered_images, parameters=response.parameters, info=response.info, faces=faces, nsfw=nsfw)
+        image_faces = detect_face_and_crop_base64(base64_image)
+        faces.extend(image_faces)
+        safety_images.append(base64_image)
+
+    return ImageResponse(images=safety_images, parameters=response.parameters, info=response.info, faces=faces)
 
 
 def simply_prompts(prompts: str):
@@ -49,6 +49,7 @@ def simply_prompts(prompts: str):
     unique_prompts = []
     [unique_prompts.append(p) for p in prompts if p not in unique_prompts]
     return ",".join(unique_prompts)
+
 
 class CharacterTxt2Img:
     def __init__(self, prompt: str = "", styles: List[str] = None, seed: int = -1, sampler_name: str = "Euler a", batch_size: int = 1, steps: int = 20, cfg_scale: float = 7.0, width: int = 512, height: int = 512, restore_faces: bool = True, negative_prompt: str = "", fashions: list[str] = None, pose: str = None):

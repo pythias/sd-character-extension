@@ -11,6 +11,8 @@ code_character_permission_denied = 100007
 code_character_not_exists = 100008
 code_character_already_exists = 100009
 code_character_was_blank = 100010
+code_character_api_only = 100011
+code_character_nsfw = 100012
 
 class ApiException(HTTPException):
     def __init__(
