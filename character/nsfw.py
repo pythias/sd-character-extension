@@ -33,7 +33,7 @@ def image_has_nsfw(base64_image):
 
     safety_checker_input = safety_feature_extractor(pil_images, return_tensors="pt")
     checked_image, has_nsfw_concept = safety_checker(images=np_image, clip_input=safety_checker_input.pixel_values)
-    return has_nsfw_concept
+    return not has_nsfw_concept and has_nsfw_concept[0]
 
 
 def tags_has_nsfw(tags):
