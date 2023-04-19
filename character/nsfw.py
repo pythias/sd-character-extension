@@ -6,8 +6,6 @@ import numpy as np
 import base64
 import io
 
-checker_timer.record("torch loaded")
-
 safety_model_id = "CompVis/stable-diffusion-safety-checker"
 safety_feature_extractor = None
 safety_checker = None
