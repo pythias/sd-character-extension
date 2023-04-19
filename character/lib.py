@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum
 from colorama import Fore, Style, init
-from modules import scripts
+from modules import scripts, shared
 
 import os
 
@@ -25,4 +25,4 @@ def log(message, level=LogLevel.INFO):
     # with microsecond precision
     current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
     level_color, level_name = level.value
-    print(f'{Fore.CYAN}{current_time}{Style.RESET_ALL} - {level_color}{level_name}{Style.RESET_ALL} - Character: {message}')
+    print(f'{Fore.CYAN}{current_time}{Style.RESET_ALL} - {level_color}{level_name}{Style.RESET_ALL} - {shared.cmd_opts.character_server_name}: {message}')
