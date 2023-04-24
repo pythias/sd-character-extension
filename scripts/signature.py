@@ -14,18 +14,28 @@ import time
 import os
 
 ignore_prefixes = ["/docs",  "/openapi.json", "/character/meta"]
+require_prefixes = ["/character", "/sdapi"]
 
 def signature_api(_: gr.Blocks, app: FastAPI):
-    @app.middleware("http")
-    async def signature_middleware(request: Request, call_next):
+    def signature_required(request: Request):
+        if shared.cmd_opts.character_ignore_signature:
+            return False
+
         for prefix in ignore_prefixes:
             if request.url.path.startswith(prefix):
-                return await call_next(request)
+                return False
+    
+        required = False
+        for prefix in require_prefixes:
+            if request.url.path.startswith(prefix):
+                required = True
+                break
+        
+        return required
 
-        if shared.cmd_opts.character_api_only and not request.url.path.startswith("/character"):
-            raise ApiException(code_character_api_only, "character api only.")
-
-        if shared.cmd_opts.character_ignore_signature:
+    @app.middleware("http")
+    async def signature_middleware(request: Request, call_next):
+        if not signature_required(request):
             return await call_next(request)
 
         sign = request.headers.get('X-Signature', '')
@@ -33,11 +43,11 @@ def signature_api(_: gr.Blocks, app: FastAPI):
         sign_timestamp = request.headers.get('X-Signature-Time', '')
 
         if not sign or not sign_name or not sign_timestamp:
-            raise ApiException(code_missing_signature, "signature is missing.")
+            return ApiException(code_missing_signature, "signature is missing.").response()
 
         key_path = os.path.join(keys_path, f"{sign_name}_rsa_public.pem")
         if not os.path.exists(key_path):
-            raise ApiException(code_invalid_signature, "signature name is invalid.")
+            return ApiException(code_invalid_signature, "signature name is invalid.").response()
 
         with open(key_path, mode='rb') as pem_file:
             key_data = pem_file.read()
@@ -45,7 +55,7 @@ def signature_api(_: gr.Blocks, app: FastAPI):
         verifier = PKCS1_v1_5.new(RSA.importKey(key_data.strip()))
 
         if (int(sign_timestamp) + 60) < int(time.time()):
-            raise ApiException(code_expired_signature, "signature was expired.")
+            return ApiException(code_expired_signature, "signature was expired.").response()
 
         body_bytes = await request.body()
         data_value = body_bytes.decode() + sign_timestamp
@@ -54,7 +64,7 @@ def signature_api(_: gr.Blocks, app: FastAPI):
 
         if not verifier.verify(data_hash, sign_decoded):
             log(f"Signature is mismatch. sign_name={sign_name}", LogLevel.ERROR)
-            raise ApiException(code_invalid_signature, "signature is mismatch.")
+            return ApiException(code_invalid_signature, "signature is mismatch.").response()
 
         scope = request.scope
         receive = request.receive

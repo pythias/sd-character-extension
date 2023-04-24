@@ -1,4 +1,6 @@
 from fastapi.exceptions import HTTPException
+from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 
 code_error = 100001
 code_invalid_input = 100002
@@ -24,3 +26,11 @@ class ApiException(HTTPException):
         self.code = code
         self.message = message
         super().__init__(status_code=status_code)
+
+    def response(self):
+        err = {
+            "code": vars(self).get('code', ''),
+            "message": vars(self).get('message', ''),
+            "errors": str(self),
+        }
+        return JSONResponse(status_code=vars(self).get('status_code', 500), content=jsonable_encoder(err))

@@ -1,9 +1,9 @@
 from character.lib import log, LogLevel
 from character.models import *
-from character.tables import *
 from character.metrics import hT2I
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+
 from modules import script_callbacks
 from modules.api import api
 from modules.api.models import TextToImageResponse
@@ -26,13 +26,23 @@ class ApiHijack(api.Api):
 api.Api = ApiHijack
 
 def character_api(_: gr.Blocks, app: FastAPI):
-    @app.get('/character/v1/poses', tags=["Character"], response_model=List[PoseRow])
-    def poses():
-        return pose_table.poses
-
-    @app.get('/character/v1/fashions', tags=["Character"], response_model=List[FashionRow])
-    def fashions():
-        return fashion_table.fashions
+    @app.middleware("http")
+    async def log_and_time(req: Request, call_next):
+        ts = time.time()
+        res: Response = await call_next(req)
+        duration = str(round(time.time() - ts, 4))
+        endpoint = req.scope.get('path', 'err')
+        if endpoint.startswith('/character'):
+            log('API {code} {prot}/{ver} {method} {endpoint} {cli} {duration}'.format(
+                code = res.status_code,
+                ver = req.scope.get('http_version', '0.0'),
+                cli = req.scope.get('client', ('0:0.0.0', 0))[0],
+                prot = req.scope.get('scheme', 'err'),
+                method = req.scope.get('method', 'err'),
+                endpoint = endpoint,
+                duration = duration,
+            ))
+        return res
 
 
 script_callbacks.on_app_started(character_api)
