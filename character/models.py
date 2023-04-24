@@ -4,6 +4,7 @@ from character.lib import log, LogLevel
 from character.nsfw import image_has_nsfw, tags_has_nsfw
 from character.face import detect_face_and_crop_base64
 from character.errors import *
+from character.metrics import *
 
 from enum import Enum
 from modules.api.models import *
@@ -28,17 +29,22 @@ class ImageResponse(BaseModel):
 
 
 def to_image_response(response: TextToImageResponse):
+    params = response.parameters
+    info = json.loads(response.info)
+
     faces = []
     safety_images = []
     for base64_image in response.images:
         if image_has_nsfw(base64_image):
+            cT2INSFW.inc()
             raise ApiException(code_character_nsfw, "has nsfw concept.")
 
         image_faces = detect_face_and_crop_base64(base64_image)
         faces.extend(image_faces)
         safety_images.append(base64_image)
 
-    return ImageResponse(images=safety_images, parameters=response.parameters, info=response.info, faces=faces)
+    cT2ISuccess.inc()
+    return ImageResponse(images=safety_images, parameters=params, info=response.info, faces=faces)
 
 
 def simply_prompts(prompts: str):
@@ -95,6 +101,14 @@ class CharacterTxt2Img:
 
         self.prompt = simply_prompts(self.prompt)
         self.negative_prompt = simply_prompts(self.negative_prompt)
+
+        cT2I.inc()
+        cT2IImages.inc(self.batch_size)
+        cT2IPrompts.inc(self.prompt.count(",") + 1)
+        cT2INegativePrompts.inc(self.negative_prompt.count(",") + 1)
+        cT2ILoras.inc(self.prompt.count("<"))
+        cT2ISteps.inc(self.steps)
+        cT2IPixels.inc(self.width * self.height)
 
         return StableDiffusionTxt2ImgProcessingAPI(
             sampler_index="",

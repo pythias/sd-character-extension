@@ -1,6 +1,7 @@
 from character.lib import log, LogLevel
 from character.models import *
 from character.tables import *
+from character.metrics import hT2I
 
 from fastapi import FastAPI
 from modules import script_callbacks
@@ -14,15 +15,9 @@ class ApiHijack(api.Api):
         super().__init__(*args, **kwargs)
 
         self.add_api_route("/character/v1/txt2img", self.character_txt2img, tags=["Character"], methods=["POST"], response_model=ImageResponse)
-        self.add_api_route("/character/v1/img2img", self.character_img2img, tags=["Character"], methods=["POST"], response_model=ImageResponse)
 
+    @hT2I.time()
     def character_txt2img(self, request: CharacterTxt2ImgRequest):
-        args = vars(request)
-        lightRequest = CharacterTxt2Img(**args)
-        origin_response = self.text2imgapi(lightRequest.to_full())
-        return to_image_response(origin_response)
-
-    def character_img2img(self, request: CharacterTxt2ImgRequest):
         args = vars(request)
         lightRequest = CharacterTxt2Img(**args)
         origin_response = self.text2imgapi(lightRequest.to_full())

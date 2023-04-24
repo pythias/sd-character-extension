@@ -3,6 +3,9 @@ import base64
 import io
 import numpy as np
 
+from character.metrics import hDF
+
+@hDF.time()
 def detect_face_and_crop_base64(image_base64) -> list:
     # Decode the base64 image
     image_data = base64.b64decode(image_base64)
