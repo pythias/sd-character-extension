@@ -4,11 +4,18 @@ from pynvml import *
 
 nvmlInit()
 
+totalMemory = 0
+gpuCount = nvmlDeviceGetCount()
+for i in range(gpuCount):
+    handle = nvmlDeviceGetHandleByIndex(i)
+    totalMemory += nvmlDeviceGetMemoryInfo(handle).total
+
 i = Info('sd_character', 'Description of sd-character-extension')
 i.info({
-    'version': '1.0.3', 
+    'version': '1.0.3',
     'name': shared.cmd_opts.character_server_name,
     'driver': nvmlSystemGetDriverVersion(),
+    'total_gpu_memory': f"{totalMemory}",
 })
 
 nvmlShutdown()
@@ -27,33 +34,42 @@ cT2ILoras = Counter('t2i_loras', 'Text to image loras')
 cT2IPixels = Counter('t2i_pixels', 'Text to image pixels')
 cT2ISteps = Counter('t2i_steps', 'Text to image steps')
 
-# collect gpu usage every 10 seconds
 gGPUUsedMemory = Gauge('gpu_memory_used_bytes', 'Memory used by the GPU device in bytes')
-gGPUTotalMemory = Gauge('gpu_memory_total_bytes', 'Total memory of the GPU device in bytes')
 gGPUTemperature = Gauge('gpu_temperature_celsius', 'Temperature of the GPU device in celsius')
+gGPUMemoryPercent = Gauge('gpu_memory_used_percent', 'Memory used by the GPU device in percent')
 
 def gpu_used_memory():
     nvmlInit()
-    handle = nvmlDeviceGetHandleByIndex(0)
-    meminfo = nvmlDeviceGetMemoryInfo(handle)
+    used = 0
+    for i in range(gpuCount):
+        handle = nvmlDeviceGetHandleByIndex(i)
+        info = nvmlDeviceGetMemoryInfo(handle)
+        used += info.used
     nvmlShutdown()
-    return meminfo.used
+    return used
 
-def gpu_total_memory():
+
+def gpu_used_memory_percent():
     nvmlInit()
-    handle = nvmlDeviceGetHandleByIndex(0)
-    meminfo = nvmlDeviceGetMemoryInfo(handle)
+    used = 0
+    for i in range(gpuCount):
+        handle = nvmlDeviceGetHandleByIndex(i)
+        info = nvmlDeviceGetMemoryInfo(handle)
+        used += info.used
     nvmlShutdown()
-    return meminfo.total
+    return (100 * used) / totalMemory
+
 
 def gpu_temperature():
     nvmlInit()
-    handle = nvmlDeviceGetHandleByIndex(0)
-    temperature = nvmlDeviceGetTemperature(handle, NVML_TEMPERATURE_GPU)
+    maxTemperature = 0
+    for i in range(gpuCount):
+        handle = nvmlDeviceGetHandleByIndex(i)
+        temperature = nvmlDeviceGetTemperature(handle, NVML_TEMPERATURE_GPU)
+        maxTemperature = max(maxTemperature, temperature)
     nvmlShutdown()
-    return temperature
+    return maxTemperature
 
 gGPUUsedMemory.set_function(gpu_used_memory)
-gGPUTotalMemory.set_function(gpu_total_memory)
 gGPUTemperature.set_function(gpu_temperature)
-
+gGPUMemoryPercent.set_function(gpu_used_memory_percent)

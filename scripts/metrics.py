@@ -13,7 +13,7 @@ def metrics_app(_, app: FastAPI):
 
     app.add_route("/character/v1/metrics", metrics_api, methods=["GET"])
 
-    @app.get('/character/v1/status1', tags=["Status"])
+    @app.get('/character/v1/status', tags=["Status"])
     def status():
         return {"online": True}
 
