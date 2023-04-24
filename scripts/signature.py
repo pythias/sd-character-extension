@@ -13,12 +13,14 @@ import gradio as gr
 import time
 import os
 
+ignore_prefixes = ["/docs",  "/openapi.json", "/character/meta"]
 
 def signature_api(_: gr.Blocks, app: FastAPI):
     @app.middleware("http")
     async def signature_middleware(request: Request, call_next):
-        if request.url.path.startswith("/docs") or request.url.path.startswith("/openapi.json"):
-            return await call_next(request)
+        for prefix in ignore_prefixes:
+            if request.url.path.startswith(prefix):
+                return await call_next(request)
 
         if shared.cmd_opts.character_api_only and not request.url.path.startswith("/character"):
             raise ApiException(code_character_api_only, "character api only.")
