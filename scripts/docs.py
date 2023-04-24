@@ -54,6 +54,11 @@ def update_tags(_: gr.Blocks, app: FastAPI):
         "description": "角色形象"
     })
 
+    app.openapi_tags.append({
+        "name": "Status",
+        "description": "系统状态"
+    })
+
     app.description = app.description + description
 
 

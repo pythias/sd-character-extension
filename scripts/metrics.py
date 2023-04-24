@@ -1,12 +1,23 @@
 from character.lib import log
 from fastapi import FastAPI
-from prometheus_client import make_asgi_app
+from starlette.routing import Route
+from starlette.responses import PlainTextResponse
+from prometheus_client import generate_latest
+
 from modules import script_callbacks
 
-def metrics_api(_, app: FastAPI):
-    metrics_app = make_asgi_app()
-    app.mount("/metrics", metrics_app)
+def metrics_app(_, app: FastAPI):
+    async def metrics_api(request):
+        metrics_data = generate_latest()
+        return PlainTextResponse(metrics_data, media_type="text/plain")
 
-script_callbacks.on_app_started(metrics_api)
+    app.add_route("/character/v1/metrics", metrics_api, methods=["GET"])
 
-log("Tags loaded")
+    @app.get('/character/v1/status1', tags=["Status"])
+    def status():
+        return {"online": True}
+
+
+script_callbacks.on_app_started(metrics_app)
+
+log("Metrics loaded")

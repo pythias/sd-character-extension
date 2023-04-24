@@ -26,10 +26,6 @@ class ApiHijack(api.Api):
 api.Api = ApiHijack
 
 def character_api(_: gr.Blocks, app: FastAPI):
-    @app.get('/character/v1/status', tags=["Character"])
-    def status():
-        return {"online": True}
-
     @app.get('/character/v1/poses', tags=["Character"], response_model=List[PoseRow])
     def poses():
         return pose_table.poses
