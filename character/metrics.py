@@ -53,7 +53,7 @@ def gpu_temperature():
     nvmlShutdown()
     return temperature
 
-gGPUUsedMemory.set_function(gpu_used_memory())
-gGPUTotalMemory.set_function(gpu_total_memory())
-gGPUTemperature.set_function(gpu_temperature())
+gGPUUsedMemory.set_function(gpu_used_memory)
+gGPUTotalMemory.set_function(gpu_total_memory)
+gGPUTemperature.set_function(gpu_temperature)
 
