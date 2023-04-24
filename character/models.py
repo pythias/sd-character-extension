@@ -37,7 +37,7 @@ def to_image_response(response: TextToImageResponse):
     for base64_image in response.images:
         if image_has_nsfw(base64_image):
             cT2INSFW.inc()
-            raise ApiException(code_character_nsfw, "has nsfw concept.")
+            return ApiException(code_character_nsfw, f"has nsfw concept, info:{info}").response()
 
         image_faces = detect_face_and_crop_base64(base64_image)
         faces.extend(image_faces)
