@@ -9,6 +9,7 @@ from modules.api import api
 from modules.api.models import TextToImageResponse
 
 import gradio as gr
+import time
 
 class ApiHijack(api.Api):
     def __init__(self, *args, **kwargs):
@@ -27,7 +28,7 @@ api.Api = ApiHijack
 
 def character_api(_: gr.Blocks, app: FastAPI):
     @app.middleware("http")
-    async def log_and_time(req: Request, call_next):
+    async def log_time(req: Request, call_next):
         ts = time.time()
         res: Response = await call_next(req)
         duration = str(round(time.time() - ts, 4))

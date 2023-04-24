@@ -21,7 +21,7 @@ class ApiException(HTTPException):
         self,
         code,
         message,
-        status_code: int = 200,
+        status_code: int = 400,
     ) -> None:
         self.code = code
         self.message = message
@@ -31,6 +31,5 @@ class ApiException(HTTPException):
         err = {
             "code": vars(self).get('code', ''),
             "message": vars(self).get('message', ''),
-            "errors": str(self),
         }
-        return JSONResponse(status_code=vars(self).get('status_code', 500), content=jsonable_encoder(err))
+        return JSONResponse(status_code=vars(self).get('status_code', 400), content=jsonable_encoder(err))
