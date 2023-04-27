@@ -12,6 +12,7 @@ character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 database_path = os.path.join(character_dir, "configs/database")
 images_path = os.path.join(character_dir, "configs/images")
+models_path = os.path.join(character_dir, "configs/models")
 
 class LogLevel(Enum):
     DEBUG = (Fore.BLUE, "DEBUG")

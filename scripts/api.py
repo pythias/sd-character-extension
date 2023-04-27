@@ -19,9 +19,8 @@ class ApiHijack(api.Api):
 
     @hT2I.time()
     def character_txt2img(self, request: CharacterTxt2ImgRequest):
-        args = vars(request)
-        lightRequest = CharacterTxt2Img(**args)
-        origin_response = self.text2imgapi(lightRequest.to_full())
+        t2i_prepare(request, "");
+        origin_response = self.text2imgapi(request)
         return to_image_response(origin_response)
 
 api.Api = ApiHijack
@@ -33,16 +32,15 @@ def character_api(_: gr.Blocks, app: FastAPI):
         res: Response = await call_next(req)
         duration = str(round(time.time() - ts, 4))
         endpoint = req.scope.get('path', 'err')
-        if endpoint.startswith('/character'):
-            log('API {code} {prot}/{ver} {method} {endpoint} {cli} {duration}'.format(
-                code = res.status_code,
-                ver = req.scope.get('http_version', '0.0'),
-                cli = req.scope.get('client', ('0:0.0.0', 0))[0],
-                prot = req.scope.get('scheme', 'err'),
-                method = req.scope.get('method', 'err'),
-                endpoint = endpoint,
-                duration = duration,
-            ))
+        log('API {code} {prot}/{ver} {method} {endpoint} {cli} {duration}'.format(
+            code = res.status_code,
+            ver = req.scope.get('http_version', '0.0'),
+            cli = req.scope.get('client', ('0:0.0.0', 0))[0],
+            prot = req.scope.get('scheme', 'err'),
+            method = req.scope.get('method', 'err'),
+            endpoint = endpoint,
+            duration = duration,
+        ))
         return res
 
 

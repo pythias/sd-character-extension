@@ -41,20 +41,12 @@ class FashionTable:
 
         return None
 
-    def get_fashion_prompts(self, names: List[str]) -> (str, str):
-        prompts = []
-        negative_prompts = []
-        for name in names:
-            fashion = self.get_by_name(name)
-            if not fashion:
-                log(f"get_fashion_tags: {name} not in self.fashions", LogLevel.WARNING)
-                continue
-            
-            log(f"get_fashion_tags: {name}")
-            prompts.append(fashion.tags)
-            negative_prompts.append(fashion.negative_prompt)
+    def get_fashion_prompts(self, name: str) -> (str, str):
+        fashion = self.get_by_name(name)
+        if not fashion:
+            return "", ""
 
-        return ",".join(prompts), ",".join(negative_prompts)
+        return fashion.tags, fashion.negative_prompt
 
     def reload(self):
         self.fashions.clear()
