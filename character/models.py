@@ -5,7 +5,7 @@ from character.nsfw import image_has_nsfw, tags_has_nsfw
 from character.face import detect_face_and_crop_base64
 from character.errors import *
 from character.metrics import *
-from character.translate import translator
+from character.translate import translate
 
 from enum import Enum
 from modules.api.models import *
@@ -23,6 +23,26 @@ negative_watermark_prompts = "text,watermark,signature,artist name,artist logo"
 negative_body_prompts = "zombie,extra fingers,six fingers,missing fingers,extra arms,missing arms,extra legs,missing legs,bad face,bad hair,bad hands,bad pose"
 
 high_quality_prompts = "8k,high quality,raw"
+
+
+def create_request_model(p_api_class):
+    class RequestModel(p_api_class):
+        class Config(p_api_class.__config__):
+            @staticmethod
+            def schema_extra(schema: dict, _):
+                props = {}
+                for k, v in schema.get('properties', {}).items():
+                    if not v.get('_deprecated', False):
+                        props[k] = v
+                    if v.get('docs_default', None) is not None:
+                        v['default'] = v['docs_default']
+                if props:
+                    schema['properties'] = props
+
+    return pydantic.create_model(
+        f'Character{p_api_class.__name__}',
+        __base__=RequestModel,
+        **c2i_fields)
 
 
 field_prefix = "character_"
@@ -68,29 +88,6 @@ def simply_prompts(prompts: str):
     return ",".join(unique_prompts)
 
 
-def create_request_model(p_api_class):
-    class RequestModel(p_api_class):
-        class Config(p_api_class.__config__):
-            @staticmethod
-            def schema_extra(schema: dict, _):
-                props = {}
-                for k, v in schema.get('properties', {}).items():
-                    if not v.get('_deprecated', False):
-                        props[k] = v
-                    if v.get('docs_default', None) is not None:
-                        v['default'] = v['docs_default']
-                if props:
-                    schema['properties'] = props
-
-    additional_fields = {
-        **c2i_fields
-    }
-
-    return pydantic.create_model(
-        f'Character{p_api_class.__name__}',
-        __base__=RequestModel,
-        **additional_fields)
-
 def t2i_prepare(request: CharacterTxt2ImgRequest):
     if request.negative_prompt is None:
         request.negative_prompt = ""
@@ -103,8 +100,8 @@ def t2i_prepare(request: CharacterTxt2ImgRequest):
         + negative_nsfw_prompts + "," \
         + negative_watermark_prompts + "," \
         + negative_body_prompts
-        
-    request.prompt = translator(request.prompt) + "," + high_quality_prompts
+
+    request.prompt = translate(request.prompt) + "," + high_quality_prompts
 
     request.prompt = simply_prompts(request.prompt)
     request.negative_prompt = simply_prompts(request.negative_prompt)
@@ -141,3 +138,4 @@ def counting_request(request: CharacterTxt2ImgRequest):
     cT2ILoras.inc(request.prompt.count("<"))
     cT2ISteps.inc(request.steps)
     cT2IPixels.inc(request.width * request.height)
+

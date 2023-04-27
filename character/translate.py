@@ -20,4 +20,10 @@ class PromptTranslator:
         translated_text = self.tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
         return translated_text[0]
 
-translator = PromptTranslator()
+
+def translate(text: str) -> str:
+    global translator
+    if translator is None:
+        translator = PromptTranslator()
+    
+    return translator.translate(text)

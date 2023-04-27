@@ -19,7 +19,7 @@ class ApiHijack(api.Api):
 
     @hT2I.time()
     def character_txt2img(self, request: CharacterTxt2ImgRequest):
-        t2i_prepare(request, "");
+        t2i_prepare(request);
         origin_response = self.text2imgapi(request)
         return to_image_response(origin_response)
 
