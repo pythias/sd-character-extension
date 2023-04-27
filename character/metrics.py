@@ -20,19 +20,24 @@ i.info({
 
 nvmlShutdown()
 
-hT2I = Histogram('t2i_latency_seconds', 'Text to image latency')
-hDF = Histogram('df_latency_seconds', 'Detect face latency')
-hDN = Histogram('dn_latency_seconds', 'Detect nsfw latency')
+hT2I = Histogram('character_t2i_latency_seconds', 'Text to image latency')
+hI2I = Histogram('character_i2i_latency_seconds', 'Image to image latency')
+hDF = Histogram('character_face_latency_seconds', 'Detect face latency')
+hDN = Histogram('character_nsfw_latency_seconds', 'Detect nsfw latency')
 
-cT2I = Counter('t2i_requests', 'Text to image requests')
-cT2ISuccess = Counter('t2i_success', 'Text to image success')
-cT2INSFW = Counter('t2i_nsfw', 'Text to image nsfw')
-cT2IImages = Counter('t2i_images', 'Text to image images')
-cT2IPrompts = Counter('t2i_prompts', 'Text to image prompts')
-cT2INegativePrompts = Counter('t2i_negative_prompts', 'Text to image negative prompts')
-cT2ILoras = Counter('t2i_loras', 'Text to image loras')
-cT2IPixels = Counter('t2i_pixels', 'Text to image pixels')
-cT2ISteps = Counter('t2i_steps', 'Text to image steps')
+cT2I = Counter('character_t2i_requests', 'Text to image requests')
+cI2I = Counter('character_i2i_requests', 'Image to image requests')
+
+cT2IImages = Counter('character_t2i_images', 'Text to image images')
+cI2IImages = Counter('character_i2i_images', 'Image to image images')
+
+cFace = Counter('character_faces', 'Detect face')
+cNSFW = Counter('character_nsfw', 'NSFW images')
+cPrompts = Counter('character_prompts', 'Text to image prompts')
+cNegativePrompts = Counter('character_negative_prompts', 'Text to image negative prompts')
+cLoras = Counter('character_loras', 'Text to image loras')
+cPixels = Counter('character_pixels', 'Text to image pixels')
+cSteps = Counter('character_steps', 'Text to image steps')
 
 gGPUUsedMemory = Gauge('gpu_memory_used_bytes', 'Memory used by the GPU device in bytes')
 gGPUTemperature = Gauge('gpu_temperature_celsius', 'Temperature of the GPU device in celsius')

@@ -1,6 +1,7 @@
 from character.lib import models_path, log, LogLevel
 from transformers import MBart50TokenizerFast, MBartForConditionalGeneration
 
+translator = None
 model_name = "facebook/mbart-large-50-many-to-many-mmt"
 src_lang = "zh_CN"
 tgt_lang = "en_XX"

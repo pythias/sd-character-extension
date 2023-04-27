@@ -25,7 +25,7 @@ negative_body_prompts = "zombie,extra fingers,six fingers,missing fingers,extra 
 high_quality_prompts = "8k,high quality,raw"
 
 
-def create_request_model(p_api_class):
+def create_request_model(p_api_class, fields):
     class RequestModel(p_api_class):
         class Config(p_api_class.__config__):
             @staticmethod
@@ -42,15 +42,24 @@ def create_request_model(p_api_class):
     return pydantic.create_model(
         f'Character{p_api_class.__name__}',
         __base__=RequestModel,
-        **c2i_fields)
+        **fields)
 
 
 field_prefix = "character_"
-c2i_fields = {
+v1_fields = {
+    f"{field_prefix}face": (bool, Field(default=True, title='With faces', description='Faces in the generated image.')),
+}
+v2_fields = {
+    f"{field_prefix}face": (bool, Field(default=True, title='With faces', description='Faces in the generated image.')),
+    f"{field_prefix}control_net": (bool, Field(default=True, title='Control Net', description='Use Control Net.')),
+    f"{field_prefix}image": (str, Field(default="", title='Image', description='The image in base64 format.')),
     f"{field_prefix}fashions": (List[str], Field(default="[]", title='Fashions', description='The fashion tags to use.')),
 }
 
-CharacterTxt2ImgRequest = create_request_model(StableDiffusionTxt2ImgProcessingAPI)
+CharacterTxt2ImgRequest = create_request_model(StableDiffusionTxt2ImgProcessingAPI, v1_fields)
+CharacterImg2ImgRequest = create_request_model(StableDiffusionImg2ImgProcessingAPI, v1_fields)
+CharacterV2Txt2ImgRequest = create_request_model(StableDiffusionTxt2ImgProcessingAPI, v2_fields)
+CharacterV2Img2ImgRequest = create_request_model(StableDiffusionImg2ImgProcessingAPI, v2_fields)
 
 class ImageResponse(BaseModel):
     images: List[str] = Field(default=None, title="Image", description="The generated image in base64 format.")
@@ -59,7 +68,14 @@ class ImageResponse(BaseModel):
     faces: List[str]
 
 
-def to_image_response(response: TextToImageResponse):
+class V2ImageResponse(BaseModel):
+    images: List[str] = Field(default=None, title="Image", description="The generated image in base64 format.")
+    parameters: dict
+    info: dict
+    faces: List[str]
+
+
+def convert_response(request, response, v2):
     params = response.parameters
     info = json.loads(response.info)
 
@@ -67,15 +83,38 @@ def to_image_response(response: TextToImageResponse):
     safety_images = []
     for base64_image in response.images:
         if image_has_nsfw(base64_image):
-            cT2INSFW.inc()
+            cNSFW.inc()
             return ApiException(code_character_nsfw, f"has nsfw concept, info:{info}").response()
 
-        image_faces = detect_face_and_crop_base64(base64_image)
-        faces.extend(image_faces)
+        if request.get(f"{field_prefix}face"):
+            image_faces = detect_face_and_crop_base64(base64_image)
+            cFace.inc(len(image_faces))
+            faces.extend(image_faces)
+
         safety_images.append(base64_image)
 
-    cT2ISuccess.inc()
-    return ImageResponse(images=safety_images, parameters=params, info=response.info, faces=faces)
+    if v2:
+        return V2ImageResponse(images=safety_images, parameters=params, info=info, faces=faces)
+    else:
+        return ImageResponse(images=safety_images, parameters=params, info=response.info, faces=faces)
+
+
+def merge_v2_responses(responses: List[V2ImageResponse]):
+    if not responses:
+        return None
+
+    if len(responses) == 1:
+        return responses[0]
+
+    merged_response = copy.deepcopy(responses[0])
+    merged_response.images = []
+    merged_response.faces = []
+    for response in responses:
+        merged_response.images.extend(response.images)
+        merged_response.faces.extend(response.faces)
+        merged_response.info.seeds.extend(response.info.seeds)
+
+    return merged_response
 
 
 def simply_prompts(prompts: str):
@@ -88,7 +127,7 @@ def simply_prompts(prompts: str):
     return ",".join(unique_prompts)
 
 
-def t2i_prepare(request: CharacterTxt2ImgRequest):
+def request_prepare(request):
     if request.negative_prompt is None:
         request.negative_prompt = ""
 
@@ -102,40 +141,62 @@ def t2i_prepare(request: CharacterTxt2ImgRequest):
         + negative_body_prompts
 
     request.prompt = translate(request.prompt) + "," + high_quality_prompts
-
     request.prompt = simply_prompts(request.prompt)
     request.negative_prompt = simply_prompts(request.negative_prompt)
 
-    counting_request(request)
-    remove_character_fields(request)
+    # todo
+    # 如果存在 control_net 和 image
 
 
-def remove_character_fields(request: CharacterTxt2ImgRequest):
-    for k, v in c2i_fields.items():
+def remove_character_fields(request):
+    params = vars(request)
+    for k, v in params.items():
+        if not k.startswith(field_prefix):
+            continue
         delattr(request, k)
 
 
-def apply_fashion(request: CharacterTxt2ImgRequest, fashion: str):
-    if fashion is None:
+def check_fashions(request):
+    if request.fashions is None:
+        request.fashions = [""]
         return
 
-    # todo 每个样式一张图
-    # todo 每个动作一张图
+    for name in request.fashions:
+        if name not in fashion_table.fashions:
+            raise ApiException(code_character_unknown_fashion, f"not found fashion {name}")
+
+
+def apply_fashion(request, fashion):
+    if fashion is None:
+        return None
 
     prompts, negative_prompts = fashion_table.get_fashion_prompts(fashion)
     if not prompts:
-        return
+        return None
 
-    request.prompt += "," + prompts
-    request.negative_prompt += "," + negative_prompts
+    # todo 优化prompts的位置
+    copied_request = copy.deepcopy(request)
+    copied_request.prompt += "," + prompts
+    copied_request.negative_prompt += "," + negative_prompts
+    return copied_request
 
 
-def counting_request(request: CharacterTxt2ImgRequest):
+def t2i_counting(request):
     cT2I.inc()
     cT2IImages.inc(request.batch_size)
-    cT2IPrompts.inc(request.prompt.count(",") + 1)
-    cT2INegativePrompts.inc(request.negative_prompt.count(",") + 1)
-    cT2ILoras.inc(request.prompt.count("<"))
-    cT2ISteps.inc(request.steps)
-    cT2IPixels.inc(request.width * request.height)
+    params_counting(request)
+
+
+def i2i_counting(request):
+    cI2I.inc()
+    cI2IImages.inc(request.batch_size)
+    params_counting(request)
+
+
+def params_counting(request):
+    cPrompts.inc(request.prompt.count(",") + 1)
+    cNegativePrompts.inc(request.negative_prompt.count(",") + 1)
+    cLoras.inc(request.prompt.count("<"))
+    cSteps.inc(request.steps)
+    cPixels.inc(request.width * request.height)
 

@@ -15,13 +15,60 @@ class ApiHijack(api.Api):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # v1 仅为原始接口封装
+        # v2 改变了返回值，info 从 str -> dict
+        # v2 添加使用ControlNet处理图片
+        # v2 添加预设场景
         self.add_api_route("/character/v1/txt2img", self.character_txt2img, tags=["Character"], methods=["POST"], response_model=ImageResponse)
+        # self.add_api_route("/character/v1/img2img", self.character_img2img, tags=["Character"], methods=["POST"], response_model=ImageResponse)
+        self.add_api_route("/character/v2/txt2img", self.character_v2_txt2img, tags=["Character"], methods=["POST"], response_model=V2ImageResponse)
+        # self.add_api_route("/character/v2/img2img", self.character_v2_img2img, tags=["Character"], methods=["POST"], response_model=V2ImageResponse)
 
     @hT2I.time()
     def character_txt2img(self, request: CharacterTxt2ImgRequest):
-        t2i_prepare(request);
-        origin_response = self.text2imgapi(request)
-        return to_image_response(origin_response)
+        request_prepare(request)
+        return self.wrap_call(self.text2imgapi, t2i_counting, request, False)
+
+    @hT2I.time()
+    def character_img2img(self, request: CharacterImg2ImgRequest):
+        request_prepare(request)
+        return self.wrap_call(self.img2imgapi, t2i_counting, request, False)
+
+    @hT2I.time()
+    def character_v2_txt2img(self, request: CharacterV2Txt2ImgRequest):
+        request_prepare(request)
+
+        try:
+            check_fashions(request)
+        except ApiException as e:
+            return e.response()
+        
+        responses = []
+
+        for name in request.fashions:
+            copied_request = apply_fashion(request, name)
+            response = self.wrap_call(self.text2imgapi, t2i_counting, copied_request, True)
+            responses.append(response)
+
+        return merge_v2_responses(responses)
+
+    @hT2I.time()
+    def character_v2_img2img(self, request: CharacterV2Img2ImgRequest):
+        request_prepare(request)
+        t2i_counting(request)
+        response = self.img2imgapi(request)
+        return convert_response(request, response, True)
+
+    
+    def wrap_call(self, processor, counting, request, v2):
+        try:
+            counting(request)
+            remove_character_fields(request)
+            response = processor(request)
+            return convert_response(request, response, v2)
+        except ApiException as e:
+            return e.response()
+
 
 api.Api = ApiHijack
 
