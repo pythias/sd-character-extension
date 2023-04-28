@@ -25,7 +25,7 @@ def numpy_to_pil(images):
 def image_has_nsfw(base64_image):
     global safety_feature_extractor, safety_checker
     if safety_feature_extractor is None:
-        safety_feature_extractor = AutoFeatureExtractor.from_pretrained( safety_model_id)
+        safety_feature_extractor = AutoFeatureExtractor.from_pretrained(safety_model_id)
         safety_checker = StableDiffusionSafetyChecker.from_pretrained(safety_model_id)
 
     image = Image.open(io.BytesIO(base64.b64decode(base64_image)))

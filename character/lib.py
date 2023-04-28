@@ -8,6 +8,7 @@ import os
 # Initialize colorama
 init()
 
+version_flag = "v0.2.5"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 database_path = os.path.join(character_dir, "configs/database")
@@ -26,4 +27,4 @@ def log(message, level=LogLevel.INFO):
     # with microsecond precision
     current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
     level_color, level_name = level.value
-    print(f'{Fore.CYAN}{current_time}{Style.RESET_ALL} - {level_color}{level_name}{Style.RESET_ALL} - {shared.cmd_opts.character_server_name}: {message}')
+    print(f'{level_color}{current_time}{Style.RESET_ALL} {shared.cmd_opts.character_server_name} {version_flag}: {message}')

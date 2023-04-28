@@ -39,12 +39,15 @@ class ApiHijack(api.Api):
         request_prepare(request)
 
         try:
+            # 获取预设场景有效性判断
             fashions = get_fashions(request)
         except ApiException as e:
             return e.response()
         
-        responses = []
+        # 如果存在control_net/image，预处理
+        apply_controlnet(request)
 
+        responses = []
         for name in fashions:
             copied_request = apply_fashion(request, name)
             response = self.wrap_call(self.text2imgapi, t2i_counting, copied_request, True)
