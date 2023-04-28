@@ -1,6 +1,6 @@
 from character.lib import log, LogLevel
 from character.models import *
-from character.metrics import hT2I
+from character.metrics import hT2I, hI2I
 
 from fastapi import FastAPI, Request
 
@@ -29,7 +29,7 @@ class ApiHijack(api.Api):
         request_prepare(request)
         return self.wrap_call(self.text2imgapi, t2i_counting, request, False)
 
-    @hT2I.time()
+    @hI2I.time()
     def character_img2img(self, request: CharacterImg2ImgRequest):
         request_prepare(request)
         return self.wrap_call(self.img2imgapi, t2i_counting, request, False)
@@ -39,20 +39,20 @@ class ApiHijack(api.Api):
         request_prepare(request)
 
         try:
-            check_fashions(request)
+            fashions = get_fashions(request)
         except ApiException as e:
             return e.response()
         
         responses = []
 
-        for name in request.fashions:
+        for name in fashions:
             copied_request = apply_fashion(request, name)
             response = self.wrap_call(self.text2imgapi, t2i_counting, copied_request, True)
             responses.append(response)
 
         return merge_v2_responses(responses)
 
-    @hT2I.time()
+    @hI2I.time()
     def character_v2_img2img(self, request: CharacterV2Img2ImgRequest):
         request_prepare(request)
         t2i_counting(request)
@@ -60,11 +60,11 @@ class ApiHijack(api.Api):
         return convert_response(request, response, True)
 
     
-    def wrap_call(self, processor, counting, request, v2):
+    def wrap_call(self, processor_call, counting_call, request, v2):
         try:
-            counting(request)
+            counting_call(request)
             remove_character_fields(request)
-            response = processor(request)
+            response = processor_call(request)
             return convert_response(request, response, v2)
         except ApiException as e:
             return e.response()

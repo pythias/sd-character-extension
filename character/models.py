@@ -39,21 +39,24 @@ def create_request_model(p_api_class, fields):
                 if props:
                     schema['properties'] = props
 
-    return pydantic.create_model(
-        f'Character{p_api_class.__name__}',
-        __base__=RequestModel,
-        **fields)
+    return pydantic.create_model(f'Character{p_api_class.__name__}', __base__=RequestModel, **fields, **default_fields)
 
 
 field_prefix = "character_"
+
+default_fields = {
+    "steps": (int, Field(default=20, title='Steps', description='Number of steps.')),
+    "sampler_name": (str, Field(default="Euler a", title='Sampler', description='The sampler to use.')),
+}
+
 v1_fields = {
     f"{field_prefix}face": (bool, Field(default=True, title='With faces', description='Faces in the generated image.')),
 }
 v2_fields = {
     f"{field_prefix}face": (bool, Field(default=True, title='With faces', description='Faces in the generated image.')),
     f"{field_prefix}control_net": (bool, Field(default=True, title='Control Net', description='Use Control Net.')),
-    f"{field_prefix}image": (str, Field(default="", title='Image', description='The image in base64 format.')),
-    f"{field_prefix}fashions": (List[str], Field(default="[]", title='Fashions', description='The fashion tags to use.')),
+    f"{field_prefix}image": (str, Field(default=None, title='Image', description='The image in base64 format.')),
+    f"{field_prefix}fashions": (List[str], Field(default=None, title='Fashions', description='The fashion tags to use.')),
 }
 
 CharacterTxt2ImgRequest = create_request_model(StableDiffusionTxt2ImgProcessingAPI, v1_fields)
@@ -86,7 +89,8 @@ def convert_response(request, response, v2):
             cNSFW.inc()
             return ApiException(code_character_nsfw, f"has nsfw concept, info:{info}").response()
 
-        if request.get(f"{field_prefix}face"):
+        field_name = f"{field_prefix}face"
+        if hasattr(request, field_name) and getattr(request, field_name):
             image_faces = detect_face_and_crop_base64(base64_image)
             cFace.inc(len(image_faces))
             faces.extend(image_faces)
@@ -109,10 +113,11 @@ def merge_v2_responses(responses: List[V2ImageResponse]):
     merged_response = copy.deepcopy(responses[0])
     merged_response.images = []
     merged_response.faces = []
+    merged_response.info['all_seeds'] = []
     for response in responses:
         merged_response.images.extend(response.images)
         merged_response.faces.extend(response.faces)
-        merged_response.info.seeds.extend(response.info.seeds)
+        merged_response.info['all_seeds'].extend(response.info['all_seeds'])
 
     return merged_response
 
@@ -150,29 +155,34 @@ def request_prepare(request):
 
 def remove_character_fields(request):
     params = vars(request)
-    for k, v in params.items():
-        if not k.startswith(field_prefix):
+    keys = list(params.keys())
+    for key in keys:
+        if not key.startswith(field_prefix):
             continue
-        delattr(request, k)
+
+        delattr(request, key)
 
 
-def check_fashions(request):
-    if request.fashions is None:
-        request.fashions = [""]
-        return
+def get_fashions(request):
+    fashions = [""]
+    field_name = f"{field_prefix}fashions"
+    if not hasattr(request, field_name) or not getattr(request, field_name):
+        return fashions
+    
+    fashions = getattr(request, field_name)
+    for name in fashions:
+        if fashion_table.get_by_name(name) == None:
+            raise ApiException(code_character_unknown_fashion, f"not found fashion {name}, fashions: {fashions}")
 
-    for name in request.fashions:
-        if name not in fashion_table.fashions:
-            raise ApiException(code_character_unknown_fashion, f"not found fashion {name}")
-
+    return fashions
 
 def apply_fashion(request, fashion):
     if fashion is None:
-        return None
+        return request
 
     prompts, negative_prompts = fashion_table.get_fashion_prompts(fashion)
     if not prompts:
-        return None
+        return request
 
     # todo 优化prompts的位置
     copied_request = copy.deepcopy(request)
