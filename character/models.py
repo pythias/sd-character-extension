@@ -134,10 +134,12 @@ def merge_v2_responses(responses: List[V2ImageResponse]):
     merged_response.images = []
     merged_response.faces = []
     merged_response.info['all_seeds'] = []
+    merged_response.info['all_prompts'] = []
     for response in responses:
         merged_response.images.extend(response.images)
         merged_response.faces.extend(response.faces)
         merged_response.info['all_seeds'].extend(response.info['all_seeds'])
+        merged_response.info['all_prompts'].extend(response.info['all_prompts'])
 
     return merged_response
 
@@ -188,13 +190,16 @@ def get_fashions(request):
     
     fashions = getattr(request, field_name)
     for name in fashions:
+        if name == "":
+            continue
+
         if fashion_table.get_by_name(name) == None:
             raise ApiException(code_character_unknown_fashion, f"not found fashion {name}, fashions: {fashions}")
 
     return fashions
 
 def apply_fashion(request, fashion):
-    if fashion is None:
+    if fashion is None or fashion == "":
         return request
 
     prompts, negative_prompts = fashion_table.get_fashion_prompts(fashion)
@@ -215,11 +220,16 @@ def clip_b64img(image_b64):
     return shared.interrogator.interrogate(pil_image)
 
 
-def apply_controlnet(request):
+def has_controlnet(request):
     field_image = f"{field_prefix}image"
-    if not hasattr(request, field_image) or not getattr(request, field_image):
+    return hasattr(request, field_image) and getattr(request, field_image)
+
+
+def apply_controlnet(request):
+    if not has_controlnet(request):
         return
 
+    field_image = f"{field_prefix}image"
     image_b64 = getattr(request, field_image)
     caption = clip_b64img(image_b64)
     request.prompt = caption + "," + request.prompt
