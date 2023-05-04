@@ -36,61 +36,21 @@ control_net_models = external_code.get_models(update=True)
 log(f"ControlNet loaded, models: {control_net_models}")
 
 
-def create_request_model(p_api_class, fields):
-    class RequestModel(p_api_class):
-        class Config(p_api_class.__config__):
-            @staticmethod
-            def schema_extra(schema: dict, _):
-                props = {}
-                for k, v in schema.get('properties', {}).items():
-                    if not v.get('_deprecated', False):
-                        props[k] = v
-                    if v.get('docs_default', None) is not None:
-                        v['default'] = v['docs_default']
-                if props:
-                    schema['properties'] = props
-
-    return pydantic.create_model(f'Character{p_api_class.__name__}', __base__=RequestModel, **fields, **default_fields)
-
-
 field_prefix = "character_"
 
-default_fields = {
-    "restore_faces": (bool, Field(default=True, title='Restore faces', description='Restore faces in the generated image.')),
-    "steps": (int, Field(default=20, title='Steps', description='Number of steps.')),
-    "sampler_name": (str, Field(default="Euler a", title='Sampler', description='The sampler to use.')),
-}
-
-v1_fields = {
-    f"{field_prefix}face": (bool, Field(default=True, title='With faces', description='Faces in the generated image.')),
-}
-v2_fields = {
-    f"{field_prefix}face": (bool, Field(default=True, title='With faces', description='Faces in the generated image.')),
-    f"{field_prefix}image": (str, Field(default=None, title='Image', description='The image in base64 format.')),
-    f"{field_prefix}fashions": (List[str], Field(default=None, title='Fashions', description='The fashion tags to use.')),
-}
-
-# CharacterTxt2ImgRequest = create_request_model(StableDiffusionTxt2ImgProcessingAPI, v1_fields)
-# CharacterImg2ImgRequest = create_request_model(StableDiffusionImg2ImgProcessingAPI, v1_fields)
-# CharacterV2Txt2ImgRequest = create_request_model(StableDiffusionTxt2ImgProcessingAPI, v2_fields)
-# CharacterV2Img2ImgRequest = create_request_model(StableDiffusionImg2ImgProcessingAPI, v2_fields)
-
-
-class CharacterTxt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
-    restore_faces: bool = Field(default=True, title='Restore faces', description='Restore faces in the generated image.')
+class CharacterDefaultProcessing(StableDiffusionTxt2ImgProcessingAPI):
     steps: int = Field(default=20, title='Steps', description='Number of steps.')
     sampler_name: str = Field(default="Euler a", title='Sampler', description='The sampler to use.')
     character_face: bool = Field(default=True, title='With faces', description='Faces in the generated image.')
 
 
-class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
-    restore_faces: bool = Field(default=True, title='Restore faces', description='Restore faces in the generated image.')
-    steps: int = Field(default=20, title='Steps', description='Number of steps.')
-    sampler_name: str = Field(default="Euler a", title='Sampler', description='The sampler to use.')
-    character_face: bool = Field(default=True, title='With faces', description='Faces in the generated image.')
+class CharacterTxt2ImgRequest(CharacterDefaultProcessing):
+    pass
+
+
+class CharacterV2Txt2ImgRequest(CharacterDefaultProcessing):
     character_image: str = Field(default=None, title='Image', description='The image in base64 format.')
     character_fashions: List[str] = Field(default=None, title='Fashions', description='The fashion tags to use.')
-
 
 
 class ImageResponse(BaseModel):
