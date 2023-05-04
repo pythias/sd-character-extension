@@ -29,11 +29,6 @@ class ApiHijack(api.Api):
         request_prepare(request)
         return self.wrap_call(self.text2imgapi, t2i_counting, request, False)
 
-    @hI2I.time()
-    def character_img2img(self, request: CharacterImg2ImgRequest):
-        request_prepare(request)
-        return self.wrap_call(self.img2imgapi, t2i_counting, request, False)
-
     @hT2I.time()
     def character_v2_txt2img(self, request: CharacterV2Txt2ImgRequest):
         request_prepare(request)
@@ -55,12 +50,17 @@ class ApiHijack(api.Api):
 
         return merge_v2_responses(responses)
 
-    @hI2I.time()
-    def character_v2_img2img(self, request: CharacterV2Img2ImgRequest):
-        request_prepare(request)
-        t2i_counting(request)
-        response = self.img2imgapi(request)
-        return convert_response(request, response, True)
+    # @hI2I.time()
+    # def character_img2img(self, request: CharacterImg2ImgRequest):
+    #     request_prepare(request)
+    #     return self.wrap_call(self.img2imgapi, t2i_counting, request, False)
+
+    # @hI2I.time()
+    # def character_v2_img2img(self, request: CharacterV2Img2ImgRequest):
+    #     request_prepare(request)
+    #     t2i_counting(request)
+    #     response = self.img2imgapi(request)
+    #     return convert_response(request, response, True)
 
     
     def wrap_call(self, processor_call, counting_call, request, v2):

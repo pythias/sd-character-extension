@@ -27,18 +27,11 @@ negative_body_prompts = "zombie,extra fingers,six fingers,missing fingers,extra 
 high_quality_prompts = "8k,high quality,raw"
 
 # 加载ControlNet
+# 注意，需要修改 sd-webui-controlnet/scripts/global_state.py
 extensions_control_net_path = os.path.join(extensions_dir, "sd-webui-controlnet")
 sys.path.append(extensions_control_net_path)
 
 from scripts import external_code, global_state
-
-# 修改 sd-webui-controlnet/scripts/global_state.py
-# cn_path = os.path.join(extensions_dir, "sd-webui-controlnet")
-# cn_models_dir = os.path.join(models_path, "ControlNet")
-# cn_models_dir_old = os.path.join(cn_path, "models")
-# default_conf = os.path.join(cn_models_dir_old, "cldm_v15.yaml")
-# default_conf_adapter = os.path.join(cn_models_dir_old, "t2iadapter_sketch_sd14v1.yaml")
-
 control_net_models = external_code.get_models(update=True)
 log(f"ControlNet loaded, models: {control_net_models}")
 
@@ -77,10 +70,28 @@ v2_fields = {
     f"{field_prefix}fashions": (List[str], Field(default=None, title='Fashions', description='The fashion tags to use.')),
 }
 
-CharacterTxt2ImgRequest = create_request_model(StableDiffusionTxt2ImgProcessingAPI, v1_fields)
-CharacterImg2ImgRequest = create_request_model(StableDiffusionImg2ImgProcessingAPI, v1_fields)
-CharacterV2Txt2ImgRequest = create_request_model(StableDiffusionTxt2ImgProcessingAPI, v2_fields)
-CharacterV2Img2ImgRequest = create_request_model(StableDiffusionImg2ImgProcessingAPI, v2_fields)
+# CharacterTxt2ImgRequest = create_request_model(StableDiffusionTxt2ImgProcessingAPI, v1_fields)
+# CharacterImg2ImgRequest = create_request_model(StableDiffusionImg2ImgProcessingAPI, v1_fields)
+# CharacterV2Txt2ImgRequest = create_request_model(StableDiffusionTxt2ImgProcessingAPI, v2_fields)
+# CharacterV2Img2ImgRequest = create_request_model(StableDiffusionImg2ImgProcessingAPI, v2_fields)
+
+
+class CharacterTxt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
+    restore_faces: bool = Field(default=True, title='Restore faces', description='Restore faces in the generated image.')
+    steps: int = Field(default=20, title='Steps', description='Number of steps.')
+    sampler_name: str = Field(default="Euler a", title='Sampler', description='The sampler to use.')
+    character_face: bool = Field(default=True, title='With faces', description='Faces in the generated image.')
+
+
+class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
+    restore_faces: bool = Field(default=True, title='Restore faces', description='Restore faces in the generated image.')
+    steps: int = Field(default=20, title='Steps', description='Number of steps.')
+    sampler_name: str = Field(default="Euler a", title='Sampler', description='The sampler to use.')
+    character_face: bool = Field(default=True, title='With faces', description='Faces in the generated image.')
+    character_image: str = Field(default=None, title='Image', description='The image in base64 format.')
+    character_fashions: List[str] = Field(default=None, title='Fashions', description='The fashion tags to use.')
+
+
 
 class ImageResponse(BaseModel):
     images: List[str] = Field(default=None, title="Image", description="The generated image in base64 format.")
