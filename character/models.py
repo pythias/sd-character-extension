@@ -53,8 +53,8 @@ class CharacterTxt2ImgRequest(CharacterDefaultProcessing):
 
 
 class CharacterV2Txt2ImgRequest(CharacterDefaultProcessing):
-    character_image: str = Field(default=None, title='Image', description='The image in base64 format.')
-    character_pose: str = Field(default=None, title='Pose', description='The pose of the character.')
+    character_image: str = Field(default="", title='Image', description='The image in base64 format.')
+    character_pose: str = Field(default="", title='Pose', description='The pose of the character.')
 
 
 class ImageResponse(BaseModel):
@@ -154,7 +154,7 @@ def apply_controlnet(request):
         return
 
     image_b64 = getattr(request, field_image)
-    if len(image_b64) < 100:
+    if not image_b64 or len(image_b64) < 100:
         return
 
     # append image caption to prompt
@@ -198,7 +198,7 @@ def get_control_net_unit_1(request):
     return {
         "model": default_open_pose_model,
         "module": default_open_pose_module,
-        "enabled": len(pose_b64) > 1,
+        "enabled": pose_b64 and len(pose_b64) > 1,
         "image": pose_b64,
     }
 
