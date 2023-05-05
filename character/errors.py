@@ -15,7 +15,6 @@ code_character_already_exists = 100009
 code_character_was_blank = 100010
 code_character_api_only = 100011
 code_character_nsfw = 100012
-code_character_unknown_fashion = 100013
 
 class ApiException(HTTPException):
     def __init__(

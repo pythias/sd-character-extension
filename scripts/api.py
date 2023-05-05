@@ -32,23 +32,8 @@ class ApiHijack(api.Api):
     @hT2I.time()
     def character_v2_txt2img(self, request: CharacterV2Txt2ImgRequest):
         request_prepare(request)
-
-        try:
-            # 获取预设场景有效性判断
-            fashions = get_fashions(request)
-        except ApiException as e:
-            return e.response()
-        
-        # 如果存在control_net/image，预处理
         apply_controlnet(request)
-
-        responses = []
-        for name in fashions:
-            copied_request = apply_fashion(request, name)
-            response = self.wrap_call(self.text2imgapi, t2i_counting, copied_request, True)
-            responses.append(response)
-
-        return merge_v2_responses(responses)
+        return self.wrap_call(self.text2imgapi, t2i_counting, request, True)
 
     # @hI2I.time()
     # def character_img2img(self, request: CharacterImg2ImgRequest):
