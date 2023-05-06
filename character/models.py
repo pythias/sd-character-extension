@@ -191,9 +191,10 @@ def get_control_net_unit_0(request, image_b64):
 
 
 def get_control_net_unit_1(request):
+    field = f"{field_prefix}pose"
     pose_b64 = ""
-    if hasattr(request, f"{field_prefix}pose"):
-        pose_b64 = getattr(request, f"{field_prefix}pose")
+    if hasattr(request, field):
+        pose_b64 = getattr(request, getattr(request, field))
         log(f"image with pose")
 
     return {

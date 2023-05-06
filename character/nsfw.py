@@ -7,6 +7,7 @@ import base64
 import io
 
 from character.metrics import hDN
+from character.lib import models_path, log, LogLevel
 
 safety_model_id = "CompVis/stable-diffusion-safety-checker"
 safety_feature_extractor = None
@@ -25,8 +26,8 @@ def numpy_to_pil(images):
 def image_has_nsfw(base64_image):
     global safety_feature_extractor, safety_checker
     if safety_feature_extractor is None:
-        safety_feature_extractor = AutoFeatureExtractor.from_pretrained(safety_model_id)
-        safety_checker = StableDiffusionSafetyChecker.from_pretrained(safety_model_id)
+        safety_feature_extractor = AutoFeatureExtractor.from_pretrained(safety_model_id, cache_dir=models_path)
+        safety_checker = StableDiffusionSafetyChecker.from_pretrained(safety_model_id, cache_dir=models_path)
 
     image = Image.open(io.BytesIO(base64.b64decode(base64_image)))
     np_image = np.array(image) / 255.0
