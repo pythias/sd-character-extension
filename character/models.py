@@ -26,8 +26,7 @@ negative_body_prompts = "zombie,extra fingers,six fingers,missing fingers,extra 
 
 high_quality_prompts = "4k,8k,high quality"
 
-# 加载ControlNet
-# 注意，需要修改 sd-webui-controlnet/scripts/global_state.py
+# 加载ControlNet，启动添加参数 --controlnet-dir
 extensions_control_net_path = os.path.join(extensions_dir, "sd-webui-controlnet")
 sys.path.append(extensions_control_net_path)
 
@@ -36,8 +35,10 @@ control_net_models = external_code.get_models(update=True)
 log(f"ControlNet loaded, models: {control_net_models}")
 
 # todo load from config
-default_control_net_model = "controlnet11Models_softedge [f616a34f]"
-default_control_net_module = "softedge_pidisafe"
+# default_control_net_model = "controlnet11Models_softedge [f616a34f]"
+# default_control_net_module = "softedge_pidisafe"
+default_control_net_model = "controlnet11Models_animeline [c58f338b]"
+default_control_net_module = "lineart_anime"
 default_open_pose_model = "controlnet11Models_openpose [73c2b67d]"
 default_open_pose_module = "openpose_full"
 
@@ -194,7 +195,7 @@ def get_control_net_unit_1(request):
     field = f"{field_prefix}pose"
     pose_b64 = ""
     if hasattr(request, field):
-        pose_b64 = getattr(request, getattr(request, field))
+        pose_b64 = getattr(request, field)
         log(f"image with pose")
 
     return {
