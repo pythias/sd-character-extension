@@ -15,30 +15,14 @@ class ApiHijack(api.Api):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # v1 仅为原始接口封装
-        # v2 改变了返回值，info 从 str -> dict
-        # v2 添加使用ControlNet处理图片
-        # v2 添加预设场景
-        self.add_api_route("/character/v1/txt2img", self.character_txt2img, tags=["Character"], methods=["POST"], response_model=ImageResponse)
-        # self.add_api_route("/character/v1/img2img", self.character_img2img, tags=["Character"], methods=["POST"], response_model=ImageResponse)
         self.add_api_route("/character/v2/txt2img", self.character_v2_txt2img, tags=["Character"], methods=["POST"], response_model=V2ImageResponse)
         # self.add_api_route("/character/v2/img2img", self.character_v2_img2img, tags=["Character"], methods=["POST"], response_model=V2ImageResponse)
-
-    @hT2I.time()
-    def character_txt2img(self, request: CharacterTxt2ImgRequest):
-        request_prepare(request)
-        return self.wrap_call(self.text2imgapi, t2i_counting, request, False)
 
     @hT2I.time()
     def character_v2_txt2img(self, request: CharacterV2Txt2ImgRequest):
         request_prepare(request)
         apply_controlnet(request)
-        return self.wrap_call(self.text2imgapi, t2i_counting, request, True)
-
-    # @hI2I.time()
-    # def character_img2img(self, request: CharacterImg2ImgRequest):
-    #     request_prepare(request)
-    #     return self.wrap_call(self.img2imgapi, t2i_counting, request, False)
+        return self.wrap_call(self.text2imgapi, t2i_counting, request)
 
     # @hI2I.time()
     # def character_v2_img2img(self, request: CharacterV2Img2ImgRequest):
@@ -48,12 +32,12 @@ class ApiHijack(api.Api):
     #     return convert_response(request, response, True)
 
     
-    def wrap_call(self, processor_call, counting_call, request, v2):
+    def wrap_call(self, processor_call, counting_call, request):
         try:
             counting_call(request)
             remove_character_fields(request)
             response = processor_call(request)
-            return convert_response(request, response, v2)
+            return convert_response(request, response)
         except ApiException as e:
             return e.response()
 

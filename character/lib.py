@@ -1,19 +1,19 @@
 from datetime import datetime
 from enum import Enum
-from colorama import Fore, Style, init
+from colorama import Fore, Style
 from modules import scripts, shared
 
 import os
+import colorama
 
 # Initialize colorama
-init()
+colorama.init()
 
-version_flag = "v0.2.5"
+version_flag = "v0.2.6"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
-database_path = os.path.join(character_dir, "configs/database")
-images_path = os.path.join(character_dir, "configs/images")
 models_path = os.path.join(character_dir, "configs/models")
+
 
 class LogLevel(Enum):
     DEBUG = (Fore.BLUE, "DEBUG")

@@ -37,8 +37,8 @@ log(f"ControlNet loaded, models: {control_net_models}")
 # todo load from config
 # default_control_net_model = "controlnet11Models_softedge [f616a34f]"
 # default_control_net_module = "softedge_pidisafe"
-default_control_net_model = "controlnet11Models_animeline [c58f338b]"
-default_control_net_module = "lineart_anime"
+default_control_net_model = "controlnet11Models_lineart [5c23b17d]"
+default_control_net_module = "lineart_realistic"
 default_open_pose_model = "controlnet11Models_openpose [73c2b67d]"
 default_open_pose_module = "openpose_full"
 
@@ -59,13 +59,6 @@ class CharacterV2Txt2ImgRequest(CharacterDefaultProcessing):
     character_pose: str = Field(default="", title='Pose', description='The pose of the character.')
 
 
-class ImageResponse(BaseModel):
-    images: List[str] = Field(default=None, title="Image", description="The generated image in base64 format.")
-    parameters: dict
-    info: str
-    faces: List[str]
-
-
 class V2ImageResponse(BaseModel):
     images: List[str] = Field(default=None, title="Image", description="The generated image in base64 format.")
     parameters: dict
@@ -73,7 +66,7 @@ class V2ImageResponse(BaseModel):
     faces: List[str]
 
 
-def convert_response(request, response, v2):
+def convert_response(request, response):
     params = response.parameters
     info = json.loads(response.info)
 
@@ -94,11 +87,8 @@ def convert_response(request, response, v2):
 
         safety_images.append(base64_image)
 
-    if v2:
-        return V2ImageResponse(images=safety_images, parameters=params, info=info, faces=faces)
+    return V2ImageResponse(images=safety_images, parameters=params, info=info, faces=faces)
     
-    return ImageResponse(images=safety_images, parameters=params, info=response.info, faces=faces)
-
 
 def simply_prompts(prompts: str):
     if not prompts:
@@ -239,4 +229,3 @@ log("Loading blip models...")
 shared.interrogator.load()
 shared.interrogator.unload()
 log("Blip loaded")
-
