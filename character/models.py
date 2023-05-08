@@ -44,6 +44,8 @@ default_open_pose_module = "openpose_full"
 
 field_prefix = "character_"
 
+min_base64_image_size = 1000
+
 class CharacterDefaultProcessing(StableDiffusionTxt2ImgProcessingAPI):
     steps: int = Field(default=20, title='Steps', description='Number of steps.')
     sampler_name: str = Field(default="Euler a", title='Sampler', description='The sampler to use.')
@@ -141,21 +143,8 @@ def resize_b64img(image_b64):
 
 
 def apply_controlnet(request):
-    field_image = f"{field_prefix}image"
-    if not hasattr(request, field_image):
-        return
-
-    image_b64 = getattr(request, field_image)
-    if not image_b64 or len(image_b64) < 100:
-        return
-
-    # append image caption to prompt
-    caption = clip_b64img(image_b64)
-    request.prompt = caption + "," + request.prompt
-    log(f"image, caption: {caption}, new-prompt: {request.prompt}")
-
     units = [
-        get_control_net_unit_0(request, image_b64), 
+        get_control_net_unit_0(request), 
         get_control_net_unit_1(request), 
         get_control_net_unit_2(request)
     ]
@@ -163,9 +152,26 @@ def apply_controlnet(request):
     request.alwayson_scripts.update({'ControlNet': {'args': [external_code.ControlNetUnit(**unit) for unit in units]}})
 
 
-def get_control_net_unit_0(request, image_b64):
+def valid_base64(image_b64):
+    if not image_b64 or len(image_b64) < min_base64_image_size:
+        return False
+
+    try:
+        decode_base64_to_image(image_b64)
+        return True
+    except Exception as e:
+        log(f"invalid base64 image: {e}", LogLevel.ERROR)
+        return False
+
+
+def get_control_net_unit_0(request):
     model = default_control_net_model
     module = default_control_net_module
+    image_b64 = ""
+    enabled = False
+
+    if hasattr(request, f"{field_prefix}image"):
+        image_b64 = getattr(request, f"{field_prefix}image")
 
     if hasattr(request, f"{field_prefix}model"):
         model = getattr(request, f"{field_prefix}model")
@@ -173,25 +179,34 @@ def get_control_net_unit_0(request, image_b64):
     if hasattr(request, f"{field_prefix}module"):
         module = getattr(request, f"{field_prefix}module")
 
+    # append image caption to prompt
+    if valid_base64(image_b64):
+        enabled = True
+        caption = clip_b64img(image_b64)
+        request.prompt = caption + "," + request.prompt
+        log(f"image, caption: {caption}, new-prompt: {request.prompt}")
+
     return {
         "model": model,
         "module": module,
-        "enabled": True,
+        "enabled": enabled,
         "image": image_b64,
     }
 
 
 def get_control_net_unit_1(request):
-    field = f"{field_prefix}pose"
     pose_b64 = ""
-    if hasattr(request, field):
-        pose_b64 = getattr(request, field)
-        log(f"image with pose")
+    preprocessor = ""
+    if hasattr(request, f"{field_prefix}pose"):
+        pose_b64 = getattr(request, f"{field_prefix}pose")
+
+    if hasattr(request, f"{field_prefix}preprocessor"):
+        preprocessor = getattr(request, f"{field_prefix}preprocessor")
 
     return {
         "model": default_open_pose_model,
-        "module": default_open_pose_module,
-        "enabled": pose_b64 and len(pose_b64) > 1,
+        "module": preprocessor,
+        "enabled": valid_base64(pose_b64),
         "image": pose_b64,
     }
 
