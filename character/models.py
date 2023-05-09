@@ -18,6 +18,7 @@ from character.translate import translate
 from modules import shared, images
 from modules.api.models import *
 from modules.paths_internal import extensions_dir
+from modules.api.api import decode_base64_to_image
 
 negative_default_prompts = "EasyNegative,worst quality,low quality"
 negative_nsfw_prompts = "nsfw,naked,nude,sex,ass,pussy,loli,kids,kid,child,children,teenager,teenagers,teen,baby face,big breasts"
@@ -131,10 +132,12 @@ def remove_character_fields(request):
 
 
 def clip_b64img(image_b64):
-    from modules.api.api import decode_base64_to_image
-    img = decode_base64_to_image(image_b64)
-    pil_image = img.convert('RGB')
-    return shared.interrogator.interrogate(pil_image)
+    try:
+        img = decode_base64_to_image(image_b64)
+        pil_image = img.convert('RGB')
+        return shared.interrogator.interrogate(pil_image)
+    except Exception as e:
+        return None
 
 
 def resize_b64img(image_b64):
@@ -144,9 +147,9 @@ def resize_b64img(image_b64):
 
 def apply_controlnet(request):
     units = [
-        get_control_net_unit_0(request), 
-        get_control_net_unit_1(request), 
-        get_control_net_unit_2(request)
+        get_cn_image_unit(request), 
+        get_cn_pose_unit(request), 
+        get_cn_empty_unit()
     ]
 
     request.alwayson_scripts.update({'ControlNet': {'args': [external_code.ControlNetUnit(**unit) for unit in units]}})
@@ -164,25 +167,25 @@ def valid_base64(image_b64):
         return False
 
 
-def get_control_net_unit_0(request):
-    model = default_control_net_model
-    module = default_control_net_module
+def get_cn_image_unit(request):
     image_b64 = ""
     enabled = False
+    model = default_control_net_model
+    if hasattr(request, f"{field_prefix}model"):
+        model = getattr(request, f"{field_prefix}model")
+
+    module = default_control_net_module
+    if hasattr(request, f"{field_prefix}module"):
+        module = getattr(request, f"{field_prefix}module")
+
 
     if hasattr(request, f"{field_prefix}image"):
         image_b64 = getattr(request, f"{field_prefix}image")
 
-    if hasattr(request, f"{field_prefix}model"):
-        model = getattr(request, f"{field_prefix}model")
+    caption = clip_b64img(image_b64)
 
-    if hasattr(request, f"{field_prefix}module"):
-        module = getattr(request, f"{field_prefix}module")
-
-    # append image caption to prompt
-    if valid_base64(image_b64):
+    if caption:
         enabled = True
-        caption = clip_b64img(image_b64)
         request.prompt = caption + "," + request.prompt
         log(f"image, caption: {caption}, new-prompt: {request.prompt}")
 
@@ -194,12 +197,12 @@ def get_control_net_unit_0(request):
     }
 
 
-def get_control_net_unit_1(request):
+def get_cn_pose_unit(request):
     pose_b64 = ""
-    preprocessor = ""
     if hasattr(request, f"{field_prefix}pose"):
         pose_b64 = getattr(request, f"{field_prefix}pose")
 
+    preprocessor = ""
     if hasattr(request, f"{field_prefix}preprocessor"):
         preprocessor = getattr(request, f"{field_prefix}preprocessor")
 
@@ -211,10 +214,10 @@ def get_control_net_unit_1(request):
     }
 
 
-def get_control_net_unit_2(request):
+def get_cn_empty_unit():
     return {
-        "model": default_control_net_model,
-        "module": default_control_net_module,
+        "model": "",
+        "module": "",
         "enabled": False,
         "image": "",
     }
