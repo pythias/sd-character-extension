@@ -9,7 +9,7 @@ import colorama
 # Initialize colorama
 colorama.init()
 
-version_flag = "v0.3.0"
+version_flag = "v0.3.1"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")

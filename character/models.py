@@ -80,8 +80,7 @@ def convert_response(request, response):
             cNSFW.inc()
             return ApiException(code_character_nsfw, f"has nsfw concept, info:{info}").response()
 
-        field_name = f"{field_prefix}face"
-        if hasattr(request, field_name) and getattr(request, field_name):
+        if getattr(request, f"{field_prefix}face", False):
             image_faces = detect_face_and_crop_base64(base64_image)
             log(f"got {len(image_faces)} faces, prompt: {request.prompt}")
 
@@ -168,20 +167,10 @@ def valid_base64(image_b64):
 
 
 def get_cn_image_unit(request):
-    image_b64 = ""
+    image_b64 = getattr(request, f"{field_prefix}image", "")
     enabled = False
-    model = default_control_net_model
-    if hasattr(request, f"{field_prefix}model"):
-        model = getattr(request, f"{field_prefix}model")
-
-    module = default_control_net_module
-    if hasattr(request, f"{field_prefix}module"):
-        module = getattr(request, f"{field_prefix}module")
-
-
-    if hasattr(request, f"{field_prefix}image"):
-        image_b64 = getattr(request, f"{field_prefix}image")
-
+    model = getattr(request, f"{field_prefix}model", default_control_net_model)
+    module = getattr(request, f"{field_prefix}module", default_control_net_module)
     caption = clip_b64img(image_b64)
 
     if caption:
@@ -198,13 +187,8 @@ def get_cn_image_unit(request):
 
 
 def get_cn_pose_unit(request):
-    pose_b64 = ""
-    if hasattr(request, f"{field_prefix}pose"):
-        pose_b64 = getattr(request, f"{field_prefix}pose")
-
-    preprocessor = ""
-    if hasattr(request, f"{field_prefix}preprocessor"):
-        preprocessor = getattr(request, f"{field_prefix}preprocessor")
+    pose_b64 = getattr(request, f"{field_prefix}pose", "")
+    preprocessor = getattr(request, f"{field_prefix}preprocessor", "none")
 
     return {
         "model": default_open_pose_model,
@@ -216,8 +200,8 @@ def get_cn_pose_unit(request):
 
 def get_cn_empty_unit():
     return {
-        "model": "",
-        "module": "",
+        "model": "none",
+        "module": "none",
         "enabled": False,
         "image": "",
     }
