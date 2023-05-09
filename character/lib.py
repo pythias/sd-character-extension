@@ -1,17 +1,19 @@
 from datetime import datetime
 from enum import Enum
-from colorama import Fore, Style, init
+from colorama import Fore, Style
 from modules import scripts, shared
 
 import os
+import colorama
 
 # Initialize colorama
-init()
+colorama.init()
 
+version_flag = "v0.3.2"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
-database_path = os.path.join(character_dir, "configs/database")
-images_path = os.path.join(character_dir, "configs/images")
+models_path = os.path.join(character_dir, "configs/models")
+
 
 class LogLevel(Enum):
     DEBUG = (Fore.BLUE, "DEBUG")
@@ -25,4 +27,4 @@ def log(message, level=LogLevel.INFO):
     # with microsecond precision
     current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
     level_color, level_name = level.value
-    print(f'{Fore.CYAN}{current_time}{Style.RESET_ALL} - {level_color}{level_name}{Style.RESET_ALL} - {shared.cmd_opts.character_server_name}: {message}')
+    print(f'{level_color}{current_time}{Style.RESET_ALL} {shared.cmd_opts.character_server_name} {version_flag}: {message}')
