@@ -51,6 +51,7 @@ class CharacterDefaultProcessing(StableDiffusionTxt2ImgProcessingAPI):
     steps: int = Field(default=20, title='Steps', description='Number of steps.')
     sampler_name: str = Field(default="Euler a", title='Sampler', description='The sampler to use.')
     character_face: bool = Field(default=True, title='With faces', description='Faces in the generated image.')
+    restore_faces: bool = Field(default=True, title='Restore faces', description='Restore faces in the generated image.')
 
 
 class CharacterTxt2ImgRequest(CharacterDefaultProcessing):
