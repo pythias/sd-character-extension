@@ -54,8 +54,8 @@ def signature_api(_: gr.Blocks, app: FastAPI):
 
         verifier = PKCS1_v1_5.new(RSA.importKey(key_data.strip()))
 
-        if (int(sign_timestamp) + 60) < int(time.time()):
-            return ApiException(code_expired_signature, "signature was expired.").response()
+        # if (int(sign_timestamp) + 60) < int(time.time()):
+        #    return ApiException(code_expired_signature, "signature was expired.").response()
 
         body_bytes = await request.body()
         data_value = body_bytes.decode() + sign_timestamp

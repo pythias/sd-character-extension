@@ -50,14 +50,15 @@ def character_api(_: gr.Blocks, app: FastAPI):
         ts = time.time()
         res: Response = await call_next(req)
         duration = str(round(time.time() - ts, 4))
-        endpoint = req.scope.get('path', 'err')
-        log('API {code} {prot}/{ver} {method} {endpoint} {cli} {duration}'.format(
+        
+        log('API {code} {prot}/{ver} {method} {endpoint} {host} {client} {duration}'.format(
             code = res.status_code,
             ver = req.scope.get('http_version', '0.0'),
-            cli = req.scope.get('client', ('0:0.0.0', 0))[0],
+            host = req.headers.get('host', 'err'),
+            client = req.scope.get('client', 'err'),
             prot = req.scope.get('scheme', 'err'),
             method = req.scope.get('method', 'err'),
-            endpoint = endpoint,
+            endpoint = req.scope.get('path', 'err'),
             duration = duration,
         ))
         return res

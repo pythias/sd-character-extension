@@ -13,7 +13,6 @@ from character.nsfw import image_has_nsfw, tags_has_nsfw
 from character.face import detect_face_and_crop_base64
 from character.errors import *
 from character.metrics import *
-from character.translate import translate
 
 from modules import shared, images
 from modules.api.models import *
@@ -99,7 +98,7 @@ def simply_prompts(prompts: str):
 
     prompts = prompts.split(",")
     unique_prompts = []
-    [unique_prompts.append(p) for p in prompts if p not in unique_prompts]
+    [unique_prompts.append(p) for p in prompts if p not in unique_prompts and p != ""]
     return ",".join(unique_prompts)
 
 
@@ -116,7 +115,7 @@ def request_prepare(request):
         + negative_watermark_prompts + "," \
         + negative_body_prompts
 
-    request.prompt = translate(request.prompt) + "," + high_quality_prompts
+    request.prompt = request.prompt + "," + high_quality_prompts
     request.prompt = simply_prompts(request.prompt)
     request.negative_prompt = simply_prompts(request.negative_prompt)
 
@@ -177,7 +176,7 @@ def get_cn_image_unit(request):
     if caption:
         enabled = True
         request.prompt = caption + "," + request.prompt
-        log(f"image, caption: {caption}, new-prompt: {request.prompt}")
+        # log(f"image, caption: {caption}, new-prompt: {request.prompt}")
 
     return {
         "model": model,
