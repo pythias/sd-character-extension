@@ -249,7 +249,3 @@ def params_counting(request):
     cPixels.inc(request.width * request.height)
 
 
-log("Loading blip models...")
-shared.interrogator.load()
-shared.interrogator.unload()
-log("Blip loaded")

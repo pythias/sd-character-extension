@@ -1,5 +1,7 @@
 from character.lib import log
-from fastapi import FastAPI
+
+from fastapi import FastAPI, Request
+
 from starlette.routing import Route
 from starlette.responses import PlainTextResponse
 from prometheus_client import generate_latest
@@ -8,7 +10,6 @@ from modules import script_callbacks
 
 import gradio as gr
 import time
-
 
 def metrics_api(_, app: FastAPI):
     @app.get('/character/meta/status', tags=["Status"])
