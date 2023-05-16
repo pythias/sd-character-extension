@@ -13,8 +13,9 @@ from character.nsfw import image_has_nsfw, tags_has_nsfw
 from character.face import detect_face_and_crop_base64
 from character.errors import *
 from character.metrics import *
+from character.translate import translate
 
-from modules import shared, images
+from modules import shared, images, deepbooru
 from modules.api.models import *
 from modules.paths_internal import extensions_dir
 from modules.api.api import decode_base64_to_image
@@ -69,6 +70,15 @@ class V2ImageResponse(BaseModel):
     faces: List[str]
 
 
+class CaptionRequest(BaseModel):
+    image: str = Field(default="", title='Image', description='The image in base64 format.')
+
+
+class CaptionResponse(BaseModel):
+    caption: str = Field(default="", title='Caption', description='The caption of the image.')
+    by: str = Field(default="deepbooru, ", title='By', description='The model used to generate the caption.')
+
+
 def convert_response(request, response):
     params = response.parameters
     info = json.loads(response.info)
@@ -109,6 +119,11 @@ def request_prepare(request):
     if request.prompt is None:
         request.prompt = ""
 
+    requireTranslate = getattr(request, f"{field_prefix}translate", False)
+    if requireTranslate:
+        request.prompt = translate(request.prompt)
+        request.negative_prompt = translate(request.negative_prompt)
+
     request.negative_prompt = request.negative_prompt + "," \
         + negative_default_prompts + "," \
         + negative_nsfw_prompts + "," \
@@ -133,8 +148,12 @@ def remove_character_fields(request):
 def clip_b64img(image_b64):
     try:
         img = decode_base64_to_image(image_b64)
-        pil_image = img.convert('RGB')
-        return shared.interrogator.interrogate(pil_image)
+
+        # use deepbooru
+        return deepbooru.model.tag(img)
+
+        # use default interrogator
+        # return shared.interrogator.interrogate(img.convert('RGB'))
     except Exception as e:
         return None
 
