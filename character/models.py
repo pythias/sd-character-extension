@@ -78,7 +78,7 @@ class CaptionRequest(BaseModel):
 
 class CaptionResponse(BaseModel):
     caption: str = Field(default="", title='Caption', description='The caption of the image.')
-    by: str = Field(default="deepbooru, ", title='By', description='The model used to generate the caption.')
+    by: str = Field(default="CLIP", title='By', description='The model used to generate the caption.')
 
 
 def convert_response(request, character_params, response):
@@ -153,10 +153,10 @@ def clip_b64img(image_b64):
         img = decode_base64_to_image(image_b64)
 
         # use deepbooru
-        return deepbooru.model.tag(img)
+        # return deepbooru.model.tag(img)
 
         # use default interrogator
-        # return shared.interrogator.interrogate(img.convert('RGB'))
+        return shared.interrogator.interrogate(img.convert('RGB'))
     except Exception as e:
         return None
 
@@ -247,5 +247,3 @@ def params_counting(request):
     cLoras.inc(request.prompt.count("<"))
     cSteps.inc(request.steps)
     cPixels.inc(request.width * request.height)
-
-
