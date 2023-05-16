@@ -119,8 +119,7 @@ def request_prepare(request):
     if request.prompt is None:
         request.prompt = ""
 
-    requireTranslate = getattr(request, f"{field_prefix}translate", False)
-    if requireTranslate:
+    if hasattr(request, f"{field_prefix}translate"):
         request.prompt = translate(request.prompt)
         request.negative_prompt = translate(request.negative_prompt)
 
