@@ -24,6 +24,7 @@ hT2I = Histogram('character_t2i_latency_seconds', 'Text to image latency')
 hI2I = Histogram('character_i2i_latency_seconds', 'Image to image latency')
 hDF = Histogram('character_face_latency_seconds', 'Detect face latency')
 hDN = Histogram('character_nsfw_latency_seconds', 'Detect nsfw latency')
+hTranslate = Histogram('character_translate_latency_seconds', 'Translate latency')
 
 cT2I = Counter('character_t2i_requests', 'Text to image requests')
 cI2I = Counter('character_i2i_requests', 'Image to image requests')

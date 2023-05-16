@@ -1,5 +1,5 @@
 from character.lib import log
-
+from fastapi import FastAPI
 from modules import script_callbacks
 
 def upscale_api(_, app: FastAPI):

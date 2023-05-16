@@ -50,8 +50,9 @@ min_base64_image_size = 1000
 class CharacterDefaultProcessing(StableDiffusionTxt2ImgProcessingAPI):
     steps: int = Field(default=20, title='Steps', description='Number of steps.')
     sampler_name: str = Field(default="Euler a", title='Sampler', description='The sampler to use.')
-    character_face: bool = Field(default=True, title='With faces', description='Faces in the generated image.')
     restore_faces: bool = Field(default=True, title='Restore faces', description='Restore faces in the generated image.')
+    character_face: bool = Field(default=True, title='With faces', description='Faces in the generated image.')
+    character_translate: bool = Field(default=False, title='Translate', description='Translate the prompt.')
 
 
 class CharacterTxt2ImgRequest(CharacterDefaultProcessing):
@@ -66,6 +67,7 @@ class CharacterV2Txt2ImgRequest(CharacterDefaultProcessing):
 class V2ImageResponse(BaseModel):
     images: List[str] = Field(default=None, title="Image", description="The generated image in base64 format.")
     parameters: dict
+    other: dict
     info: dict
     faces: List[str]
 
@@ -79,7 +81,7 @@ class CaptionResponse(BaseModel):
     by: str = Field(default="deepbooru, ", title='By', description='The model used to generate the caption.')
 
 
-def convert_response(request, response):
+def convert_response(request, character_params, response):
     params = response.parameters
     info = json.loads(response.info)
 
@@ -90,16 +92,14 @@ def convert_response(request, response):
             cNSFW.inc()
             return ApiException(code_character_nsfw, f"has nsfw concept, info:{info}").response()
 
-        if getattr(request, f"{field_prefix}face", False):
+        if f"{field_prefix}face" in character_params and character_params[f"{field_prefix}face"]:
             image_faces = detect_face_and_crop_base64(base64_image)
-            log(f"got {len(image_faces)} faces, prompt: {request.prompt}")
-
             cFace.inc(len(image_faces))
             faces.extend(image_faces)
 
         safety_images.append(base64_image)
 
-    return V2ImageResponse(images=safety_images, parameters=params, info=info, faces=faces)
+    return V2ImageResponse(images=safety_images, parameters=params, info=info, faces=faces, other=character_params)
     
 
 def simply_prompts(prompts: str):
@@ -119,7 +119,7 @@ def request_prepare(request):
     if request.prompt is None:
         request.prompt = ""
 
-    if hasattr(request, f"{field_prefix}translate"):
+    if getattr(request, f"{field_prefix}translate", False):
         request.prompt = translate(request.prompt)
         request.negative_prompt = translate(request.negative_prompt)
 
@@ -135,14 +135,18 @@ def request_prepare(request):
 
 
 def remove_character_fields(request):
+    character_params = {}
+
     params = vars(request)
     keys = list(params.keys())
     for key in keys:
         if not key.startswith(field_prefix):
             continue
-
+        
+        character_params[key] = params[key]
         delattr(request, key)
 
+    return character_params
 
 def clip_b64img(image_b64):
     try:

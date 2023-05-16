@@ -31,9 +31,9 @@ class ApiHijack(api.Api):
     def wrap_call(self, processor_call, counting_call, request):
         try:
             counting_call(request)
-            remove_character_fields(request)
+            character_params = remove_character_fields(request)
             response = processor_call(request)
-            return convert_response(request, response)
+            return convert_response(request, character_params, response)
         except ApiException as e:
             return e.response()
 
