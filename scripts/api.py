@@ -4,7 +4,7 @@ from character.metrics import hT2I, hSD
 
 from fastapi import FastAPI, Request
 
-from modules import script_callbacks
+from modules import shared, script_callbacks
 from modules.api import api
 from modules.api.models import TextToImageResponse
 
@@ -23,7 +23,11 @@ class ApiHijack(api.Api):
 
 
     def character_v2_caption(self, request: CaptionRequest):
+        shared.state.begin()
+        shared.state.job = 'caption'
         caption = clip_b64img(request.image)
+        shared.state.end()
+
         return CaptionResponse(caption=caption)
 
 
