@@ -85,6 +85,9 @@ def convert_response(request, character_params, response):
     params = response.parameters
     info = json.loads(response.info)
 
+    if f"{field_prefix}image" in character_params and character_params[f"{field_prefix}image"] and len(response.images) > 1:
+        response.images.pop()
+
     faces = []
     safety_images = []
     for base64_image in response.images:
@@ -135,6 +138,8 @@ def request_prepare(request):
     request.prompt = request.prompt + "," + high_quality_prompts
     request.prompt = simply_prompts(request.prompt)
     request.negative_prompt = simply_prompts(request.negative_prompt)
+
+    apply_controlnet(request)
 
 
 def remove_character_fields(request):

@@ -19,7 +19,6 @@ class ApiHijack(api.Api):
     @hT2I.time()
     def character_v2_txt2img(self, request: CharacterV2Txt2ImgRequest):
         request_prepare(request)
-        apply_controlnet(request)
         return self.wrap_call(self.text2imgapi, t2i_counting, request)
 
 
