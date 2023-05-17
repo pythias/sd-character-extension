@@ -32,8 +32,8 @@ def metrics_init():
 
 metrics_init()
 
-hT2I = Histogram('character_t2i_latency_seconds', 'Text to image latency', buckets=(3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 10.0, 12.0, 20.0, INF))
-hSD = Histogram('character_processing_latency_seconds', 'Stable diffusion processing latency', buckets=(3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 10.0, 12.0, 20.0, INF))
+hT2I = Histogram('character_t2i_latency_seconds', 'Text to image latency', buckets=(3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 10.0, 12.0, 20.0, float("inf")))
+hSD = Histogram('character_processing_latency_seconds', 'Stable diffusion processing latency', buckets=(3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 10.0, 12.0, 20.0, float("inf")))
 hDF = Histogram('character_face_latency_seconds', 'Detect face latency')
 hDN = Histogram('character_nsfw_latency_seconds', 'Detect nsfw latency')
 hTranslate = Histogram('character_translate_latency_seconds', 'Translate latency')
