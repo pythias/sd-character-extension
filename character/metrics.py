@@ -12,7 +12,7 @@ for i in range(gpuCount):
 
 i = Info('sd_character', 'Description of sd-character-extension')
 i.info({
-    'version': '1.0.3',
+    'version': '1.0.4',
     'name': shared.cmd_opts.character_server_name,
     'driver': nvmlSystemGetDriverVersion(),
     'total_gpu_memory': f"{totalMemory}",
@@ -20,18 +20,15 @@ i.info({
 
 nvmlShutdown()
 
-hT2I = Histogram('character_t2i_latency_seconds', 'Text to image latency')
-hI2I = Histogram('character_i2i_latency_seconds', 'Image to image latency')
+# (.005, .01, .025, .05, .075, .1, .25, .5, .75, 1.0, 2.5, 5.0, 7.5, 10.0, INF)
+hT2I = Histogram('character_t2i_latency_seconds', 'Text to image latency', buckets=(3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 10.0, 12.0, 20.0, INF))
+hSD = Histogram('character_processing_latency_seconds', 'Stable diffusion processing latency', buckets=(3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 10.0, 12.0, 20.0, INF))
 hDF = Histogram('character_face_latency_seconds', 'Detect face latency')
 hDN = Histogram('character_nsfw_latency_seconds', 'Detect nsfw latency')
 hTranslate = Histogram('character_translate_latency_seconds', 'Translate latency')
 
 cT2I = Counter('character_t2i_requests', 'Text to image requests')
-cI2I = Counter('character_i2i_requests', 'Image to image requests')
-
 cT2IImages = Counter('character_t2i_images', 'Text to image images')
-cI2IImages = Counter('character_i2i_images', 'Image to image images')
-
 cFace = Counter('character_faces', 'Detect face')
 cNSFW = Counter('character_nsfw', 'NSFW images')
 cPrompts = Counter('character_prompts', 'Text to image prompts')

@@ -1,6 +1,6 @@
 from character.lib import log, LogLevel
 from character.models import *
-from character.metrics import hT2I, hI2I
+from character.metrics import hT2I, hSD
 
 from fastapi import FastAPI, Request
 
@@ -32,7 +32,9 @@ class ApiHijack(api.Api):
         try:
             counting_call(request)
             character_params = remove_character_fields(request)
-            response = processor_call(request)
+
+            with hSD.time():
+                response = processor_call(request)
             return convert_response(request, character_params, response)
         except ApiException as e:
             return e.response()

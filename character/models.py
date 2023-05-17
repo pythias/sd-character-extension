@@ -90,7 +90,7 @@ def convert_response(request, character_params, response):
     for base64_image in response.images:
         if image_has_nsfw(base64_image):
             cNSFW.inc()
-            return ApiException(code_character_nsfw, f"has nsfw concept, info:{info}").response()
+            continue
 
         if f"{field_prefix}face" in character_params and character_params[f"{field_prefix}face"]:
             image_faces = detect_face_and_crop_base64(base64_image)
@@ -98,6 +98,9 @@ def convert_response(request, character_params, response):
             faces.extend(image_faces)
 
         safety_images.append(base64_image)
+
+    if len(safety_images) == 0:
+        return ApiException(code_character_nsfw, f"has nsfw concept, info:{info}").response()
 
     return V2ImageResponse(images=safety_images, parameters=params, info=info, faces=faces, other=character_params)
     
@@ -234,11 +237,6 @@ def t2i_counting(request):
     cT2IImages.inc(request.batch_size)
     params_counting(request)
 
-
-def i2i_counting(request):
-    cI2I.inc()
-    cI2IImages.inc(request.batch_size)
-    params_counting(request)
 
 
 def params_counting(request):
