@@ -2,6 +2,8 @@ from modules import shared
 from prometheus_client import Info, Histogram, Counter, Gauge
 from pynvml import *
 
+from character.lib import version_flag
+
 nvmlInit()
 
 totalMemory = 0
@@ -13,7 +15,7 @@ for i in range(gpuCount):
 try:
     iCharacter = Info('sd_character', 'Description of sd-character-extension')
     iCharacter.info({
-        'version': '1.0.4',
+        'version': version_flag,
         'name': shared.cmd_opts.character_server_name,
         'driver': nvmlSystemGetDriverVersion(),
         'total_gpu_memory': f"{totalMemory}",

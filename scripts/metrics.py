@@ -1,4 +1,4 @@
-from character.lib import log
+from character.lib import log, version_flag
 
 from fastapi import FastAPI, Request
 
@@ -14,7 +14,7 @@ import time
 def metrics_api(_, app: FastAPI):
     @app.get('/character/meta/status', tags=["Status"])
     def status():
-        return {"online": True}
+        return {"online": True, "version": version_flag}
 
     @app.get('/character/meta/metrics', tags=["Status"])
     def metrics():
@@ -25,12 +25,10 @@ def metrics_api(_, app: FastAPI):
     async def log_time(req: Request, call_next):
         ts = time.time()
         res: Response = await call_next(req)
-        duration = str(round(time.time() - ts, 4))
+        duration = str(round(time.time() - ts, 3))
         
-        log('API {code} {prot}/{ver} {method} {endpoint} {duration}'.format(
+        log('API {method} {endpoint} {duration} {code}'.format(
             code = res.status_code,
-            ver = req.scope.get('http_version', '-'),
-            prot = req.scope.get('scheme', '-'),
             method = req.scope.get('method', '-'),
             endpoint = req.scope.get('path', '-'),
             duration = duration,
