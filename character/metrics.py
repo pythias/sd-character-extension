@@ -18,12 +18,16 @@ def metrics_init():
         totalMemory += nvmlDeviceGetMemoryInfo(handle).total
 
     iCharacter = Info('sd_character', 'Description of sd-character-extension')
-    iCharacter.info({
-        'version': '1.0.4',
-        'name': shared.cmd_opts.character_server_name,
-        'driver': nvmlSystemGetDriverVersion(),
-        'total_gpu_memory': f"{totalMemory}",
-    })
+
+    try:
+        iCharacter.info({
+            'version': '1.0.4',
+            'name': shared.cmd_opts.character_server_name,
+            'driver': nvmlSystemGetDriverVersion(),
+            'total_gpu_memory': f"{totalMemory}",
+        })
+    except Exception as e:
+        pass
 
     nvmlShutdown()
 
