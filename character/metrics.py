@@ -5,6 +5,7 @@ from pynvml import *
 iCharacter = None
 
 def metrics_init():
+    global iCharacter
     if iCharacter != None:
         return
 

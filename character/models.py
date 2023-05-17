@@ -161,7 +161,7 @@ def clip_b64img(image_b64):
         # use default interrogator
         return shared.interrogator.interrogate(img.convert('RGB'))
     except Exception as e:
-        return None
+        return ""
 
 
 def resize_b64img(image_b64):
