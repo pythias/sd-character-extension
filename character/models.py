@@ -85,7 +85,7 @@ def convert_response(request, character_params, response):
     params = response.parameters
     info = json.loads(response.info)
 
-    if f"{field_prefix}image" in character_params and character_params[f"{field_prefix}image"] and len(response.images) > 1:
+    if f"{field_prefix}image" in character_params and len(character_params[f"{field_prefix}image"]) > 1000 and len(response.images) > 1:
         response.images.pop()
 
     faces = []
