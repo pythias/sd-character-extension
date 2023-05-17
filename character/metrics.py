@@ -2,35 +2,26 @@ from modules import shared
 from prometheus_client import Info, Histogram, Counter, Gauge
 from pynvml import *
 
-iCharacter = None
+nvmlInit()
 
-def metrics_init():
-    global iCharacter
-    if iCharacter != None:
-        return
+totalMemory = 0
+gpuCount = nvmlDeviceGetCount()
+for i in range(gpuCount):
+    handle = nvmlDeviceGetHandleByIndex(i)
+    totalMemory += nvmlDeviceGetMemoryInfo(handle).total
 
-    nvmlInit()
+try:
+    iCharacter = Info('sd_character', 'Description of sd-character-extension')
+    iCharacter.info({
+        'version': '1.0.4',
+        'name': shared.cmd_opts.character_server_name,
+        'driver': nvmlSystemGetDriverVersion(),
+        'total_gpu_memory': f"{totalMemory}",
+    })
+except Exception as e:
+    pass
 
-    totalMemory = 0
-    gpuCount = nvmlDeviceGetCount()
-    for i in range(gpuCount):
-        handle = nvmlDeviceGetHandleByIndex(i)
-        totalMemory += nvmlDeviceGetMemoryInfo(handle).total
-
-    try:
-        iCharacter = Info('sd_character', 'Description of sd-character-extension')
-        iCharacter.info({
-            'version': '1.0.4',
-            'name': shared.cmd_opts.character_server_name,
-            'driver': nvmlSystemGetDriverVersion(),
-            'total_gpu_memory': f"{totalMemory}",
-        })
-    except Exception as e:
-        pass
-
-    nvmlShutdown()
-
-metrics_init()
+nvmlShutdown()
 
 hT2I = Histogram('character_t2i_latency_seconds', 'Text to image latency', buckets=(3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 10.0, 12.0, 20.0, float("inf")))
 hSD = Histogram('character_processing_latency_seconds', 'Stable diffusion processing latency', buckets=(3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 10.0, 12.0, 20.0, float("inf")))
