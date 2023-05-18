@@ -94,17 +94,21 @@ class FaceRepairer(scripts.Script):
         return scripts.AlwaysVisible
  
     def run(self, p, *args):
-        mask_model, detection_model = self.get_face_models()
-        unit = face.get_unit(p)
+        units = face.get_units(p)
+        if units is None or len(units) == 0:
+            return process_images(p)
 
         # p.do_not_save_samples = True
         shared.state.job_count = p.n_iter * 3
 
         # 原始过程
         result = process_images(p)
+
+        # 获取模型
+        mask_model, detection_model = self.get_face_models()
         
         # 修复过程
-        return self._repair_images(mask_model, detection_model, p, result, unit)
+        return self._repair_images(mask_model, detection_model, p, result, units[0])
 
     def get_face_models(self):
         if hasattr(retinaface, 'device'):

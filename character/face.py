@@ -3,7 +3,7 @@ import base64
 import io
 import numpy as np
 
-from typing import Optional
+from typing import Optional, List
 from modules import scripts, processing
 
 from character.metrics import hDF
@@ -81,7 +81,7 @@ class FaceUnit:
         return vars(self) == vars(other)
 
 
-def get_unit(p: processing.StableDiffusionProcessing) -> Optional[FaceUnit]:
+def get_units(p: processing.StableDiffusionProcessing) -> List[FaceUnit]:
     script_runner = p.scripts
     script_args = p.script_args
 
@@ -93,7 +93,7 @@ def get_unit(p: processing.StableDiffusionProcessing) -> Optional[FaceUnit]:
     if len(fr_script_args) == 0:
         return None
 
-    return FaceUnit(**fr_script_args[0])
+    return [FaceUnit(**fr_script_args[0])]
 
 def find_face_repairer_script(script_runner: scripts.ScriptRunner) -> Optional[scripts.Script]:
     if script_runner is None:
@@ -110,6 +110,18 @@ def apply_face_repairer(request):
     if not getattr(request, "character_face_repair", False):
         return
 
-    # 获取修复参数
-    request.alwayson_scripts.update({NAME: {'args': FaceUnit(enabled=True)}})
+    unit = FaceUnit(enabled=True)
+    params = vars(request)
+    keys = list(params.keys())
+    for key in keys:
+        if not key.startswith("character_face_repair_"):
+            continue
+
+        key = key[len("character_face_repair_"):]
+        if key not in vars(unit):
+            continue
+
+        setattr(unit, key, params[key])
+
+    request.alwayson_scripts.update({NAME: {'args': [unit]}})
     
