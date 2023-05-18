@@ -15,7 +15,7 @@ from character.errors import *
 from character.metrics import *
 from character.translate import translate
 
-from modules import shared, images, deepbooru
+from modules import shared, images
 from modules.api.models import *
 from modules.paths_internal import extensions_dir
 from modules.api.api import decode_base64_to_image
@@ -47,22 +47,18 @@ field_prefix = "character_"
 
 min_base64_image_size = 1000
 
-class CharacterDefaultProcessing(StableDiffusionTxt2ImgProcessingAPI):
+class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
     steps: int = Field(default=20, title='Steps', description='Number of steps.')
     sampler_name: str = Field(default="Euler a", title='Sampler', description='The sampler to use.')
     restore_faces: bool = Field(default=True, title='Restore faces', description='Restore faces in the generated image.')
     character_face: bool = Field(default=True, title='With faces', description='Faces in the generated image.')
     character_translate: bool = Field(default=False, title='Translate', description='Translate the prompt.')
-
-
-class CharacterTxt2ImgRequest(CharacterDefaultProcessing):
-    pass
-
-
-class CharacterV2Txt2ImgRequest(CharacterDefaultProcessing):
     character_image: str = Field(default="", title='Image', description='The image in base64 format.')
     character_pose: str = Field(default="", title='Pose', description='The pose of the character.')
 
+class CharacterV2Img2ImgRequest(StableDiffusionImg2ImgProcessingAPI):
+    steps: int = Field(default=20, title='Steps', description='Number of steps.')
+    sampler_name: str = Field(default="Euler", title='Sampler', description='The sampler to use.')
 
 class V2ImageResponse(BaseModel):
     images: List[str] = Field(default=None, title="Image", description="The generated image in base64 format.")
@@ -71,15 +67,12 @@ class V2ImageResponse(BaseModel):
     info: dict
     faces: List[str]
 
-
 class CaptionRequest(BaseModel):
     image: str = Field(default="", title='Image', description='The image in base64 format.')
-
 
 class CaptionResponse(BaseModel):
     caption: str = Field(default="", title='Caption', description='The caption of the image.')
     by: str = Field(default="CLIP", title='By', description='The model used to generate the caption.')
-
 
 def convert_response(request, character_params, response):
     params = response.parameters
@@ -106,17 +99,15 @@ def convert_response(request, character_params, response):
         return ApiException(code_character_nsfw, f"has nsfw concept, info:{info}").response()
 
     return V2ImageResponse(images=safety_images, parameters=params, info=info, faces=faces, other=character_params)
-    
 
 def simply_prompts(prompts: str):
     if not prompts:
         return ""
 
-    prompts = prompts.split(",")
+    prompts = prompts.lower().split(",")
     unique_prompts = []
     [unique_prompts.append(p) for p in prompts if p not in unique_prompts and p != ""]
     return ",".join(unique_prompts)
-
 
 def request_prepare(request):
     if request.negative_prompt is None:
@@ -139,9 +130,6 @@ def request_prepare(request):
     request.prompt = simply_prompts(request.prompt)
     request.negative_prompt = simply_prompts(request.negative_prompt)
 
-    apply_controlnet(request)
-
-
 def remove_character_fields(request):
     character_params = {}
 
@@ -159,20 +147,13 @@ def remove_character_fields(request):
 def clip_b64img(image_b64):
     try:
         img = decode_base64_to_image(image_b64)
-
-        # use deepbooru
-        # return deepbooru.model.tag(img)
-
-        # use default interrogator
         return shared.interrogator.interrogate(img.convert('RGB'))
     except Exception as e:
         return ""
 
-
 def resize_b64img(image_b64):
     MAX_SIZE = (1024, 1024)
     pass
-
 
 def apply_controlnet(request):
     units = [
@@ -182,7 +163,6 @@ def apply_controlnet(request):
     ]
 
     request.alwayson_scripts.update({'ControlNet': {'args': [external_code.ControlNetUnit(**unit) for unit in units]}})
-
 
 def valid_base64(image_b64):
     if not image_b64 or len(image_b64) < min_base64_image_size:
@@ -194,7 +174,6 @@ def valid_base64(image_b64):
     except Exception as e:
         log(f"invalid base64 image: {e}", LogLevel.ERROR)
         return False
-
 
 def get_cn_image_unit(request):
     image_b64 = getattr(request, f"{field_prefix}image", "")
@@ -215,7 +194,6 @@ def get_cn_image_unit(request):
         "image": image_b64,
     }
 
-
 def get_cn_pose_unit(request):
     pose_b64 = getattr(request, f"{field_prefix}pose", "")
     preprocessor = getattr(request, f"{field_prefix}preprocessor", "none")
@@ -227,7 +205,6 @@ def get_cn_pose_unit(request):
         "image": pose_b64,
     }
 
-
 def get_cn_empty_unit():
     return {
         "model": "none",
@@ -236,13 +213,10 @@ def get_cn_empty_unit():
         "image": "",
     }
 
-
 def t2i_counting(request):
     cT2I.inc()
     cT2IImages.inc(request.batch_size)
     params_counting(request)
-
-
 
 def params_counting(request):
     cPrompts.inc(request.prompt.count(",") + 1)

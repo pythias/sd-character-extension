@@ -1,4 +1,5 @@
 from character.lib import log, version_flag
+from character.metrics import cT2IImages
 
 from fastapi import FastAPI, Request
 
@@ -6,7 +7,7 @@ from starlette.routing import Route
 from starlette.responses import PlainTextResponse
 from prometheus_client import generate_latest
 
-from modules import script_callbacks
+from modules import script_callbacks, shared
 
 import gradio as gr
 import time
@@ -14,7 +15,13 @@ import time
 def metrics_api(_, app: FastAPI):
     @app.get('/character/meta/status', tags=["Status"])
     def status():
-        return {"online": True, "version": version_flag}
+        return {
+            "name": shared.cmd_opts.character_server_name,
+            "version": version_flag,
+            "online": True,
+            "images": cT2IImages.collect()[0].samples[0].value,
+            "time": time.time,
+        }
 
     @app.get('/character/meta/metrics', tags=["Status"])
     def metrics():
