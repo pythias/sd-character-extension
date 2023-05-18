@@ -1,4 +1,6 @@
 from character.lib import models_path, log, LogLevel
+from character.metrics import *
+
 from transformers import MBart50TokenizerFast, MBartForConditionalGeneration
 
 translator = None
@@ -13,7 +15,11 @@ class PromptTranslator:
 
         log(message=f"Translator loaded, model: {model_name}")
 
+    @hTranslate.time()
     def translate(self, text: str) -> str:
+        if text == "":
+            return ""
+
         encoded_input = self.tokenizer(text, return_tensors="pt")
         generated_tokens = self.model.generate(
             **encoded_input, forced_bos_token_id=self.tokenizer.lang_code_to_id[tgt_lang]
@@ -21,10 +27,9 @@ class PromptTranslator:
         translated_text = self.tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
         return translated_text[0]
 
-
 def translate(text: str) -> str:
     global translator
     if translator is None:
         translator = PromptTranslator()
-    
+
     return translator.translate(text)
