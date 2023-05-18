@@ -7,6 +7,7 @@ from typing import Optional
 from modules import scripts, processing
 
 from character.metrics import hDF
+from character.models import field_prefix
 
 NAME = "Face Repairer"
 
