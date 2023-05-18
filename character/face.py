@@ -3,10 +3,15 @@ import base64
 import io
 import numpy as np
 
+from typing import Optional
+from modules import scripts, processing
+
 from character.metrics import hDF
 
+NAME = "Face Repairer"
+
 @hDF.time()
-def detect_face_and_crop_base64(image_base64) -> list:
+def crop(image_base64) -> list:
     # Decode the base64 image
     image_data = base64.b64decode(image_base64)
     image_buffer = io.BytesIO(image_data)
@@ -44,3 +49,67 @@ def detect_face_and_crop_base64(image_base64) -> list:
         cropped_face_base64s.append(cropped_face_base64)
 
     return cropped_face_base64s
+
+class FaceUnit:
+    def __init__(
+        self,
+        enabled: bool=False,
+        face_margin: float=1.6,
+        confidence: float=0.97,
+        face_denoising_strength: float=0.4,
+        entire_denoising_strength: float=0.0,
+        max_face_count: int=20,
+        mask_size: int=24,
+        mask_blur: int=0,
+        prompt_for_face: str='',
+        **_kwargs,
+    ):
+        self.enabled = enabled
+        self.face_margin = face_margin
+        self.confidence = confidence
+        self.face_denoising_strength = face_denoising_strength
+        self.entire_denoising_strength = entire_denoising_strength
+        self.max_face_count = max_face_count
+        self.mask_size = mask_size
+        self.mask_blur = mask_blur
+        self.prompt_for_face = prompt_for_face
+
+    def __eq__(self, other):
+        if not isinstance(other, FaceUnit):
+            return False
+
+        return vars(self) == vars(other)
+
+
+def get_unit(p: processing.StableDiffusionProcessing) -> Optional[FaceUnit]:
+    script_runner = p.scripts
+    script_args = p.script_args
+
+    fr_script = find_face_repairer_script(script_runner)
+    if fr_script is None:
+        return None
+
+    fr_script_args = script_args[fr_script.args_from:fr_script.args_to]
+    if len(fr_script_args) == 0:
+        return None
+
+    return FaceUnit(**fr_script_args[0])
+
+def find_face_repairer_script(script_runner: scripts.ScriptRunner) -> Optional[scripts.Script]:
+    if script_runner is None:
+        return None
+
+    for script in script_runner.alwayson_scripts:
+        if is_face_repairer_script(script):
+            return script
+
+def is_face_repairer_script(script: scripts.Script) -> bool:
+    return script.title() == NAME
+
+def apply_face_repairer(request):
+    if f"{field_prefix}face_repair" not in character_params or not character_params[f"{field_prefix}face_repair"]:
+        return
+
+    # 获取修复参数
+    request.alwayson_scripts.update({'FaceRepairer': {'args': FaceUnit(enabled=True)}})
+    

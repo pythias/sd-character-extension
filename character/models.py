@@ -8,9 +8,9 @@ from enum import Enum
 from pydantic import BaseModel, Field
 from typing import Any, Optional, Dict, List
 
+from character import face
 from character.lib import log, LogLevel
 from character.nsfw import image_has_nsfw, tags_has_nsfw
-from character.face import detect_face_and_crop_base64
 from character.errors import *
 from character.metrics import *
 from character.translate import translate
@@ -22,10 +22,10 @@ from modules.api.api import decode_base64_to_image
 
 negative_default_prompts = "EasyNegative,worst quality,low quality"
 negative_nsfw_prompts = "nsfw,naked,nude,sex,ass,pussy,loli,kids,kid,child,children,teenager,teenagers,teen,baby face,big breasts"
-negative_watermark_prompts = "text,watermark,signature,artist name,artist logo"
+negative_watermark_prompts = "text,watermark,signature,logo"
 negative_body_prompts = "zombie,extra fingers,six fingers,missing fingers,extra arms,missing arms,extra legs,missing legs,bad face,bad hair,bad hands,bad pose"
 
-high_quality_prompts = "4k,8k,high quality"
+high_quality_prompts = "8k,high quality"
 
 # 加载ControlNet，启动添加参数 --controlnet-dir
 extensions_control_net_path = os.path.join(extensions_dir, "sd-webui-controlnet")
@@ -88,8 +88,9 @@ def convert_response(request, character_params, response):
             cNSFW.inc()
             continue
 
+        # todo 脸部裁切，在高清修复脸部时有数据
         if f"{field_prefix}face" in character_params and character_params[f"{field_prefix}face"]:
-            image_faces = detect_face_and_crop_base64(base64_image)
+            image_faces = face.crop(base64_image)
             cFace.inc(len(image_faces))
             faces.extend(image_faces)
 
@@ -104,7 +105,10 @@ def simply_prompts(prompts: str):
     if not prompts:
         return ""
 
+    # 大小写不影响最后结果
     prompts = prompts.lower().split(",")
+
+    # 顺序影响最后结果
     unique_prompts = []
     [unique_prompts.append(p) for p in prompts if p not in unique_prompts and p != ""]
     return ",".join(unique_prompts)
@@ -127,6 +131,7 @@ def request_prepare(request):
         + negative_body_prompts
 
     request.prompt = request.prompt + "," + high_quality_prompts
+
     request.prompt = simply_prompts(request.prompt)
     request.negative_prompt = simply_prompts(request.negative_prompt)
 
