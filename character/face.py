@@ -7,9 +7,8 @@ from typing import Optional
 from modules import scripts, processing
 
 from character.metrics import hDF
-from character.models import field_prefix
 
-NAME = "Face Repairer"
+NAME = "FaceRepairer"
 
 @hDF.time()
 def crop(image_base64) -> list:
@@ -108,9 +107,9 @@ def is_face_repairer_script(script: scripts.Script) -> bool:
     return script.title() == NAME
 
 def apply_face_repairer(request):
-    if f"{field_prefix}face_repair" not in character_params or not character_params[f"{field_prefix}face_repair"]:
+    if not getattr(request, "character_face_repair", False):
         return
 
     # 获取修复参数
-    request.alwayson_scripts.update({'FaceRepairer': {'args': FaceUnit(enabled=True)}})
+    request.alwayson_scripts.update({NAME: {'args': FaceUnit(enabled=True)}})
     

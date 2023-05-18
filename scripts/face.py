@@ -87,22 +87,11 @@ class FaceRepairer(scripts.Script):
     def __init__(self) -> None:
         super().__init__()
 
-    def get_face_models(self):
-        if hasattr(retinaface, 'device'):
-            retinaface.device = shared.device
-
-        mask_model = init_parsing_model(device=shared.device)
-        detection_model = init_detection_model("retinaface_resnet50", device=shared.device)
-        return (mask_model, detection_model)
-
     def title(self):
         return face.NAME
 
     def show(self, is_img2img):
-        return False
-
-    def ui(self, is_img2img):
-        pass
+        return scripts.AlwaysVisible
  
     def run(self, p, *args):
         mask_model, detection_model = self.get_face_models()
@@ -116,6 +105,14 @@ class FaceRepairer(scripts.Script):
         
         # 修复过程
         return self._repair_images(mask_model, detection_model, p, result, unit)
+
+    def get_face_models(self):
+        if hasattr(retinaface, 'device'):
+            retinaface.device = shared.device
+
+        mask_model = init_parsing_model(device=shared.device)
+        detection_model = init_detection_model("retinaface_resnet50", device=shared.device)
+        return (mask_model, detection_model)
 
     @hRepair.time()
     def _repair_images(self, mask_model: BiSeNet, detection_model: RetinaFace, p: StableDiffusionProcessing, result: Processed, unit: face.FaceUnit):
