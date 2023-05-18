@@ -41,7 +41,7 @@ cNSFW = Counter('character_nsfw', 'NSFW images')
 cPrompts = Counter('character_prompts', 'Text to image prompts')
 cNegativePrompts = Counter('character_negative_prompts', 'Text to image negative prompts')
 cLoras = Counter('character_loras', 'Text to image loras')
-cPixels = Counter('character_pixels', 'Text to image pixels')``
+cPixels = Counter('character_pixels', 'Text to image pixels')
 cSteps = Counter('character_steps', 'Text to image steps')
 cRepair = Counter('character_repair_faces', 'Repair faces')
 
