@@ -20,7 +20,6 @@ def metrics_api(_, app: FastAPI):
             "version": version_flag,
             "online": True,
             "images": cT2IImages.collect()[0].samples[0].value,
-            "time": time.time,
         }
 
     @app.get('/character/meta/metrics', tags=["Status"])

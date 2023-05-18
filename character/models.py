@@ -55,10 +55,13 @@ class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
     character_translate: bool = Field(default=False, title='Translate', description='Translate the prompt.')
     character_image: str = Field(default="", title='Image', description='The image in base64 format.')
     character_pose: str = Field(default="", title='Pose', description='The pose of the character.')
+    character_face_repair: bool = Field(default=False, title='Face repair', description='Repair faces in the generated image.')
 
 class CharacterV2Img2ImgRequest(StableDiffusionImg2ImgProcessingAPI):
     steps: int = Field(default=20, title='Steps', description='Number of steps.')
     sampler_name: str = Field(default="Euler", title='Sampler', description='The sampler to use.')
+    character_translate: bool = Field(default=False, title='Translate', description='Translate the prompt.')
+    character_face_repair: bool = Field(default=True, title='Face repair', description='Repair faces in the generated image.')
 
 class V2ImageResponse(BaseModel):
     images: List[str] = Field(default=None, title="Image", description="The generated image in base64 format.")

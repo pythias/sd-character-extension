@@ -14,6 +14,7 @@ from modules.processing import Processed, StableDiffusionProcessing, StableDiffu
 
 from character import face
 from character.lib import log
+from character.metrics import hRepair, cRepair
 
 class Face:
     def __init__(self, entire_image: np.ndarray, face_box: np.ndarray, face_margin: float):
@@ -116,6 +117,7 @@ class FaceRepairer(scripts.Script):
         # 修复过程
         return self._repair_images(mask_model, detection_model, p, result, unit)
 
+    @hRepair.time()
     def _repair_images(self, mask_model: BiSeNet, detection_model: RetinaFace, p: StableDiffusionProcessing, result: Processed, unit: face.FaceUnit):
         repaired_images = []
         seed_index = 0
@@ -176,6 +178,8 @@ class FaceRepairer(scripts.Script):
             # 挨个脸修复
             if shared.state.interrupted:
                 break
+
+            cRepair.inc()
 
             p.init_images = [face.image]
             p.width = face.image.width
