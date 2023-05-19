@@ -15,8 +15,7 @@ from operator import attrgetter
 
 from modules.processing import Processed, StableDiffusionProcessing, StableDiffusionProcessingImg2Img, process_images
 
-from character import face
-from character.lib import log
+from character import face, lib
 from character.metrics import hRepair, cRepair
 
 class Face:
@@ -120,8 +119,6 @@ class FaceRepairer(scripts.Script):
         args contains all values returned by components from ui()
         """
         units = face.get_units(p)
-        log(f"face-repairer, units: {units}, args: {args}")
-
         if units is None or len(units) == 0 or units[0].enabled is False:
             return
 
@@ -177,10 +174,8 @@ class FaceRepairer(scripts.Script):
         rgb_image = self.__to_rgb_image(p.init_images[0])
 
         faces = self.__crop_face(detection_model, rgb_image, unit.face_margin, unit.confidence)
-        log(f"face-repairer, number of faces: {len(faces)}")
-
-        # 没有脸则不处理
         if len(faces) == 0:
+            # 没有脸则不处理
             return None
 
         if shared.state.job_count == -1:
@@ -247,10 +242,7 @@ class FaceRepairer(scripts.Script):
         return final
 
     def __to_rgb_image(self, img):
-        if not hasattr(img, 'mode') or img.mode != 'RGB':
-            return img.convert('RGB')
-        
-        return img
+        return lib.to_rgb_image(img)
 
     def __to_masked_image(self, mask_image: np.ndarray, image: np.ndarray) -> np.ndarray:
         gray_mask = np.where(mask_image == 0, 47, 255) / 255.0

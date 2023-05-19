@@ -28,3 +28,9 @@ def log(message, level=LogLevel.INFO):
     current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
     level_color, level_name = level.value
     print(f'{level_color}{current_time}{Style.RESET_ALL} {shared.cmd_opts.character_server_name} {version_flag}: {message}')
+
+def to_rgb_image(img):
+    if not hasattr(img, 'mode') or img.mode != 'RGB':
+        return img.convert('RGB')
+    
+    return img

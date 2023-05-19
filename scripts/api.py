@@ -1,6 +1,6 @@
+from character import *
 from character.lib import log, LogLevel
 from character.models import *
-from character.face import apply_face_repairer
 from character.metrics import hT2I, hSD, hCaption
 
 from fastapi import FastAPI, Request
@@ -22,14 +22,16 @@ class ApiHijack(api.Api):
     def character_v2_txt2img(self, request: CharacterV2Txt2ImgRequest):
         request_prepare(request)
         apply_controlnet(request)
-        apply_face_repairer(request)
+        face.apply_face_repairer(request)
+        # upscale.apply_auto_upscale(request)
         return self.wrap_call(self.text2imgapi, t2i_counting, request)
 
     @hT2I.time()
     def character_v2_img2img(self, request: CharacterV2Img2ImgRequest):
         # todo upscale
         request_prepare(request)
-        apply_face_repairer(request)
+        face.apply_face_repairer(request)
+        # upscale.apply_auto_upscale(request)
         return self.wrap_call(self.img2imgapi, t2i_counting, request)
 
     @hCaption.time()

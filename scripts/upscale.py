@@ -1,13 +1,96 @@
-from character.lib import log
+from character import upscale, lib
+from character.models import get_cn_empty_unit
+
 from fastapi import FastAPI
-from modules import script_callbacks
 
-def upscale_api(_, app: FastAPI):
-    @app.get('/character/v2/upscale', tags=["Character"])
-    def upscale():
-        return {"todo": True}
+from modules import shared, scripts, script_callbacks
+from modules.processing import Processed, StableDiffusionProcessing, StableDiffusionProcessingImg2Img, process_images
 
+from scripts import external_code, controlnet
 
-script_callbacks.on_app_started(upscale_api)
+class Upscaler(scripts.Script):
+    def __init__(self) -> None:
+        super().__init__()
 
-log("upscale_api loaded")
+    def title(self):
+        return upscale.NAME
+
+    def show(self, is_img2img):
+        return scripts.AlwaysVisible
+
+    def ui(self, is_img2img):
+        enabled = gr.Checkbox(label="Auto Upscale", value=True)
+        return [enabled]
+
+    def postprocess_image(self, p, pp: scripts.PostprocessImageArgs, enabled:bool, *args):
+        """
+        Called for every image after it has been generated.
+        """
+        lib.log(f"{upscale.NAME} postprocess_image, {args}")
+        return
+
+    def postprocess(self, p, processed, enabled:bool, *args):
+        """
+        This function is called after processing ends for AlwaysVisible scripts.
+        args contains all values returned by components from ui()
+        """
+
+        lib.log(f"{upscale.NAME} postprocess, {args}")
+
+        if not enabled:
+            return
+
+        hires_images = []
+        seed_index = 0
+        subseed_index = 0
+        for i, image in enumerate(processed.images):
+            if i < processed.index_of_first_image:
+                continue
+
+            up = StableDiffusionProcessingImg2Img()
+            up.__dict__.update(p.__dict__)
+            up.init_images = [image]
+            up.batch_size = 1
+            up.width, up.height = image.size
+            up.do_not_save_samples = True
+
+            cn_script = controlnet.Script()
+            up.scripts = scripts.scripts_txt2img
+            up.scripts.alwayson_scripts = [cn_script]
+
+            max_models = shared.opts.data.get("control_net_max_models_num", 1)
+            up.script_args = [None] * max_models
+
+            units = self.get_units(image)
+            external_code.update_cn_script_in_processing(up, units, is_img2img=True, is_ui=False)
+
+            if seed_index < len(processed.all_seeds):
+                up.seed = processed.all_seeds[seed_index]
+                seed_index += 1
+            if subseed_index < len(processed.all_subseeds):
+                up.subseed = processed.all_subseeds[subseed_index]
+                subseed_index += 1
+            
+            hires_result = process_images(p)
+            hires_images.append(hires_result.images[0])
+        
+        processed.images = hires_images
+
+    def get_tile_unit(self, image):
+        return {
+            "model": "controlnet11Models_tile [39a89b25]",
+            "module": "none",
+            "enabled": True,
+            "image": image,
+            
+        }
+
+    def get_units(self, image):
+        units = [
+            self.get_tile_unit(image), 
+            get_cn_empty_unit(), 
+            get_cn_empty_unit()
+        ]
+        return [external_code.ControlNetUnit(**unit) for unit in units]
+
+lib.log(f"{upscale.NAME} loaded")
