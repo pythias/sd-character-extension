@@ -44,14 +44,6 @@ class Upscaler(scripts.Script):
             lib.log(message=f"Upscaling image {i+1}/{len(processed.images)}")
 
             up = StableDiffusionProcessingImg2Img()
-
-            # log type of image
-            lib.log(message=f"Image type: {type(image)}")
-
-            # PIL.Image.Image to base64
-            image_base64 = shared.image_to_base64(image)
-
-            
             up.__dict__.update(p.__dict__)
             up.extra_generation_params["auto-upscale-processing"] = True
             up.init_images = [image]

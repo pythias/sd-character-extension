@@ -5,9 +5,10 @@ from modules import scripts, shared
 
 import os
 import colorama
+import numpy as np
 
 from PIL import Image
-from modules.api.models import *
+
 from modules.api import api
 
 # Initialize colorama
