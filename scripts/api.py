@@ -1,4 +1,4 @@
-from character import *
+from character import upscale, face
 from character.lib import log, LogLevel
 from character.models import *
 from character.metrics import hT2I, hSD, hCaption

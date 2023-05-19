@@ -41,6 +41,8 @@ class Upscaler(scripts.Script):
         seed_index = 0
         subseed_index = 0
         for i, image in enumerate(processed.images):
+            lib.log(message=f"Upscaling image {i+1}/{len(processed.images)}")
+
             up = StableDiffusionProcessingImg2Img()
             up.__dict__.update(p.__dict__)
             up.extra_generation_params["auto-upscale-processing"] = True

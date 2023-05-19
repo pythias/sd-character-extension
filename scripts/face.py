@@ -149,6 +149,8 @@ class FaceRepairer(scripts.Script):
         seed_index = 0
         subseed_index = 0
         for i, image in enumerate(processed.images):
+            lib.log(message=f"Repairing face for image {i + 1}/{len(processed.images)}, keep original: {unit.keep_original}")
+
             p1 = StableDiffusionProcessingImg2Img()
             p1.extra_generation_params["face-repairer-processing"] = True
             p1.__dict__.update(p.__dict__)
