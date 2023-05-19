@@ -122,6 +122,9 @@ class FaceRepairer(scripts.Script):
         if units is None or len(units) == 0 or units[0].enabled is False:
             return
 
+        if "face-repairer-processing" in p.extra_generation_params:
+            return
+
         # p.do_not_save_samples = True
         shared.state.job_count = p.n_iter * 3
 
@@ -150,6 +153,7 @@ class FaceRepairer(scripts.Script):
 
             # 每张图片使用i2i进行修复
             p1 = StableDiffusionProcessingImg2Img()
+            p1.extra_generation_params["face-repairer-processing"] = True
             p1.__dict__.update(p.__dict__)
             p1.init_images = [image]
             p1.width, p1.height = image.size
@@ -287,4 +291,4 @@ class FaceRepairer(scripts.Script):
                 mask[index[0], index[1], :] = [255, 255, 255]
         return mask
 
-log("Face loaded")
+lib.log("Face loaded")

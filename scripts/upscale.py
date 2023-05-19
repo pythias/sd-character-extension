@@ -1,3 +1,5 @@
+import gradio as gr
+
 from character import upscale, lib
 from character.models import get_cn_empty_unit
 
@@ -6,7 +8,7 @@ from fastapi import FastAPI
 from modules import shared, scripts, script_callbacks
 from modules.processing import Processed, StableDiffusionProcessing, StableDiffusionProcessingImg2Img, process_images
 
-from scripts import external_code, controlnet
+from scripts import external_code
 
 class Upscaler(scripts.Script):
     def __init__(self) -> None:
@@ -22,13 +24,6 @@ class Upscaler(scripts.Script):
         enabled = gr.Checkbox(label="Auto Upscale", value=True)
         return [enabled]
 
-    def postprocess_image(self, p, pp: scripts.PostprocessImageArgs, enabled:bool, *args):
-        """
-        Called for every image after it has been generated.
-        """
-        lib.log(f"{upscale.NAME} postprocess_image, {args}")
-        return
-
     def postprocess(self, p, processed, enabled:bool, *args):
         """
         This function is called after processing ends for AlwaysVisible scripts.
@@ -40,21 +35,24 @@ class Upscaler(scripts.Script):
         if not enabled:
             return
 
+        if "auto-upscale-processing" in p.extra_generation_params:
+            return
+
         hires_images = []
         seed_index = 0
         subseed_index = 0
         for i, image in enumerate(processed.images):
-            if i < processed.index_of_first_image:
-                continue
-
             up = StableDiffusionProcessingImg2Img()
             up.__dict__.update(p.__dict__)
+            up.extra_generation_params["auto-upscale-processing"] = True
             up.init_images = [image]
             up.batch_size = 1
             up.width, up.height = image.size
             up.do_not_save_samples = True
+            up.do_not_save_grid = True
+            up.denoising_strength = 0.75
 
-            cn_script = controlnet.Script()
+            cn_script = external_code.find_cn_script(up.scripts)
             up.scripts = scripts.scripts_txt2img
             up.scripts.alwayson_scripts = [cn_script]
 
@@ -74,7 +72,7 @@ class Upscaler(scripts.Script):
             hires_result = process_images(p)
             hires_images.append(hires_result.images[0])
         
-        processed.images = hires_images
+        processed.images.extend(hires_images)
 
     def get_tile_unit(self, image):
         return {
@@ -82,7 +80,6 @@ class Upscaler(scripts.Script):
             "module": "none",
             "enabled": True,
             "image": image,
-            
         }
 
     def get_units(self, image):
