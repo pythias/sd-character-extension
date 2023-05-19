@@ -10,6 +10,7 @@ from character.metrics import hDF
 from character.lib import log
 
 NAME = "FaceRepairer"
+CROPPER_NAME = "FaceCropper"
 
 @hDF.time()
 def crop(image_base64) -> list:
@@ -97,7 +98,7 @@ def get_units(p: processing.StableDiffusionProcessing) -> List[FaceUnit]:
     if isinstance(fr_script_args[0], FaceUnit):
         return [fr_script_args[0]]
 
-    return [FaceUnit(**vars(fr_script_args[0]))]
+    return [FaceUnit(**fr_script_args)]
 
 def find_face_repairer_script(script_runner: scripts.ScriptRunner) -> Optional[scripts.Script]:
     if script_runner is None:

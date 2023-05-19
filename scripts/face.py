@@ -1,4 +1,5 @@
 import cv2
+import gradio as gr
 import modules.scripts as scripts
 import modules.shared as shared
 import numpy as np
@@ -10,6 +11,7 @@ from facexlib.utils.misc import img2tensor
 from PIL import Image
 from torchvision.transforms.functional import normalize
 from typing import Optional
+from operator import attrgetter
 
 from modules.processing import Processed, StableDiffusionProcessing, StableDiffusionProcessingImg2Img, process_images
 
@@ -82,7 +84,18 @@ class Face:
         return left, top, right, bottom
 
 class FaceCropper(scripts.Script):
-    pass
+    def __init__(self) -> None:
+        super().__init__()
+
+    def title(self):
+        return face.CROPPER_NAME
+
+    def show(self, is_img2img):
+        return False
+
+    def ui(self, is_img2img):
+        enabled = gr.Checkbox(label="Enabled", value=False)
+        return [enabled]
 
 class FaceRepairer(scripts.Script):
     """
@@ -97,13 +110,17 @@ class FaceRepairer(scripts.Script):
     def show(self, is_img2img):
         return scripts.AlwaysVisible
 
+    def ui(self, is_img2img):
+        enabled = gr.Checkbox(label="Enabled", value=False)
+        return [enabled]
+
     def postprocess(self, p, processed, *args):
         """
         This function is called after processing ends for AlwaysVisible scripts.
         args contains all values returned by components from ui()
         """
         units = face.get_units(p)
-        log(f"face-repairer, units: {units}")
+        log(f"face-repairer, units: {units}, args: {args}")
 
         if units is None or len(units) == 0 or units[0].enabled is False:
             return
@@ -149,7 +166,7 @@ class FaceRepairer(scripts.Script):
             
             repaired_result = self._repair_image(mask_model, detection_model, p1, unit)
             if repaired_result is None:
-                repaired_images.extend(image)
+                repaired_images.append(image)
             else:
                 repaired_images.extend(repaired_result.images)
         
@@ -160,7 +177,7 @@ class FaceRepairer(scripts.Script):
     def _repair_image(self, mask_model: BiSeNet, detection_model: RetinaFace, p: StableDiffusionProcessingImg2Img, unit: face.FaceUnit) -> Optional[Processed]:
         rgb_image = self.__to_rgb_image(p.init_images[0])
 
-        faces = self.__crop_face(detection_model, rgb_image, face_margin, confidence)
+        faces = self.__crop_face(detection_model, rgb_image, unit.face_margin, unit.confidence)
         log(f"face-repairer, number of faces: {len(faces)}")
 
         # 没有脸则不处理
@@ -177,9 +194,9 @@ class FaceRepairer(scripts.Script):
         entire_prompt = p.prompt
         p.batch_size = 1
         p.n_iter = 1
-        scripts = p.scripts
 
-        output_images = []
+        # 忽略其他脚本
+        # scripts = p.scripts        
         faces = faces[:unit.max_face_count]
         for face in faces:
             # todo 脸部交叠的问题
@@ -189,6 +206,7 @@ class FaceRepairer(scripts.Script):
 
             cRepair.inc()
 
+            p.scripts = None
             p.init_images = [face.image]
             p.width = face.image.width
             p.height = face.image.height
@@ -197,6 +215,7 @@ class FaceRepairer(scripts.Script):
             p.do_not_save_samples = True
 
             processed = process_images(p)
+            
             face_image = np.array(self.__to_rgb_image(processed.images[0]))
             mask_image = self.__to_mask_image(mask_model, face_image, unit.mask_size)
             face_image = cv2.resize(face_image, dsize=(face.width, face.height))
@@ -212,7 +231,7 @@ class FaceRepairer(scripts.Script):
             ] = mask_image
 
         # 合并重绘
-        p.scripts = scripts
+        p.scripts = None
         p.prompt = entire_prompt
         p.width = entire_width
         p.height = entire_height
@@ -223,7 +242,10 @@ class FaceRepairer(scripts.Script):
         p.inpainting_fill = 1
         p.image_mask = Image.fromarray(entire_mask_image)
         p.do_not_save_samples = False
-        return process_images(p)
+
+        final = process_images(p)
+        # final.images = output_images
+        return final
 
     def __to_rgb_image(self, img):
         if not hasattr(img, 'mode') or img.mode != 'RGB':
