@@ -21,7 +21,7 @@ class Upscaler(scripts.Script):
         return scripts.AlwaysVisible
 
     def ui(self, is_img2img):
-        enabled = gr.Checkbox(label="Auto Upscale", value=True)
+        enabled = gr.Checkbox(label="Auto Upscale", value=False)
         return [enabled]
 
     def postprocess(self, p, processed, enabled:bool, *args):
@@ -30,12 +30,11 @@ class Upscaler(scripts.Script):
         args contains all values returned by components from ui()
         """
 
-        lib.log(f"{upscale.NAME} postprocess, {args}")
-
         if not enabled:
             return
 
         if "auto-upscale-processing" in p.extra_generation_params:
+            lib.log(f"{upscale.NAME} already done, skipping")
             return
 
         hires_images = []
@@ -53,10 +52,9 @@ class Upscaler(scripts.Script):
             up.denoising_strength = 0.75
 
             cn_script = external_code.find_cn_script(up.scripts)
-            up.scripts = scripts.scripts_txt2img
             up.scripts.alwayson_scripts = [cn_script]
 
-            max_models = shared.opts.data.get("control_net_max_models_num", 1)
+            max_models = shared.opts.data.get("control_net_max_models_num", 3)
             up.script_args = [None] * max_models
 
             units = self.get_units(image)
@@ -69,8 +67,10 @@ class Upscaler(scripts.Script):
                 up.subseed = processed.all_subseeds[subseed_index]
                 subseed_index += 1
             
-            hires_result = process_images(p)
+            hires_result = process_images(up)
             hires_images.append(hires_result.images[0])
+
+            lib.log(f"scripts, {up.scripts.alwayson_scripts}, {up.script_args}")
         
         processed.images.extend(hires_images)
 

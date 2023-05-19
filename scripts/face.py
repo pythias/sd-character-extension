@@ -111,7 +111,8 @@ class FaceRepairer(scripts.Script):
 
     def ui(self, is_img2img):
         enabled = gr.Checkbox(label="Enabled Face Repair", value=False)
-        return [enabled]
+        keep_original = gr.Checkbox(label="Keep Original Image Before Face Repair", value=False)
+        return [enabled, keep_original]
 
     def postprocess(self, p, processed, *args):
         """
@@ -148,10 +149,6 @@ class FaceRepairer(scripts.Script):
         seed_index = 0
         subseed_index = 0
         for i, image in enumerate(processed.images):
-            if i < processed.index_of_first_image:
-                continue
-
-            # 每张图片使用i2i进行修复
             p1 = StableDiffusionProcessingImg2Img()
             p1.extra_generation_params["face-repairer-processing"] = True
             p1.__dict__.update(p.__dict__)
@@ -171,8 +168,10 @@ class FaceRepairer(scripts.Script):
             else:
                 repaired_images.extend(repaired_result.images)
         
-        processed.images = repaired_images
-        # processed.images.extend(repaired_images)
+        if unit.keep_original:
+            processed.images.extend(repaired_images)
+        else:
+            processed.images = repaired_images
 
     def _repair_image(self, mask_model: BiSeNet, detection_model: RetinaFace, p: StableDiffusionProcessingImg2Img, unit: face.FaceUnit) -> Optional[Processed]:
         rgb_image = self.__to_rgb_image(p.init_images[0])

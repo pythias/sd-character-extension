@@ -56,6 +56,7 @@ class FaceUnit:
     def __init__(
         self,
         enabled: bool=False,
+        keep_original: bool=False,
         face_margin: float=1.6,
         confidence: float=0.97,
         face_denoising_strength: float=0.4,
@@ -75,6 +76,7 @@ class FaceUnit:
         self.mask_size = mask_size
         self.mask_blur = mask_blur
         self.prompt_for_face = prompt_for_face
+        self.keep_original = keep_original
 
     def __eq__(self, other):
         if not isinstance(other, FaceUnit):
