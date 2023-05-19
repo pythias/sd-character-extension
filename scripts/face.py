@@ -170,9 +170,8 @@ class FaceRepairer(scripts.Script):
             else:
                 repaired_images.extend(repaired_result.images)
         
-        # processed.images = repaired_images
-        processed.images.extend(repaired_images)
-
+        processed.images = repaired_images
+        # processed.images.extend(repaired_images)
 
     def _repair_image(self, mask_model: BiSeNet, detection_model: RetinaFace, p: StableDiffusionProcessingImg2Img, unit: face.FaceUnit) -> Optional[Processed]:
         rgb_image = self.__to_rgb_image(p.init_images[0])
