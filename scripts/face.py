@@ -94,7 +94,7 @@ class FaceCropper(scripts.Script):
         return False
 
     def ui(self, is_img2img):
-        enabled = gr.Checkbox(label="Enabled", value=False)
+        enabled = gr.Checkbox(label="Enabled Face Detect", value=False)
         return [enabled]
 
 class FaceRepairer(scripts.Script):
@@ -111,7 +111,7 @@ class FaceRepairer(scripts.Script):
         return scripts.AlwaysVisible
 
     def ui(self, is_img2img):
-        enabled = gr.Checkbox(label="Enabled", value=False)
+        enabled = gr.Checkbox(label="Enabled Face Repair", value=False)
         return [enabled]
 
     def postprocess(self, p, processed, *args):
