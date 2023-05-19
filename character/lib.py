@@ -6,6 +6,10 @@ from modules import scripts, shared
 import os
 import colorama
 
+from PIL import Image
+from modules.api.models import *
+from modules.api import api
+
 # Initialize colorama
 colorama.init()
 
@@ -34,3 +38,17 @@ def to_rgb_image(img):
         return img.convert('RGB')
     
     return img
+
+def encode_to_base64(image):
+    if type(image) is str:
+        return image
+    elif type(image) is Image.Image:
+        return api.encode_pil_to_base64(image)
+    elif type(image) is np.ndarray:
+        return encode_np_to_base64(image)
+    else:
+        return ""
+
+def encode_np_to_base64(image):
+    pil = Image.fromarray(image)
+    return api.encode_pil_to_base64(pil)

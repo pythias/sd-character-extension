@@ -119,18 +119,17 @@ def apply_face_repairer(request):
     if not getattr(request, "character_face_repair", False):
         return
 
-    unit = FaceUnit(enabled=True)
     params = vars(request)
     keys = list(params.keys())
+    values = {};
     for key in keys:
         if not key.startswith("character_face_repair_"):
             continue
 
         key = key[len("character_face_repair_"):]
-        if key not in vars(unit):
-            continue
+        values[key] = params["character_face_repair_" + key]
 
-        setattr(unit, key, params[key])
-
+    values["enabled"] = True
+    unit = FaceUnit(**values)
     request.alwayson_scripts.update({NAME: {'args': [unit]}})
     

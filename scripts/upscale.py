@@ -1,4 +1,5 @@
 import gradio as gr
+import numpy as np
 
 from character import upscale, lib
 from character.models import get_cn_empty_unit
@@ -29,7 +30,6 @@ class Upscaler(scripts.Script):
         This function is called after processing ends for AlwaysVisible scripts.
         args contains all values returned by components from ui()
         """
-
         if not enabled:
             return
 
@@ -44,6 +44,14 @@ class Upscaler(scripts.Script):
             lib.log(message=f"Upscaling image {i+1}/{len(processed.images)}")
 
             up = StableDiffusionProcessingImg2Img()
+
+            # log type of image
+            lib.log(message=f"Image type: {type(image)}")
+
+            # PIL.Image.Image to base64
+            image_base64 = shared.image_to_base64(image)
+
+            
             up.__dict__.update(p.__dict__)
             up.extra_generation_params["auto-upscale-processing"] = True
             up.init_images = [image]
@@ -54,12 +62,17 @@ class Upscaler(scripts.Script):
             up.denoising_strength = 0.75
 
             cn_script = external_code.find_cn_script(up.scripts)
+            args_len = cn_script.args_to - cn_script.args_from
+            args_bak = up.script_args[cn_script.args_from:cn_script.args_to]
+
+            cn_script.args_from = 0
+            cn_script.args_to = args_len
+
+            up.scripts = scripts.ScriptRunner()
             up.scripts.alwayson_scripts = [cn_script]
+            up.script_args = args_bak
 
-            max_models = shared.opts.data.get("control_net_max_models_num", 3)
-            up.script_args = [None] * max_models
-
-            units = self.get_units(image)
+            units = self.get_units(lib.encode_to_base64(image))
             external_code.update_cn_script_in_processing(up, units, is_img2img=True, is_ui=False)
 
             if seed_index < len(processed.all_seeds):
@@ -71,8 +84,6 @@ class Upscaler(scripts.Script):
             
             hires_result = process_images(up)
             hires_images.append(hires_result.images[0])
-
-            lib.log(f"scripts, {up.scripts.alwayson_scripts}, {up.script_args}")
         
         processed.images.extend(hires_images)
 
