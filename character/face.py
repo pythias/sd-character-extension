@@ -7,6 +7,7 @@ from typing import Optional, List
 from modules import scripts, processing
 
 from character.metrics import hDF
+from character.lib import log
 
 NAME = "FaceRepairer"
 
@@ -93,7 +94,10 @@ def get_units(p: processing.StableDiffusionProcessing) -> List[FaceUnit]:
     if len(fr_script_args) == 0:
         return None
 
-    return [FaceUnit(**fr_script_args[0])]
+    if isinstance(fr_script_args[0], FaceUnit):
+        return [fr_script_args[0]]
+
+    return [FaceUnit(**vars(fr_script_args[0]))]
 
 def find_face_repairer_script(script_runner: scripts.ScriptRunner) -> Optional[scripts.Script]:
     if script_runner is None:
@@ -102,6 +106,8 @@ def find_face_repairer_script(script_runner: scripts.ScriptRunner) -> Optional[s
     for script in script_runner.alwayson_scripts:
         if is_face_repairer_script(script):
             return script
+
+    return None
 
 def is_face_repairer_script(script: scripts.Script) -> bool:
     return script.title() == NAME

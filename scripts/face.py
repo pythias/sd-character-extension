@@ -9,6 +9,7 @@ from facexlib.parsing import BiSeNet, init_parsing_model
 from facexlib.utils.misc import img2tensor
 from PIL import Image
 from torchvision.transforms.functional import normalize
+from typing import Optional
 
 from modules.processing import Processed, StableDiffusionProcessing, StableDiffusionProcessingImg2Img, process_images
 
@@ -80,6 +81,9 @@ class Face:
 
         return left, top, right, bottom
 
+class FaceCropper(scripts.Script):
+    pass
+
 class FaceRepairer(scripts.Script):
     """
     modify from https://github.com/ototadana/sd-face-editor.git
@@ -92,23 +96,26 @@ class FaceRepairer(scripts.Script):
 
     def show(self, is_img2img):
         return scripts.AlwaysVisible
- 
-    def run(self, p, *args):
+
+    def postprocess(self, p, processed, *args):
+        """
+        This function is called after processing ends for AlwaysVisible scripts.
+        args contains all values returned by components from ui()
+        """
         units = face.get_units(p)
-        if units is None or len(units) == 0:
-            return process_images(p)
+        log(f"face-repairer, units: {units}")
+
+        if units is None or len(units) == 0 or units[0].enabled is False:
+            return
 
         # p.do_not_save_samples = True
         shared.state.job_count = p.n_iter * 3
-
-        # 原始过程
-        result = process_images(p)
 
         # 获取模型
         mask_model, detection_model = self.get_face_models()
         
         # 修复过程
-        return self._repair_images(mask_model, detection_model, p, result, units[0])
+        self._repair_images(mask_model, detection_model, p, processed, units[0])
 
     def get_face_models(self):
         if hasattr(retinaface, 'device'):
@@ -119,12 +126,12 @@ class FaceRepairer(scripts.Script):
         return (mask_model, detection_model)
 
     @hRepair.time()
-    def _repair_images(self, mask_model: BiSeNet, detection_model: RetinaFace, p: StableDiffusionProcessing, result: Processed, unit: face.FaceUnit):
+    def _repair_images(self, mask_model: BiSeNet, detection_model: RetinaFace, p: StableDiffusionProcessing, processed: Processed, unit: face.FaceUnit):
         repaired_images = []
         seed_index = 0
         subseed_index = 0
-        for i, image in enumerate(result.images):
-            if i < result.index_of_first_image:
+        for i, image in enumerate(processed.images):
+            if i < processed.index_of_first_image:
                 continue
 
             # 每张图片使用i2i进行修复
@@ -132,38 +139,38 @@ class FaceRepairer(scripts.Script):
             p1.__dict__.update(p.__dict__)
             p1.init_images = [image]
             p1.width, p1.height = image.size
-            if seed_index < len(result.all_seeds):
-                p1.seed = result.all_seeds[seed_index]
+            p1.do_not_save_samples = True
+            if seed_index < len(processed.all_seeds):
+                p1.seed = processed.all_seeds[seed_index]
                 seed_index += 1
-            if subseed_index < len(result.all_subseeds):
-                p1.subseed = result.all_subseeds[subseed_index]
+            if subseed_index < len(processed.all_subseeds):
+                p1.subseed = processed.all_subseeds[subseed_index]
                 subseed_index += 1
             
-            repaired_result = self._repair_image(mask_model, detection_model, p1, image, unit)
-            repaired_images.extend(repaired_result.images)
+            repaired_result = self._repair_image(mask_model, detection_model, p1, unit)
+            if repaired_result is None:
+                repaired_images.extend(image)
+            else:
+                repaired_images.extend(repaired_result.images)
         
-        result.images = repaired_images
-        # result.images.extend(repaired_images)
-        return result
+        # processed.images = repaired_images
+        processed.images.extend(repaired_images)
 
-    def _format_init_images(self, p: StableDiffusionProcessingImg2Img):
-        if not hasattr(p.init_images[0], 'mode') or p.init_images[0].mode != 'RGB':
-            p.init_images[0] = p.init_images[0].convert('RGB')
 
-    def _repair_image(self, mask_model: BiSeNet, detection_model: RetinaFace, p: StableDiffusionProcessingImg2Img, pre_image: Image, unit: face.FaceUnit) -> Processed:
-        self._format_init_images(p)
+    def _repair_image(self, mask_model: BiSeNet, detection_model: RetinaFace, p: StableDiffusionProcessingImg2Img, unit: face.FaceUnit) -> Optional[Processed]:
+        rgb_image = self.__to_rgb_image(p.init_images[0])
 
-        faces = self.__crop_face(detection_model, p.init_images[0], face_margin, confidence)
-        log(f"number of faces: {len(faces)}")
+        faces = self.__crop_face(detection_model, rgb_image, face_margin, confidence)
+        log(f"face-repairer, number of faces: {len(faces)}")
 
         # 没有脸则不处理
-        if len(faces) == 0 and pre_image is not None:
-            return Processed(p, images_list=[pre_image])
+        if len(faces) == 0:
+            return None
 
         if shared.state.job_count == -1:
             shared.state.job_count = len(faces) * 2 + 1
 
-        entire_image = np.array(p.init_images[0])
+        entire_image = np.array(rgb_image)
         entire_mask_image = np.zeros_like(entire_image)
         entire_width = (p.width // 8) * 8
         entire_height = (p.height // 8) * 8
@@ -189,10 +196,8 @@ class FaceRepairer(scripts.Script):
             p.prompt = unit.prompt_for_face if len(unit.prompt_for_face) > 0 else entire_prompt
             p.do_not_save_samples = True
 
-            proc = process_images(p)
-
-            self._format_init_images(p)
-            face_image = np.array(proc.images[0])
+            processed = process_images(p)
+            face_image = np.array(self.__to_rgb_image(processed.images[0]))
             mask_image = self.__to_mask_image(mask_model, face_image, unit.mask_size)
             face_image = cv2.resize(face_image, dsize=(face.width, face.height))
             mask_image = cv2.resize(mask_image, dsize=(face.width, face.height))
@@ -219,6 +224,12 @@ class FaceRepairer(scripts.Script):
         p.image_mask = Image.fromarray(entire_mask_image)
         p.do_not_save_samples = False
         return process_images(p)
+
+    def __to_rgb_image(self, img):
+        if not hasattr(img, 'mode') or img.mode != 'RGB':
+            return img.convert('RGB')
+        
+        return img
 
     def __to_masked_image(self, mask_image: np.ndarray, image: np.ndarray) -> np.ndarray:
         gray_mask = np.where(mask_image == 0, 47, 255) / 255.0
