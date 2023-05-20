@@ -18,6 +18,7 @@ from modules.processing import Processed, StableDiffusionProcessing, StableDiffu
 from character import face, lib
 from character.metrics import hRepair, cRepair
 
+
 class Face:
     def __init__(self, entire_image: np.ndarray, face_box: np.ndarray, face_margin: float):
         left, top, right, bottom = self.__to_square(face_box)
@@ -82,6 +83,7 @@ class Face:
 
         return left, top, right, bottom
 
+
 class FaceCropper(scripts.Script):
     def __init__(self) -> None:
         super().__init__()
@@ -96,10 +98,13 @@ class FaceCropper(scripts.Script):
         enabled = gr.Checkbox(label="Enabled Face Detect", value=False)
         return [enabled]
 
+
 class FaceRepairer(scripts.Script):
     """
     modify from https://github.com/ototadana/sd-face-editor.git
+    todo 把face调整到最后一步再进行，比如放到高清修复之后
     """
+
     def __init__(self) -> None:
         super().__init__()
 
@@ -110,7 +115,7 @@ class FaceRepairer(scripts.Script):
         return scripts.AlwaysVisible
 
     def ui(self, is_img2img):
-        enabled = gr.Checkbox(label="Enabled Face Repair", value=False)
+        enabled = gr.Checkbox(label="Enabled Face Repair", value=True)
         keep_original = gr.Checkbox(label="Keep Original Image Before Face Repair", value=False)
         return [enabled, keep_original]
 
@@ -131,7 +136,7 @@ class FaceRepairer(scripts.Script):
 
         # 获取模型
         mask_model, detection_model = self.get_face_models()
-        
+
         # 修复过程
         self._repair_images(mask_model, detection_model, p, processed, units[0])
 
@@ -149,8 +154,6 @@ class FaceRepairer(scripts.Script):
         seed_index = 0
         subseed_index = 0
         for i, image in enumerate(processed.images):
-            lib.log(message=f"Repairing face for image {i + 1}/{len(processed.images)}, keep original: {unit.keep_original}")
-
             p1 = StableDiffusionProcessingImg2Img()
             p1.extra_generation_params["face-repairer-processing"] = True
             p1.__dict__.update(p.__dict__)
@@ -163,13 +166,13 @@ class FaceRepairer(scripts.Script):
             if subseed_index < len(processed.all_subseeds):
                 p1.subseed = processed.all_subseeds[subseed_index]
                 subseed_index += 1
-            
+
             repaired_result = self._repair_image(mask_model, detection_model, p1, unit)
             if repaired_result is None:
                 repaired_images.append(image)
             else:
                 repaired_images.extend(repaired_result.images)
-        
+
         if unit.keep_original:
             processed.images.extend(repaired_images)
         else:
@@ -179,8 +182,8 @@ class FaceRepairer(scripts.Script):
         rgb_image = self.__to_rgb_image(p.init_images[0])
 
         faces = self.__crop_face(detection_model, rgb_image, unit.face_margin, unit.confidence)
+
         if len(faces) == 0:
-            # 没有脸则不处理
             return None
 
         if shared.state.job_count == -1:
@@ -194,12 +197,8 @@ class FaceRepairer(scripts.Script):
         p.batch_size = 1
         p.n_iter = 1
 
-        # 忽略其他脚本
-        # scripts = p.scripts        
         faces = faces[:unit.max_face_count]
         for face in faces:
-            # todo 脸部交叠的问题
-            # 挨个脸修复
             if shared.state.interrupted:
                 break
 
@@ -214,7 +213,7 @@ class FaceRepairer(scripts.Script):
             p.do_not_save_samples = True
 
             processed = process_images(p)
-            
+
             face_image = np.array(self.__to_rgb_image(processed.images[0]))
             mask_image = self.__to_mask_image(mask_model, face_image, unit.mask_size)
             face_image = cv2.resize(face_image, dsize=(face.width, face.height))
@@ -248,10 +247,6 @@ class FaceRepairer(scripts.Script):
 
     def __to_rgb_image(self, img):
         return lib.to_rgb_image(img)
-
-    def __to_masked_image(self, mask_image: np.ndarray, image: np.ndarray) -> np.ndarray:
-        gray_mask = np.where(mask_image == 0, 47, 255) / 255.0
-        return (image * gray_mask).astype('uint8')
 
     def __crop_face(self, detection_model: RetinaFace, image: Image, face_margin: float, confidence: float) -> list:
         with torch.no_grad():
@@ -291,5 +286,6 @@ class FaceRepairer(scripts.Script):
             if i < 14:
                 mask[index[0], index[1], :] = [255, 255, 255]
         return mask
+
 
 lib.log("Face loaded")

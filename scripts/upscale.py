@@ -1,3 +1,4 @@
+import cv2
 import gradio as gr
 import numpy as np
 
@@ -10,6 +11,7 @@ from modules import shared, scripts, script_callbacks
 from modules.processing import Processed, StableDiffusionProcessing, StableDiffusionProcessingImg2Img, process_images
 
 from scripts import external_code
+
 
 class Upscaler(scripts.Script):
     def __init__(self) -> None:
@@ -25,7 +27,7 @@ class Upscaler(scripts.Script):
         enabled = gr.Checkbox(label="Auto Upscale", value=False)
         return [enabled]
 
-    def postprocess(self, p, processed, enabled:bool, *args):
+    def postprocess(self, p, processed, enabled: bool, *args):
         """
         This function is called after processing ends for AlwaysVisible scripts.
         args contains all values returned by components from ui()
@@ -64,8 +66,9 @@ class Upscaler(scripts.Script):
             up.scripts.alwayson_scripts = [cn_script]
             up.script_args = args_bak
 
-            units = self.get_units(lib.encode_to_base64(image))
-            external_code.update_cn_script_in_processing(up, units, is_img2img=True, is_ui=False)
+            units = self.get_units(image)
+            external_code.update_cn_script_in_processing(
+                up, units, is_img2img=True, is_ui=False)
 
             if seed_index < len(processed.all_seeds):
                 up.seed = processed.all_seeds[seed_index]
@@ -73,26 +76,27 @@ class Upscaler(scripts.Script):
             if subseed_index < len(processed.all_subseeds):
                 up.subseed = processed.all_subseeds[subseed_index]
                 subseed_index += 1
-            
+
             hires_result = process_images(up)
             hires_images.append(hires_result.images[0])
-        
+
         processed.images.extend(hires_images)
 
     def get_tile_unit(self, image):
         return {
             "model": "controlnet11Models_tile [39a89b25]",
-            "module": "none",
+            "module": "tile_resample",
             "enabled": True,
-            "image": image,
+            "image": "",
         }
 
     def get_units(self, image):
         units = [
-            self.get_tile_unit(image), 
-            get_cn_empty_unit(), 
+            self.get_tile_unit(image),
+            get_cn_empty_unit(),
             get_cn_empty_unit()
         ]
         return [external_code.ControlNetUnit(**unit) for unit in units]
+
 
 lib.log(f"{upscale.NAME} loaded")

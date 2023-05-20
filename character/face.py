@@ -12,6 +12,7 @@ from character.lib import log
 NAME = "FaceRepairer"
 CROPPER_NAME = "FaceCropper"
 
+
 @hDF.time()
 def crop(image_base64) -> list:
     # Decode the base64 image
@@ -46,25 +47,26 @@ def crop(image_base64) -> list:
         cropped_face = image[y1:y2, x1:x2]
 
         # Encode the cropped face as a base64 string
-        _, buffer = cv2.imencode('.png', cropped_face)
-        cropped_face_base64 = base64.b64encode(buffer).decode('utf-8')
+        _, face_buffer = cv2.imencode('.png', cropped_face)
+        cropped_face_base64 = base64.b64encode(face_buffer).decode('utf-8')
         cropped_face_base64s.append(cropped_face_base64)
 
     return cropped_face_base64s
 
+
 class FaceUnit:
     def __init__(
         self,
-        enabled: bool=False,
-        keep_original: bool=False,
-        face_margin: float=1.6,
-        confidence: float=0.97,
-        face_denoising_strength: float=0.4,
-        entire_denoising_strength: float=0.0,
-        max_face_count: int=20,
-        mask_size: int=24,
-        mask_blur: int=0,
-        prompt_for_face: str='',
+        enabled: bool = False,
+        keep_original: bool = False,
+        face_margin: float = 1.6,
+        confidence: float = 0.97,
+        face_denoising_strength: float = 0.4,
+        entire_denoising_strength: float = 0.0,
+        max_face_count: int = 20,
+        mask_size: int = 24,
+        mask_blur: int = 0,
+        prompt_for_face: str = '',
         **_kwargs,
     ):
         self.enabled = enabled
@@ -85,7 +87,7 @@ class FaceUnit:
         return vars(self) == vars(other)
 
 
-def get_units(p: processing.StableDiffusionProcessing) -> List[FaceUnit]:
+def get_units(p: processing.StableDiffusionProcessing) -> Optional[List[FaceUnit]]:
     script_runner = p.scripts
     script_args = p.script_args
 
@@ -102,6 +104,7 @@ def get_units(p: processing.StableDiffusionProcessing) -> List[FaceUnit]:
 
     return [FaceUnit(*fr_script_args)]
 
+
 def find_face_repairer_script(script_runner: scripts.ScriptRunner) -> Optional[scripts.Script]:
     if script_runner is None:
         return None
@@ -112,8 +115,10 @@ def find_face_repairer_script(script_runner: scripts.ScriptRunner) -> Optional[s
 
     return None
 
+
 def is_face_repairer_script(script: scripts.Script) -> bool:
     return script.title() == NAME
+
 
 def apply_face_repairer(request):
     if not getattr(request, "character_face_repair", False):
@@ -121,7 +126,7 @@ def apply_face_repairer(request):
 
     params = vars(request)
     keys = list(params.keys())
-    values = {};
+    values = {}
     for key in keys:
         if not key.startswith("character_face_repair_"):
             continue
@@ -132,4 +137,3 @@ def apply_face_repairer(request):
     values["enabled"] = True
     unit = FaceUnit(**values)
     request.alwayson_scripts.update({NAME: {'args': [unit]}})
-    
