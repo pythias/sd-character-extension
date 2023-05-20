@@ -1,4 +1,3 @@
-from scripts import external_code, global_state
 import os
 import sys
 import json
@@ -29,6 +28,7 @@ high_quality_prompts = "8k,high quality,<lora:add_detail:1>"
 # 加载ControlNet，启动添加参数 --controlnet-dir
 extensions_control_net_path = os.path.join(extensions_dir, "sd-webui-controlnet")
 sys.path.append(extensions_control_net_path)
+from scripts import external_code, global_state
 
 control_net_models = external_code.get_models(update=True)
 log(f"ControlNet loaded, models: {control_net_models}")
