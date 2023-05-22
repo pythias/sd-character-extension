@@ -1,5 +1,6 @@
+import gradio as gr
 from character.lib import log
-from modules import shared
+from modules import shared, scripts
 
 class Script(scripts.Script):
     def title(self):
@@ -18,3 +19,5 @@ class Script(scripts.Script):
         }
 
 shared.opts.data.update({'control_net_no_detectmap': True})
+
+log("Character Information Extension loaded")

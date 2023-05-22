@@ -126,8 +126,12 @@ def is_face_repairer_script(script: scripts.Script) -> bool:
     return script.title() == REPAIRER_NAME
 
 
+def require_face_repairer(request):
+    return getattr(request, "character_face_repair", False)
+
+
 def apply_face_repairer(request):
-    if not getattr(request, "character_face_repair", False):
+    if not require_face_repairer(request):
         return
 
     params = vars(request)
