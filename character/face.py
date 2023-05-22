@@ -9,7 +9,7 @@ from modules import scripts, processing
 from character.metrics import hDF
 from character.lib import log
 
-REPAIRER_NAME = "FaceRepairer"
+REPAIRER_NAME = "Face Editor"
 CROPPER_NAME = "FaceCropper"
 
 
@@ -58,27 +58,33 @@ class FaceUnit:
     def __init__(
         self,
         enabled: bool = False,
-        keep_original: bool = False,
         face_margin: float = 1.6,
         confidence: float = 0.97,
-        face_denoising_strength: float = 0.4,
-        entire_denoising_strength: float = 0.0,
+        strength1: float = 0.4,
+        strength2: float = 0.0,
         max_face_count: int = 20,
         mask_size: int = 24,
         mask_blur: int = 0,
         prompt_for_face: str = '',
+        apply_inside_mask_only: bool = False,
+        save_original_image: bool = False,
+        show_intermediate_steps: bool = False,
+        apply_scripts_to_faces: bool = False,
         **_kwargs,
     ):
         self.enabled = enabled
         self.face_margin = face_margin
         self.confidence = confidence
-        self.face_denoising_strength = face_denoising_strength
-        self.entire_denoising_strength = entire_denoising_strength
+        self.strength1 = strength1
+        self.strength2 = strength2
         self.max_face_count = max_face_count
         self.mask_size = mask_size
         self.mask_blur = mask_blur
         self.prompt_for_face = prompt_for_face
-        self.keep_original = keep_original
+        self.apply_inside_mask_only = apply_inside_mask_only
+        self.save_original_image = save_original_image
+        self.show_intermediate_steps = show_intermediate_steps
+        self.apply_scripts_to_faces = apply_scripts_to_faces
 
     def __eq__(self, other):
         if not isinstance(other, FaceUnit):
@@ -136,4 +142,4 @@ def apply_face_repairer(request):
 
     values["enabled"] = True
     unit = FaceUnit(**values)
-    request.alwayson_scripts.update({REPAIRER_NAME: {'args': [unit]}})
+    request.alwayson_scripts.update({REPAIRER_NAME: {'args': vars(unit)}})
