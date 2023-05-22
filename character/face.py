@@ -9,7 +9,7 @@ from modules import scripts, processing
 from character.metrics import hDF
 from character.lib import log
 
-REPAIRER_NAME = "Face Editor"
+REPAIRER_NAME = "face editor ex"
 CROPPER_NAME = "FaceCropper"
 
 
@@ -142,4 +142,5 @@ def apply_face_repairer(request):
 
     values["enabled"] = True
     unit = FaceUnit(**values)
+    # face editor ex
     request.alwayson_scripts.update({REPAIRER_NAME: {'args': vars(unit)}})
