@@ -96,12 +96,11 @@ class FaceCropper(scripts.Script):
         enabled = gr.Checkbox(label="Enabled Face Detect", value=False)
         return [enabled]
 
-class FaceRepairer(scripts.Script):
-    """
-    modify from https://github.com/ototadana/sd-face-editor.git
-    """
+
+class FaceRepairerExtension(scripts.Script):
     def __init__(self) -> None:
         super().__init__()
+        self.__is_running = False
 
     def title(self):
         return face.NAME
@@ -110,30 +109,77 @@ class FaceRepairer(scripts.Script):
         return scripts.AlwaysVisible
 
     def ui(self, is_img2img):
-        enabled = gr.Checkbox(label="Enabled Face Repair", value=False)
+        with gr.Accordion("Face Repairer", open=False, elem_id="sd-face-repairer-extension"):
+            return [gr.Checkbox(label="Face Repairer Enabled", value=False)] + FaceRepairer().ui(is_img2img)
+
+    def before_process_batch(self, p: StableDiffusionProcessing, **kwargs):
+        unit = face.get_unit(p)
+        if unit is None or unit.enabled is False:
+            return
+
+        if self.__is_running:
+            return
+
+        if not unit.keep_original:
+            p.do_not_save_samples = True
+
+    def postprocess(self, p: StableDiffusionProcessing, processed, *args):
+        unit = face.get_unit(p)
+        if unit is None or unit.enabled is False:
+            return
+
+        try:
+            self.__is_running = True
+
+            if o.scripts is not None:
+                o.scripts.postprocess(o, processed)
+
+            o.do_not_save_samples = False
+            script = FaceRepairer()
+            mask_model, detection_model = script.get_face_models()
+            script.repair_images(mask_model, detection_model, processed, unit)
+        finally:
+            self.__is_running = False
+
+class FaceRepairer(scripts.Script):
+    """
+    modify from https://github.com/ototadana/sd-face-editor.git
+    """
+    def __init__(self) -> None:
+        super().__init__()
+
+    def title(self):
+        return "Face Repairer Script"
+
+    def show(self, is_img2img):
+        return scripts.AlwaysVisible
+
+    def ui(self, is_img2img):
         keep_original = gr.Checkbox(label="Keep Original Image Before Face Repair", value=False)
-        return [enabled, keep_original]
+        return [keep_original]
 
-    def postprocess(self, p, processed, *args):
-        """
-        This function is called after processing ends for AlwaysVisible scripts.
-        args contains all values returned by components from ui()
-        """
-        units = face.get_units(p)
-        if units is None or len(units) == 0 or units[0].enabled is False:
+    def run(self, p: StableDiffusionProcessing, *args):
+        unit = face.get_unit(p)
+        if unit is None or unit.enabled is False:
             return
 
-        if "face-repairer-processing" in p.extra_generation_params:
-            return
+        mask_model, detection_model = self.get_face_models()
 
-        # p.do_not_save_samples = True
+        if isinstance(p, StableDiffusionProcessingImg2Img) and p.n_iter == 1 and p.batch_size == 1:
+            processed = self._repair_image(mask_model, detection_model, p, unit)
+            if processed is not None:
+                return processed
+            return Processed(p, images_list=[None])
+
         shared.state.job_count = p.n_iter * 3
 
-        # 获取模型
-        mask_model, detection_model = self.get_face_models()
-        
-        # 修复过程
-        self._repair_images(mask_model, detection_model, p, processed, units[0])
+        if not unit.keep_original:
+            p.do_not_save_samples = True
+
+        processed = process_images(p)
+        p.do_not_save_samples = False
+        self.repair_images(mask_model, detection_model, p, processed, unit)
+        return processed
 
     def get_face_models(self):
         if hasattr(retinaface, 'device'):
@@ -144,7 +190,7 @@ class FaceRepairer(scripts.Script):
         return (mask_model, detection_model)
 
     @hRepair.time()
-    def _repair_images(self, mask_model: BiSeNet, detection_model: RetinaFace, p: StableDiffusionProcessing, processed: Processed, unit: face.FaceUnit):
+    def repair_images(self, mask_model: BiSeNet, detection_model: RetinaFace, p: StableDiffusionProcessing, processed: Processed, unit: face.FaceUnit):
         repaired_images = []
         seed_index = 0
         subseed_index = 0
@@ -180,7 +226,6 @@ class FaceRepairer(scripts.Script):
 
         faces = self.__crop_face(detection_model, rgb_image, unit.face_margin, unit.confidence)
         if len(faces) == 0:
-            # 没有脸则不处理
             return None
 
         if shared.state.job_count == -1:
@@ -194,8 +239,7 @@ class FaceRepairer(scripts.Script):
         p.batch_size = 1
         p.n_iter = 1
 
-        # 忽略其他脚本
-        # scripts = p.scripts        
+        scripts = p.scripts        
         faces = faces[:unit.max_face_count]
         for face in faces:
             # todo 脸部交叠的问题
@@ -205,6 +249,7 @@ class FaceRepairer(scripts.Script):
 
             cRepair.inc()
 
+             # 忽略其他脚本
             p.scripts = None
             p.init_images = [face.image]
             p.width = face.image.width
@@ -230,7 +275,7 @@ class FaceRepairer(scripts.Script):
             ] = mask_image
 
         # 合并重绘
-        p.scripts = None
+        p.scripts = scripts
         p.prompt = entire_prompt
         p.width = entire_width
         p.height = entire_height
