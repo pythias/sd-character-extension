@@ -1,4 +1,4 @@
-from character import upscale, face
+from character import face, upscale
 from character.lib import log, LogLevel
 from character.models import *
 from character.metrics import hT2I, hSD, hCaption
@@ -22,14 +22,14 @@ class ApiHijack(api.Api):
         request_prepare(request)
         apply_controlnet(request)
         face.apply_face_repairer(request)
+        upscale.apply_auto_upscale(request)
         return self.wrap_call(self.text2imgapi, t2i_counting, request)
 
     @hT2I.time()
     def character_v2_img2img(self, request: CharacterV2Img2ImgRequest):
-        # todo upscale
         request_prepare(request)
         face.apply_face_repairer(request)
-        # upscale.apply_auto_upscale(request)
+        upscale.apply_auto_upscale(request)
         return self.wrap_call(self.img2imgapi, t2i_counting, request)
 
 

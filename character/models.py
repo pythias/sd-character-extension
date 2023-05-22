@@ -84,6 +84,8 @@ def convert_response(request, character_params, response):
     params = response.parameters
     info = json.loads(response.info)
 
+    # 清除脸部修复的图片
+    # 清除ControlNet的图片
     if f"{field_prefix}image" in character_params and len(character_params[f"{field_prefix}image"]) > 1000 and len(response.images) > 1:
         response.images.pop()
 
