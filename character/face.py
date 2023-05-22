@@ -9,7 +9,7 @@ from modules import scripts, processing
 from character.metrics import hDF
 from character.lib import log
 
-NAME = "FaceRepairer"
+REPAIRER_NAME = "FaceRepairer"
 CROPPER_NAME = "FaceCropper"
 
 
@@ -87,7 +87,7 @@ class FaceUnit:
         return vars(self) == vars(other)
 
 
-def get_units(p: processing.StableDiffusionProcessing) -> Optional[List[FaceUnit]]:
+def get_unit(p: processing.StableDiffusionProcessing) -> Optional[FaceUnit]:
     script_runner = p.scripts
     script_args = p.script_args
 
@@ -100,9 +100,9 @@ def get_units(p: processing.StableDiffusionProcessing) -> Optional[List[FaceUnit
         return None
 
     if isinstance(fr_script_args[0], FaceUnit):
-        return [fr_script_args[0]]
+        return fr_script_args[0]
 
-    return [FaceUnit(*fr_script_args)]
+    return FaceUnit(*fr_script_args)
 
 
 def find_face_repairer_script(script_runner: scripts.ScriptRunner) -> Optional[scripts.Script]:
@@ -117,7 +117,7 @@ def find_face_repairer_script(script_runner: scripts.ScriptRunner) -> Optional[s
 
 
 def is_face_repairer_script(script: scripts.Script) -> bool:
-    return script.title() == NAME
+    return script.title() == REPAIRER_NAME
 
 
 def apply_face_repairer(request):
@@ -136,4 +136,4 @@ def apply_face_repairer(request):
 
     values["enabled"] = True
     unit = FaceUnit(**values)
-    request.alwayson_scripts.update({NAME: {'args': [unit]}})
+    request.alwayson_scripts.update({REPAIRER_NAME: {'args': [unit]}})
