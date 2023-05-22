@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from typing import Any, Optional, Dict, List
 
 from character import face
-from character.lib import log, LogLevel
+from character.lib import log, LogLevel, get_or_default
 from character.nsfw import image_has_nsfw, tags_has_nsfw
 from character.errors import *
 from character.metrics import *
@@ -97,8 +97,10 @@ def convert_response(request, character_params, response):
     params = response.parameters
     info = json.loads(response.info)
 
-    if face.require_face_repairer(request) and not face.keep_original_image(request):
-        batch_size = getattr(request, "batch_size", 1)
+    log(f"convert_response: {face.require_face_repairer(character_params)}, {face.keep_original_image(character_params)}, {getattr(request, 'batch_size', 1)}")
+
+    if face.require_face_repairer(character_params) and not face.keep_original_image(character_params):
+        batch_size = get_or_default(request, "batch_size", 1)
         for _ in range(batch_size):
             response.images.pop()
 
@@ -110,7 +112,7 @@ def convert_response(request, character_params, response):
             continue
 
         # todo 脸部裁切，在高清修复脸部时有数据
-        if f"{field_prefix}face" in character_params and character_params[f"{field_prefix}face"]:
+        if face.require_face(character_params):
             image_faces = face.crop(base64_image)
             cFace.inc(len(image_faces))
             faces.extend(image_faces)
@@ -143,7 +145,7 @@ def request_prepare(request):
     if request.prompt is None:
         request.prompt = ""
 
-    if getattr(request, f"{field_prefix}translate", False):
+    if get_or_default(request, f"{field_prefix}translate", False):
         request.prompt = translate(request.prompt)
         request.negative_prompt = translate(request.negative_prompt)
 

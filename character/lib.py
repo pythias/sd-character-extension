@@ -53,3 +53,7 @@ def encode_to_base64(image):
 def encode_np_to_base64(image):
     pil = Image.fromarray(image)
     return api.encode_pil_to_base64(pil)
+
+
+def get_or_default(obj, key, default):
+    return obj.get(key, default) if isinstance(obj, dict) else getattr(obj, key, default)

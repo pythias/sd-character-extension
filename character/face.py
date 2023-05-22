@@ -7,7 +7,7 @@ from typing import Optional, List
 from modules import scripts, processing
 
 from character.metrics import hDF
-from character.lib import log
+from character.lib import log, get_or_default
 
 REPAIRER_NAME = "face editor ex"
 CROPPER_NAME = "FaceCropper"
@@ -126,17 +126,23 @@ def is_face_repairer_script(script: scripts.Script) -> bool:
     return script.title() == REPAIRER_NAME
 
 
+def require_face(request):
+    return get_or_default(request, "character_face", False)
+
+
 def require_face_repairer(request):
-    return getattr(request, "character_face_repair", False)
+    return get_or_default(request, "character_face_repair", True)
 
 
 def keep_original_image(request):
-    return getattr(request, "character_face_repair_keep_original", False)
+    return get_or_default(request, "character_face_repair_keep_original", False)
 
 
 def apply_face_repairer(request):
     if not require_face_repairer(request):
         return
+
+    log("face repairer enabled")
 
     params = vars(request)
     keys = list(params.keys())
