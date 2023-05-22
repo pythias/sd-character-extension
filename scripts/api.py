@@ -22,7 +22,6 @@ class ApiHijack(api.Api):
         request_prepare(request)
         apply_controlnet(request)
         face.apply_face_repairer(request)
-        upscale.apply_auto_upscale(request)
         return self.wrap_call(self.text2imgapi, t2i_counting, request)
 
     @hT2I.time()

@@ -142,5 +142,4 @@ def apply_face_repairer(request):
 
     values["enabled"] = True
     unit = FaceUnit(**values)
-    # face editor ex
-    request.alwayson_scripts.update({REPAIRER_NAME: {'args': vars(unit)}})
+    request.alwayson_scripts.update({REPAIRER_NAME: {'args': [unit]}})
