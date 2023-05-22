@@ -130,6 +130,10 @@ def require_face_repairer(request):
     return getattr(request, "character_face_repair", False)
 
 
+def keep_original_image(request):
+    return getattr(request, "character_face_repair_keep_original", False)
+
+
 def apply_face_repairer(request):
     if not require_face_repairer(request):
         return

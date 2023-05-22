@@ -46,7 +46,20 @@ field_prefix = "character_"
 min_base64_image_size = 1000
 
 
-class CharacterCommonRequest():
+# class CharacterCommonRequest():
+#     steps: int = Field(default=20, title='Steps', description='Number of steps.')
+#     sampler_name: str = Field(default="Euler", title='Sampler', description='The sampler to use.')
+#     restore_faces: bool = Field(default=False, title='Restore faces', description='Restore faces in the generated image.')
+
+#     character_translate: bool = Field(default=False, title='Translate', description='Translate the prompt.')
+#     character_face_repair: bool = Field(default=True, title='Face repair', description='Repair faces in the generated image.')
+#     character_face_repair_keep_original: bool = Field(default=False, title='Keep original', description='Keep the original image when repairing faces.')
+#     character_auto_upscale: bool = Field(default=True, title='Auto upscale', description='Auto upscale the generated image.')
+
+#     character_image: str = Field(default="", title='Image', description='The image in base64 format.')
+
+
+class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
     steps: int = Field(default=20, title='Steps', description='Number of steps.')
     sampler_name: str = Field(default="Euler", title='Sampler', description='The sampler to use.')
     restore_faces: bool = Field(default=False, title='Restore faces', description='Restore faces in the generated image.')
@@ -57,12 +70,9 @@ class CharacterCommonRequest():
     character_auto_upscale: bool = Field(default=True, title='Auto upscale', description='Auto upscale the generated image.')
 
     character_image: str = Field(default="", title='Image', description='The image in base64 format.')
-
-
-class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI, CharacterCommonRequest):
     character_pose: str = Field(default="", title='Pose', description='The pose of the character.')
 
-class CharacterV2Img2ImgRequest(StableDiffusionImg2ImgProcessingAPI, CharacterCommonRequest):
+class CharacterV2Img2ImgRequest(StableDiffusionImg2ImgProcessingAPI):
     pass
 
 
@@ -87,8 +97,7 @@ def convert_response(request, character_params, response):
     params = response.parameters
     info = json.loads(response.info)
 
-    if face.require_face_repairer(request):
-        # 由于Face Editor会保留原图，需要清除脸部修复的图片
+    if face.require_face_repairer(request) and not face.keep_original_image(request):
         batch_size = getattr(request, "batch_size", 1)
         for _ in range(batch_size):
             response.images.pop()
