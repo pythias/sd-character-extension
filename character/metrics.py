@@ -30,7 +30,6 @@ hSD = Histogram('character_processing_latency_seconds', 'Stable diffusion proces
 hDF = Histogram('character_face_latency_seconds', 'Detect face latency')
 hDN = Histogram('character_nsfw_latency_seconds', 'Detect nsfw latency')
 hCaption = Histogram('character_caption_latency_seconds', 'Caption latency')
-hTranslate = Histogram('character_translate_latency_seconds', 'Translate latency')
 hRepair = Histogram('character_repair_latency_seconds', 'Repair latency')
 
 cT2I = Counter('character_t2i_requests', 'Text to image requests')

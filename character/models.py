@@ -11,7 +11,6 @@ from character.lib import log, LogLevel, get_or_default
 from character.nsfw import image_has_nsfw, tags_has_nsfw
 from character.errors import *
 from character.metrics import *
-from character.translate import translate
 
 from modules import shared, images
 from modules.api.models import *
@@ -45,35 +44,46 @@ field_prefix = "character_"
 
 min_base64_image_size = 1000
 
+common_fields = [
+    {"key": "steps", "type": int, "default": 20},
+    {"key": "sampler_name", "type": str, "default": "Euler a"},
+    {"key": "restore_faces", "type": bool, "default": False},
+    {"key": "character_face_repair", "type": bool, "default": True},
+    {"key": "character_face_repair_keep_original", "type": bool, "default": False},
+    {"key": "character_auto_upscale", "type": bool, "default": True},
+    {"key": "character_image", "type": str, "default": ""},
+]
 
-# class CharacterCommonRequest():
+t2i_fields = common_fields + []
+i2i_fields = common_fields + []
+
+CharacterV2Txt2ImgRequest = PydanticModelGenerator(
+    "StableDiffusionTxt2ImgProcessingAPI",
+    StableDiffusionTxt2ImgProcessingAPI,
+    t2i_fields
+).generate_model()
+
+CharacterV2Img2ImgRequest = PydanticModelGenerator(
+    "StableDiffusionImg2ImgProcessingAPI",
+    StableDiffusionImg2ImgProcessingAPI,
+    i2i_fields
+).generate_model()
+
+
+# class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
 #     steps: int = Field(default=20, title='Steps', description='Number of steps.')
 #     sampler_name: str = Field(default="Euler", title='Sampler', description='The sampler to use.')
 #     restore_faces: bool = Field(default=False, title='Restore faces', description='Restore faces in the generated image.')
 
-#     character_translate: bool = Field(default=False, title='Translate', description='Translate the prompt.')
 #     character_face_repair: bool = Field(default=True, title='Face repair', description='Repair faces in the generated image.')
 #     character_face_repair_keep_original: bool = Field(default=False, title='Keep original', description='Keep the original image when repairing faces.')
 #     character_auto_upscale: bool = Field(default=True, title='Auto upscale', description='Auto upscale the generated image.')
 
 #     character_image: str = Field(default="", title='Image', description='The image in base64 format.')
+#     character_pose: str = Field(default="", title='Pose', description='The pose of the character.')
 
-
-class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
-    steps: int = Field(default=20, title='Steps', description='Number of steps.')
-    sampler_name: str = Field(default="Euler", title='Sampler', description='The sampler to use.')
-    restore_faces: bool = Field(default=False, title='Restore faces', description='Restore faces in the generated image.')
-
-    character_translate: bool = Field(default=False, title='Translate', description='Translate the prompt.')
-    character_face_repair: bool = Field(default=True, title='Face repair', description='Repair faces in the generated image.')
-    character_face_repair_keep_original: bool = Field(default=False, title='Keep original', description='Keep the original image when repairing faces.')
-    character_auto_upscale: bool = Field(default=True, title='Auto upscale', description='Auto upscale the generated image.')
-
-    character_image: str = Field(default="", title='Image', description='The image in base64 format.')
-    character_pose: str = Field(default="", title='Pose', description='The pose of the character.')
-
-class CharacterV2Img2ImgRequest(StableDiffusionImg2ImgProcessingAPI):
-    pass
+# class CharacterV2Img2ImgRequest(StableDiffusionImg2ImgProcessingAPI):
+#     pass
 
 
 class V2ImageResponse(BaseModel):
@@ -142,10 +152,6 @@ def request_prepare(request):
 
     if request.prompt is None:
         request.prompt = ""
-
-    if get_or_default(request, f"{field_prefix}translate", False):
-        request.prompt = translate(request.prompt)
-        request.negative_prompt = translate(request.negative_prompt)
 
     request.negative_prompt = request.negative_prompt + "," \
         + negative_default_prompts + "," \
