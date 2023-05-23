@@ -11,6 +11,7 @@ from character import face
 from character.lib import log, get_or_default, clip_b64img
 from character.errors import *
 from character.metrics import *
+from character.nsfw import image_has_nsfw, image_has_illegal_words
 
 from modules import shared, images
 from modules.api.models import *
@@ -95,17 +96,35 @@ def convert_response(request, response):
 
     faces = []
 
-    if face.require_face(request):
-        for base64_image in response.images:
+    if face.require_face_repairer(p) and not face.keep_original_image(p):
+        batch_size = get_or_default(p, "batch_size", 1)
+        for _ in range(batch_size):
+            response.images.pop()
+
+    crop_face = face.require_face(request)
+
+    safety_images = []
+    for base64_image in response.images:
+        if image_has_nsfw(base64_image):
+            cNSFW.inc()
+            continue
+
+        if image_has_illegal_words(base64_image):
+            cIllegal.inc()
+            continue
+
+        safety_images.append(base64_image)
+
+        if crop_face:
             # todo 脸部裁切，在高清修复脸部时有数据
             image_faces = face.crop(base64_image)
             cFace.inc(len(image_faces))
             faces.extend(image_faces)
 
-    if len(response.images) == 0:
+    if len(safety_images) == 0:
         return ApiException(code_character_nsfw, f"has nsfw concept, info:{info}").response()
 
-    return V2ImageResponse(images=response.images, parameters=params, info=info, faces=faces)
+    return V2ImageResponse(images=safety_images, parameters=params, info=info, faces=faces)
 
 
 def simply_prompts(prompts: str):

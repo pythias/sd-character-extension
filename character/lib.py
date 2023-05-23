@@ -25,7 +25,6 @@ logging.basicConfig(
     format="%(levelname)s %(asctime)s %(server_name)s %(server_version)s %(request_id)s %(message)s",
 )
 
-
 def set_request_id(id):
     global request_id
     request_id = id
