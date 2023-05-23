@@ -38,7 +38,10 @@ log(f"ControlNet loaded, models: {control_net_models}")
 default_control_net_model = "controlnet11Models_lineart [5c23b17d]"
 default_control_net_module = "lineart_realistic"
 default_open_pose_model = "controlnet11Models_openpose [73c2b67d]"
-default_open_pose_module = "openpose_full"
+default_open_pose_module = "openpose"
+default_tile_model = "controlnet11Models_tile [39a89b25]"
+default_tile_module = "tile_resample"
+
 
 field_prefix = "character_"
 
@@ -51,20 +54,20 @@ common_fields = [
     {"key": "character_face_repair", "type": bool, "default": True},
     {"key": "character_face_repair_keep_original", "type": bool, "default": False},
     {"key": "character_auto_upscale", "type": bool, "default": True},
-    {"key": "character_image", "type": str, "default": ""},
+    {"key": "character_image", "type": str, "default": None},
 ]
 
-t2i_fields = common_fields + []
-i2i_fields = common_fields + []
+t2i_fields = common_fields
+i2i_fields = common_fields
 
 CharacterV2Txt2ImgRequest = PydanticModelGenerator(
-    "StableDiffusionTxt2ImgProcessingAPI",
+    "CharacterV2Txt2ImgRequest",
     StableDiffusionTxt2ImgProcessingAPI,
     t2i_fields
 ).generate_model()
 
 CharacterV2Img2ImgRequest = PydanticModelGenerator(
-    "StableDiffusionImg2ImgProcessingAPI",
+    "CharacterV2Img2ImgRequest",
     StableDiffusionImg2ImgProcessingAPI,
     i2i_fields
 ).generate_model()
@@ -137,13 +140,18 @@ def simply_prompts(prompts: str):
     if not prompts:
         return ""
 
-    # 大小写不影响最后结果
-    prompts = prompts.lower().split(",")
+    # split the prompts and keep the original case
+    prompts = prompts.split(",")
 
-    # 顺序影响最后结果
-    unique_prompts = []
-    [unique_prompts.append(p) for p in prompts if p not in unique_prompts and p != ""]
-    return ",".join(unique_prompts)
+    unique_prompts = {}
+    for p in prompts:
+        p_stripped = p.strip()  # remove leading/trailing whitespace
+        if p_stripped != "":
+            # note the use of lower() for the comparison but storing the original string
+            unique_prompts[p_stripped.lower()] = p_stripped
+
+    return ",".join(unique_prompts.values())
+
 
 
 def request_prepare(request):
@@ -200,7 +208,6 @@ def apply_controlnet(request):
         get_cn_empty_unit()
     ]
 
-
     # todo 对用户输入的处理
     request.alwayson_scripts.update({'ControlNet': {'args': [external_code.ControlNetUnit(**unit) for unit in units]}})
 
@@ -218,44 +225,42 @@ def valid_base64(image_b64):
 
 
 def get_cn_image_unit(request):
-    image_b64 = getattr(request, f"{field_prefix}image", "")
-    enabled = False
-    model = getattr(request, f"{field_prefix}model", default_control_net_model)
-    module = getattr(request, f"{field_prefix}module", default_control_net_module)
-    caption = clip_b64img(image_b64)
+    image_b64 = get_or_default(request, f"{field_prefix}image", "")
+    if not valid_base64(image_b64):
+        return get_cn_empty_unit()
 
-    if caption:
-        enabled = True
-        request.prompt = caption + "," + request.prompt
-        # log(f"image, caption: {caption}, new-prompt: {request.prompt}")
+    request.prompt = clip_b64img(image_b64) + "," + request.prompt
 
     return {
-        "model": model,
-        "module": module,
-        "enabled": enabled,
+        "module": get_or_default(request, f"{field_prefix}cn_preprocessor", default_control_net_module),
+        "model": get_or_default(request, f"{field_prefix}cn_model", default_control_net_model),
+        "enabled": True,
         "image": image_b64,
     }
 
 
 def get_cn_pose_unit(request):
-    pose_b64 = getattr(request, f"{field_prefix}pose", "")
-    preprocessor = getattr(request, f"{field_prefix}preprocessor", "none")
+    pose_b64 = get_or_default(request, f"{field_prefix}pose", "")
+    if not valid_base64(pose_b64):
+        return get_cn_empty_unit()
 
     return {
-        "model": default_open_pose_model,
-        "module": preprocessor,
-        "enabled": valid_base64(pose_b64),
+        "module": get_or_default(request, f"{field_prefix}pose_preprocessor", default_open_pose_module),
+        "model": get_or_default(request, f"{field_prefix}pose_model", default_open_pose_model),
+        "enabled": True,
         "image": pose_b64,
     }
 
 
 def get_cn_tile_unit(request):
-    auto_upscale = getattr(request, f"{field_prefix}auto_upscale", False)
+    auto_upscale = get_or_default(request, f"{field_prefix}auto_upscale", False)
+    if not auto_upscale:
+        return get_cn_empty_unit()
 
     return {
-        "model": "controlnet11Models_tile [39a89b25]",
-        "module": "tile_resample",
-        "enabled": auto_upscale,
+        "module": get_or_default(request, f"{field_prefix}tile_preprocessor", default_tile_module),
+        "model": get_or_default(request, f"{field_prefix}tile_model", default_tile_model),
+        "enabled": True,
         "image": "",
     }
 
