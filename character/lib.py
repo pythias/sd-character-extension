@@ -8,49 +8,31 @@ from modules.api.api import decode_base64_to_image
 from PIL import Image
 
 import os
-import colorama
 import numpy as np
 import logging
+import sys
 
-
-version_flag = "v1.0.8"
+version_flag = "v1.0.9"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")
 
 request_id_var = ContextVar('request_id')
-request_id_var.set("started")
-
-
-# Initialize colorama
-colorama.init()
-
-class ColoredFormatter(logging.Formatter):
-    def format(self, record):
-        level = record.levelno
-        if(level>=logging.ERROR):
-            color = Fore.RED
-        elif(level>=logging.WARN):
-            color = Fore.YELLOW
-        elif(level>=logging.INFO):
-            color = Fore.GREEN
-        elif(level>=logging.DEBUG):
-            color = Fore.BLUE
-        else:
-            color = Fore.WHITE
-        
-        asctime = self.formatTime(record, self.datefmt)
-        return f"{color}{record.levelname}{Style.RESET_ALL} {asctime} {record.message}"
+request_id_var.set("initialization")
 
 # Set up the logger
 logger = logging.getLogger("fastapi")
-handler = logging.StreamHandler()
-handler.setFormatter(ColoredFormatter())
-logger.addHandler(handler)
-logger.setLevel(logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s %(asctime)s %(server_name)-15s %(server_version)s %(request_id)s %(message)s",
+)
 
 def log(message, level = logging.INFO):
-    logger.log(level, f"{shared.cmd_opts.character_server_name} v{version_flag} {request_id_var.get()} : {message}")
+    logger.log(level, message, extra={
+        "server_name": shared.cmd_opts.character_server_name,
+        "server_version": version_flag,
+        "request_id": request_id_var.get()
+    })
 
 def to_rgb_image(img):
     if not hasattr(img, 'mode') or img.mode != 'RGB':
