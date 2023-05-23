@@ -11,7 +11,7 @@ import numpy as np
 import logging
 import sys
 
-version_flag = "v1.0.9"
+version_flag = "v1.1.0"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")
@@ -81,7 +81,7 @@ def clip_b64img(image_b64):
 
 
 def request_is_t2i(request):
-    if isinstance(obj, dict):
+    if isinstance(request, dict):
         return "hr_scale" in dict
         
     return hasattr(request, "hr_scale")
