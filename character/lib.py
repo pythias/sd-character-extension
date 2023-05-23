@@ -5,7 +5,6 @@ from colorama import Fore, Style
 from modules import scripts, shared
 from modules.api import api
 from modules.api.api import decode_base64_to_image
-from contextvars import ContextVar
 from PIL import Image
 
 import os
@@ -39,19 +38,19 @@ class ColoredFormatter(logging.Formatter):
             color = Fore.BLUE
         else:
             color = Fore.WHITE
-
-        return f"{color}{record.levelname}{Style.RESET_ALL} {record.asctime} {record.message}"
+        
+        asctime = self.formatTime(record, self.datefmt)
+        return f"{color}{record.levelname}{Style.RESET_ALL} {asctime} {record.message}"
 
 # Set up the logger
-logger = logging.getLogger("uvicorn")
+logger = logging.getLogger("fastapi")
 handler = logging.StreamHandler()
 handler.setFormatter(ColoredFormatter())
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
 def log(message, level = logging.INFO):
-    logger.log(level, f"{shared.cmd_opts.character_server_name}v{version_flag} {request_id_var.get()} : {message}")
-
+    logger.log(level, f"{shared.cmd_opts.character_server_name} v{version_flag} {request_id_var.get()} : {message}")
 
 def to_rgb_image(img):
     if not hasattr(img, 'mode') or img.mode != 'RGB':
