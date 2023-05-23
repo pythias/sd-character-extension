@@ -28,23 +28,19 @@ colorama.init()
 
 class ColoredFormatter(logging.Formatter):
     def format(self, record):
-        levelno = record.levelno
-        if(levelno>=50):
+        level = record.levelno
+        if(level>=logging.ERROR):
             color = Fore.RED
-        elif(levelno>=40):
+        elif(level>=logging.WARN):
             color = Fore.YELLOW
-        elif(levelno>=30):
+        elif(level>=logging.INFO):
             color = Fore.GREEN
-        elif(levelno>=20):
-            color = Fore.CYAN
-        elif(levelno>=10):
+        elif(level>=logging.DEBUG):
             color = Fore.BLUE
         else:
             color = Fore.WHITE
 
-        format_str = "%(asctime)s %(server_name)s %(server_version)s %(request_id)s : %(message)s"
-        result = format_str % record.__dict__
-        return f"{color}{record.levelname}{Style.RESET_ALL} {result}"
+        return f"{color}{record.levelname}{Style.RESET_ALL} {record.asctime} {record.message}"
 
 # Set up the logger
 logger = logging.getLogger("uvicorn")
@@ -54,11 +50,7 @@ logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
 def log(message, level = logging.INFO):
-    logger.log(level, message, extra={
-        "server_name": shared.cmd_opts.character_server_name,
-        "server_version": version_flag,
-        "request_id": request_id_var.get(),
-    })
+    logger.log(level, f"{shared.cmd_opts.character_server_name}v{version_flag} {request_id_var.get()} : {message}")
 
 
 def to_rgb_image(img):
