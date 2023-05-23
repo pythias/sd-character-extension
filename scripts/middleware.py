@@ -1,4 +1,4 @@
-from character.lib import keys_path, log, request_id_var
+from character.lib import keys_path, log, set_request_id
 from character.errors import *
 
 from Crypto.Hash import SHA256
@@ -40,7 +40,7 @@ def setup_middleware(_: gr.Blocks, app: FastAPI):
         request_id = str(uuid4())
         request_id = request_id.split('-')[-1]
         if request.url.path.startswith("/character/v2/"):
-            request_id_var.set(request_id)
+            set_request_id(request_id)
 
         response = await call_next(request)
         response.headers["X-Request-ID"] = request_id

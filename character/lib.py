@@ -1,4 +1,3 @@
-from contextvars import ContextVar
 from datetime import datetime
 from enum import Enum
 from colorama import Fore, Style
@@ -17,8 +16,7 @@ character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")
 
-request_id_var = ContextVar('request_id')
-request_id_var.set("initialization")
+request_id = "initialization"
 
 # Set up the logger
 logger = logging.getLogger("fastapi")
@@ -27,11 +25,19 @@ logging.basicConfig(
     format="%(levelname)s %(asctime)s %(server_name)s %(server_version)s %(request_id)s %(message)s",
 )
 
+
+def set_request_id(id):
+    global request_id
+    request_id = id
+
+def get_request_id():
+    return request_id
+
 def log(message, level = logging.INFO):
     logger.log(level, message, extra={
         "server_name": shared.cmd_opts.character_server_name,
         "server_version": version_flag,
-        "request_id": request_id_var.get()
+        "request_id": request_id
     })
 
 def to_rgb_image(img):
