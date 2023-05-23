@@ -29,9 +29,6 @@ extensions_control_net_path = os.path.join(extensions_dir, "sd-webui-controlnet"
 sys.path.append(extensions_control_net_path)
 from scripts import external_code, global_state
 
-control_net_models = external_code.get_models(update=True)
-log(f"ControlNet loaded, models: {control_net_models}")
-
 # todo load from config
 # default_control_net_model = "controlnet11Models_softedge [f616a34f]"
 # default_control_net_module = "softedge_pidisafe"
@@ -42,51 +39,50 @@ default_open_pose_module = "openpose"
 default_tile_model = "controlnet11Models_tile [39a89b25]"
 default_tile_module = "tile_resample"
 
+control_net_models = external_code.get_models(update=True)
+log(f"ControlNet loaded, {global_state.cn_models_names}, {global_state.cn_models}")
+
+def find_closest_cn_model_name(search: str):
+    if not search:
+        return None
+
+    if search in global_state.cn_models:
+        return search
+
+    search = search.lower()
+    if search in global_state.cn_models_names:
+        return global_state.cn_models_names.get(search)
+    
+    applicable = [name for name in global_state.cn_models_names.keys() if search in name.lower()]
+    if not applicable:
+        return None
+
+    applicable = sorted(applicable, key=lambda name: len(name))
+    return global_state.cn_models_names[applicable[0]]
+
 
 field_prefix = "character_"
 
 min_base64_image_size = 1000
 
-common_fields = [
-    {"key": "steps", "type": int, "default": 20},
-    {"key": "sampler_name", "type": str, "default": "Euler a"},
-    {"key": "restore_faces", "type": bool, "default": False},
-    {"key": "character_face_repair", "type": bool, "default": True},
-    {"key": "character_face_repair_keep_original", "type": bool, "default": False},
-    {"key": "character_auto_upscale", "type": bool, "default": True},
-    {"key": "character_image", "type": str, "default": None},
-]
-
-t2i_fields = common_fields
-i2i_fields = common_fields
-
-CharacterV2Txt2ImgRequest = PydanticModelGenerator(
-    "CharacterV2Txt2ImgRequest",
-    StableDiffusionTxt2ImgProcessingAPI,
-    t2i_fields
-).generate_model()
-
-CharacterV2Img2ImgRequest = PydanticModelGenerator(
-    "CharacterV2Img2ImgRequest",
-    StableDiffusionImg2ImgProcessingAPI,
-    i2i_fields
-).generate_model()
+class CharacterCommonRequest():
+    def __init__(self, character_face_repair = True, character_face_repair_keep_original = False, character_auto_upscale = True, character_image = "", character_pose = "", **kwargs):
+        self.character_face_repair = character_face_repair
+        self.character_face_repair_keep_original = character_face_repair_keep_original
+        self.character_auto_upscale = character_auto_upscale
+        self.character_image = character_image
+        self.character_pose = character_pose
 
 
-# class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
-#     steps: int = Field(default=20, title='Steps', description='Number of steps.')
-#     sampler_name: str = Field(default="Euler", title='Sampler', description='The sampler to use.')
-#     restore_faces: bool = Field(default=False, title='Restore faces', description='Restore faces in the generated image.')
+class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI, CharacterCommonRequest):
+    steps: int = Field(default=20, title='Steps', description='Number of steps.')
+    sampler_name: str = Field(default="Euler", title='Sampler', description='The sampler to use.')
 
-#     character_face_repair: bool = Field(default=True, title='Face repair', description='Repair faces in the generated image.')
-#     character_face_repair_keep_original: bool = Field(default=False, title='Keep original', description='Keep the original image when repairing faces.')
-#     character_auto_upscale: bool = Field(default=True, title='Auto upscale', description='Auto upscale the generated image.')
 
-#     character_image: str = Field(default="", title='Image', description='The image in base64 format.')
-#     character_pose: str = Field(default="", title='Pose', description='The pose of the character.')
-
-# class CharacterV2Img2ImgRequest(StableDiffusionImg2ImgProcessingAPI):
-#     pass
+class CharacterV2Img2ImgRequest(StableDiffusionImg2ImgProcessingAPI, CharacterCommonRequest):
+    steps: int = Field(default=20, title='Steps', description='Number of steps.')
+    sampler_name: str = Field(default="Euler", title='Sampler', description='The sampler to use.')
+    denoising_strength = Field(default=0.75, title='Denoising Strength', description='The strength of the denoising.')
 
 
 class V2ImageResponse(BaseModel):
@@ -233,7 +229,7 @@ def get_cn_image_unit(request):
 
     return {
         "module": get_or_default(request, f"{field_prefix}cn_preprocessor", default_control_net_module),
-        "model": get_or_default(request, f"{field_prefix}cn_model", default_control_net_model),
+        "model": find_closest_cn_model_name(get_or_default(request, f"{field_prefix}cn_model", default_control_net_model)),
         "enabled": True,
         "image": image_b64,
     }
@@ -286,3 +282,4 @@ def params_counting(request):
     cLoras.inc(request.prompt.count("<"))
     cSteps.inc(request.steps)
     cPixels.inc(request.width * request.height)
+
