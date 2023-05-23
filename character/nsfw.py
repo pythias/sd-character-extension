@@ -5,9 +5,11 @@ from PIL import Image
 import numpy as np
 import base64
 import io
+import re
+import logging
 
 from character.metrics import hDN
-from character.lib import models_path, log, LogLevel
+from character.lib import models_path, log, clip_b64img
 
 safety_model_id = "CompVis/stable-diffusion-safety-checker"
 safety_feature_extractor = None
@@ -43,5 +45,21 @@ def image_has_nsfw(base64_image):
     return False
 
 
-def tags_has_nsfw(tags):
+def image_has_illegal_words(base64_image):
+    """
+    if captions contains "flag", "banner", "pennant",  "flags", "banners", "pennants" return True
+    """
+    caption = clip_b64img(base64_image)
+    words = re.split(', | ', caption)
+
+    # Defining the keywords
+    keywords = ["flag", "banner", "pennant", "flags", "banners", "pennants", "map", "maps"]
+
+    # Check if any of the keywords is in the caption
+    for keyword in keywords:
+        if keyword in words:
+            log(f"image has illegal word, {keyword}", logging.WARN)
+            return True
+
     return False
+

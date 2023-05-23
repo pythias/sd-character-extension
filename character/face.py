@@ -5,9 +5,10 @@ import numpy as np
 
 from typing import Optional, List
 from modules import scripts, processing
+# from modules.processing import StableDiffusionProcessing
 
 from character.metrics import hDF
-from character.lib import log, get_or_default
+from character.lib import log, get_or_default, get_from_request
 
 REPAIRER_NAME = "face editor ex"
 CROPPER_NAME = "FaceCropper"
@@ -127,15 +128,15 @@ def is_face_repairer_script(script: scripts.Script) -> bool:
 
 
 def require_face(request):
-    return get_or_default(request, "character_face", False)
+    return get_from_request(request, "character_face", False)
 
 
 def require_face_repairer(request):
-    return get_or_default(request, "character_face_repair", True)
+    return get_from_request(request, "character_repair_face", True)
 
 
 def keep_original_image(request):
-    return get_or_default(request, "character_face_repair_keep_original", False)
+    return get_from_request(request, "character_face_repair_keep_original", False)
 
 
 def apply_face_repairer(request):

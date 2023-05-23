@@ -1,4 +1,4 @@
-from character.lib import log, LogLevel
+from character.lib import log
 from modules import script_callbacks
 from fastapi import FastAPI
 import gradio as gr

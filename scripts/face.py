@@ -1,9 +1,12 @@
 import cv2
 import gradio as gr
-import modules.scripts as scripts
 
 from character import face, lib
+from character.lib import log, get_or_default
 
+import modules.scripts as scripts
+from modules import shared, scripts
+from modules.processing import Processed
 
 class FaceCropper(scripts.Script):
     def __init__(self) -> None:
@@ -19,5 +22,8 @@ class FaceCropper(scripts.Script):
         enabled = gr.Checkbox(label="Enabled Face Detect", value=False)
         return [enabled]
 
+    def postprocess(self, p, processed: Processed, enabled: bool, *args):
+        # todo 脸部检测
+        return
 
 lib.log("Face loaded")

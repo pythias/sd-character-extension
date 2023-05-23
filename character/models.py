@@ -1,17 +1,17 @@
 import os
 import sys
 import json
+import logging
 
 from enum import Enum
 from pydantic import BaseModel, Field
 from typing import Any, Optional, Dict, List
 
 from character import face
-from character.lib import log, LogLevel, get_or_default
-from character.nsfw import image_has_nsfw, tags_has_nsfw
+from character.lib import log, get_or_default, clip_b64img, get_from_request
 from character.errors import *
 from character.metrics import *
-from character.translate import translate
+from character.nsfw import image_has_nsfw, image_has_illegal_words
 
 from modules import shared, images
 from modules.api.models import *
@@ -30,110 +30,119 @@ extensions_control_net_path = os.path.join(extensions_dir, "sd-webui-controlnet"
 sys.path.append(extensions_control_net_path)
 from scripts import external_code, global_state
 
-control_net_models = external_code.get_models(update=True)
-log(f"ControlNet loaded, models: {control_net_models}")
-
 # todo load from config
 # default_control_net_model = "controlnet11Models_softedge [f616a34f]"
 # default_control_net_module = "softedge_pidisafe"
 default_control_net_model = "controlnet11Models_lineart [5c23b17d]"
 default_control_net_module = "lineart_realistic"
 default_open_pose_model = "controlnet11Models_openpose [73c2b67d]"
-default_open_pose_module = "openpose_full"
+default_open_pose_module = "openpose"
+default_tile_model = "controlnet11Models_tile [39a89b25]"
+default_tile_module = "tile_resample"
+
+control_net_models = external_code.get_models(update=True)
+
+def find_closest_cn_model_name(search: str):
+    if not search:
+        return None
+
+    if search in global_state.cn_models:
+        return search
+
+    search = search.lower()
+    if search in global_state.cn_models_names:
+        return global_state.cn_models_names.get(search)
+    
+    applicable = [name for name in global_state.cn_models_names.keys() if search in name.lower()]
+    if not applicable:
+        return None
+
+    applicable = sorted(applicable, key=lambda name: len(name))
+    return global_state.cn_models_names[applicable[0]]
+
 
 field_prefix = "character_"
 
 min_base64_image_size = 1000
 
-
-# class CharacterCommonRequest():
-#     steps: int = Field(default=20, title='Steps', description='Number of steps.')
-#     sampler_name: str = Field(default="Euler", title='Sampler', description='The sampler to use.')
-#     restore_faces: bool = Field(default=False, title='Restore faces', description='Restore faces in the generated image.')
-
-#     character_translate: bool = Field(default=False, title='Translate', description='Translate the prompt.')
-#     character_face_repair: bool = Field(default=True, title='Face repair', description='Repair faces in the generated image.')
-#     character_face_repair_keep_original: bool = Field(default=False, title='Keep original', description='Keep the original image when repairing faces.')
-#     character_auto_upscale: bool = Field(default=True, title='Auto upscale', description='Auto upscale the generated image.')
-
-#     character_image: str = Field(default="", title='Image', description='The image in base64 format.')
-
-
 class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
+    # 大部分参数都丢 extra_generation_params 里面（默认值那种，省得定义那么多）
     steps: int = Field(default=20, title='Steps', description='Number of steps.')
     sampler_name: str = Field(default="Euler", title='Sampler', description='The sampler to use.')
-    restore_faces: bool = Field(default=False, title='Restore faces', description='Restore faces in the generated image.')
-
-    character_translate: bool = Field(default=False, title='Translate', description='Translate the prompt.')
-    character_face_repair: bool = Field(default=True, title='Face repair', description='Repair faces in the generated image.')
-    character_face_repair_keep_original: bool = Field(default=False, title='Keep original', description='Keep the original image when repairing faces.')
-    character_auto_upscale: bool = Field(default=True, title='Auto upscale', description='Auto upscale the generated image.')
-
-    character_image: str = Field(default="", title='Image', description='The image in base64 format.')
-    character_pose: str = Field(default="", title='Pose', description='The pose of the character.')
+    character_image: str = Field(default="", title='Character Image', description='The character image in base64 format.')
+    character_pose: str = Field(default="", title='Character Pose', description='The character pose in base64 format.')
+    character_face: bool = Field(default=False, title='Character Face', description='Whether to crop faces.')
+    extra_generation_params: dict = Field(default={}, title='Extra Generation Params', description='Extra generation params.')
 
 class CharacterV2Img2ImgRequest(StableDiffusionImg2ImgProcessingAPI):
-    pass
-
+    steps: int = Field(default=20, title='Steps', description='Number of steps.')
+    sampler_name: str = Field(default="Euler", title='Sampler', description='The sampler to use.')
+    denoising_strength = Field(default=0.75, title='Denoising Strength', description='The strength of the denoising.')
+    character_input_image: str = Field(default="", title='Character Input Image', description='The character input image in base64 format.')
+    character_image: str = Field(default="", title='Character Image', description='The character image in base64 format.')
+    character_pose: str = Field(default="", title='Character Pose', description='The character pose in base64 format.')
+    extra_generation_params: dict = Field(default={}, title='Extra Generation Params', description='Extra generation params.')
+    
 
 class V2ImageResponse(BaseModel):
     images: List[str] = Field(default=None, title="Image", description="The generated image in base64 format.")
     parameters: dict
-    other: dict
     info: dict
     faces: List[str]
 
 
-class CaptionRequest(BaseModel):
-    image: str = Field(default="", title='Image', description='The image in base64 format.')
-
-
-class CaptionResponse(BaseModel):
-    caption: str = Field(default="", title='Caption', description='The caption of the image.')
-    by: str = Field(default="CLIP", title='By', description='The model used to generate the caption.')
-
-
-def convert_response(request, character_params, response):
+def convert_response(request, response):
     params = response.parameters
     info = json.loads(response.info)
 
-    if face.require_face_repairer(character_params) and not face.keep_original_image(character_params):
-        batch_size = get_or_default(request, "batch_size", 1)
-        for _ in range(batch_size):
-            response.images.pop()
-
     faces = []
+
+    source_images = []
+    if face.require_face_repairer(request) and not face.keep_original_image(request):
+        batch_size = get_or_default(request, "batch_size", 1)
+        source_images = response.images[batch_size:]
+
+    crop_face = face.require_face(request)
+
     safety_images = []
-    for base64_image in response.images:
+    for base64_image in source_images:
         if image_has_nsfw(base64_image):
             cNSFW.inc()
             continue
 
-        # todo 脸部裁切，在高清修复脸部时有数据
-        if face.require_face(character_params):
+        if image_has_illegal_words(base64_image):
+            cIllegal.inc()
+            continue
+
+        safety_images.append(base64_image)
+
+        if crop_face:
+            # todo 脸部裁切，在高清修复脸部时有数据
             image_faces = face.crop(base64_image)
             cFace.inc(len(image_faces))
             faces.extend(image_faces)
 
-        safety_images.append(base64_image)
-
     if len(safety_images) == 0:
         return ApiException(code_character_nsfw, f"has nsfw concept, info:{info}").response()
 
-    return V2ImageResponse(images=safety_images, parameters=params, info=info, faces=faces, other=character_params)
+    return V2ImageResponse(images=safety_images, parameters=params, info=info, faces=faces)
 
 
 def simply_prompts(prompts: str):
     if not prompts:
         return ""
 
-    # 大小写不影响最后结果
-    prompts = prompts.lower().split(",")
+    # split the prompts and keep the original case
+    prompts = prompts.split(",")
 
-    # 顺序影响最后结果
-    unique_prompts = []
-    [unique_prompts.append(p) for p in prompts if p not in unique_prompts and p != ""]
-    return ",".join(unique_prompts)
+    unique_prompts = {}
+    for p in prompts:
+        p_stripped = p.strip()  # remove leading/trailing whitespace
+        if p_stripped != "":
+            # note the use of lower() for the comparison but storing the original string
+            unique_prompts[p_stripped.lower()] = p_stripped
+
+    return ",".join(unique_prompts.values())
 
 
 def request_prepare(request):
@@ -142,10 +151,6 @@ def request_prepare(request):
 
     if request.prompt is None:
         request.prompt = ""
-
-    if get_or_default(request, f"{field_prefix}translate", False):
-        request.prompt = translate(request.prompt)
-        request.negative_prompt = translate(request.negative_prompt)
 
     request.negative_prompt = request.negative_prompt + "," \
         + negative_default_prompts + "," \
@@ -157,34 +162,20 @@ def request_prepare(request):
 
     request.prompt = simply_prompts(request.prompt)
     request.negative_prompt = simply_prompts(request.negative_prompt)
+    request.extra_generation_params['character_from_ui'] = False
 
 
 def remove_character_fields(request):
-    character_params = {}
-
     params = vars(request)
     keys = list(params.keys())
     for key in keys:
         if not key.startswith(field_prefix):
             continue
 
-        character_params[key] = params[key]
+        if not isinstance(params[key], str) or (len(params[key]) < min_base64_image_size and len(params[key]) > 0):
+            request.extra_generation_params[key] = params[key]
+        
         delattr(request, key)
-
-    return character_params
-
-
-def clip_b64img(image_b64):
-    try:
-        img = decode_base64_to_image(image_b64)
-        return shared.interrogator.interrogate(img.convert('RGB'))
-    except Exception as e:
-        return ""
-
-
-def resize_b64img(image_b64):
-    MAX_SIZE = (1024, 1024)
-    pass
 
 
 def apply_controlnet(request):
@@ -193,7 +184,6 @@ def apply_controlnet(request):
         get_cn_pose_unit(request),
         get_cn_empty_unit()
     ]
-
 
     # todo 对用户输入的处理
     request.alwayson_scripts.update({'ControlNet': {'args': [external_code.ControlNetUnit(**unit) for unit in units]}})
@@ -207,49 +197,47 @@ def valid_base64(image_b64):
         decode_base64_to_image(image_b64)
         return True
     except Exception as e:
-        log(f"invalid base64 image: {e}", LogLevel.ERROR)
+        log(f"valid_base64 error: {e}", logging.ERROR)
         return False
 
 
 def get_cn_image_unit(request):
-    image_b64 = getattr(request, f"{field_prefix}image", "")
-    enabled = False
-    model = getattr(request, f"{field_prefix}model", default_control_net_model)
-    module = getattr(request, f"{field_prefix}module", default_control_net_module)
-    caption = clip_b64img(image_b64)
+    image_b64 = get_or_default(request, f"{field_prefix}image", "")
+    if not valid_base64(image_b64):
+        return get_cn_empty_unit()
 
-    if caption:
-        enabled = True
-        request.prompt = caption + "," + request.prompt
-        # log(f"image, caption: {caption}, new-prompt: {request.prompt}")
+    request.prompt = clip_b64img(image_b64) + "," + request.prompt
 
     return {
-        "model": model,
-        "module": module,
-        "enabled": enabled,
+        "module": get_or_default(request, f"{field_prefix}cn_preprocessor", default_control_net_module),
+        "model": find_closest_cn_model_name(get_or_default(request, f"{field_prefix}cn_model", default_control_net_model)),
+        "enabled": True,
         "image": image_b64,
     }
 
 
 def get_cn_pose_unit(request):
-    pose_b64 = getattr(request, f"{field_prefix}pose", "")
-    preprocessor = getattr(request, f"{field_prefix}preprocessor", "none")
+    pose_b64 = get_or_default(request, f"{field_prefix}pose", "")
+    if not valid_base64(pose_b64):
+        return get_cn_empty_unit()
 
     return {
-        "model": default_open_pose_model,
-        "module": preprocessor,
-        "enabled": valid_base64(pose_b64),
+        "module": get_or_default(request, f"{field_prefix}pose_preprocessor", default_open_pose_module),
+        "model": find_closest_cn_model_name(get_or_default(request, f"{field_prefix}pose_model", default_open_pose_model)),
+        "enabled": True,
         "image": pose_b64,
     }
 
 
 def get_cn_tile_unit(request):
-    auto_upscale = getattr(request, f"{field_prefix}auto_upscale", False)
+    auto_upscale = get_or_default(request, f"{field_prefix}auto_upscale", False)
+    if not auto_upscale:
+        return get_cn_empty_unit()
 
     return {
-        "model": "controlnet11Models_tile [39a89b25]",
-        "module": "tile_resample",
-        "enabled": auto_upscale,
+        "module": get_or_default(request, f"{field_prefix}tile_preprocessor", default_tile_module),
+        "model": find_closest_cn_model_name(get_or_default(request, f"{field_prefix}tile_model", default_tile_model)),
+        "enabled": True,
         "image": "",
     }
 
@@ -261,6 +249,35 @@ def get_cn_empty_unit():
         "enabled": False,
         "image": "",
     }
+
+
+def apply_i2i_request(request):
+    image_b64 = get_or_default(request, "character_input_image", "")
+
+    if not image_b64 or len(image_b64) < min_base64_image_size:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    try:
+        request.init_images = [image_b64]
+
+        img = decode_base64_to_image(image_b64)
+        caption = shared.interrogator.interrogate(img.convert('RGB'))
+        request.prompt = caption + "," + request.prompt
+
+        auto_upscale = get_from_request(request, "character_auto_upscale", True)
+        if auto_upscale:
+            request.denoising_strength = get_from_request(request, "denoising_strength", 0.75)
+            request.image_cfg_scale = get_from_request(request, "image_cfg_scale", 7)
+            request.width = img.size[0] * 2
+            request.height = img.size[1] * 2
+            # todo if use pass the size, we should use the size
+            # request.width = get_from_request(request, "width", img.size[0] * 2)
+            # request.height = get_from_request(request, "height", img.size[1] * 2)
+            
+        
+    except Exception as e:
+        raise HTTPException(status_code=404, detail="Input image was invalid")
+
 
 
 def t2i_counting(request):
@@ -275,3 +292,4 @@ def params_counting(request):
     cLoras.inc(request.prompt.count("<"))
     cSteps.inc(request.steps)
     cPixels.inc(request.width * request.height)
+

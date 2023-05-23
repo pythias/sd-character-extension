@@ -2,37 +2,42 @@ from datetime import datetime
 from enum import Enum
 from colorama import Fore, Style
 from modules import scripts, shared
-
-import os
-import colorama
-import numpy as np
-
+from modules.api import api
+from modules.api.api import decode_base64_to_image
 from PIL import Image
 
-from modules.api import api
+import os
+import numpy as np
+import logging
+import sys
 
-# Initialize colorama
-colorama.init()
-
-version_flag = "v1.0.8"
+version_flag = "v1.1.0"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")
 
+request_id = "initialization"
 
-class LogLevel(Enum):
-    DEBUG = (Fore.BLUE, "DEBUG")
-    INFO = (Fore.GREEN, "INFO")
-    WARNING = (Fore.YELLOW, "WARNING")
-    ERROR = (Fore.RED, "ERROR")
+# Set up the logger
+logger = logging.getLogger("fastapi")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s %(asctime)s %(server_name)s %(server_version)s %(request_id)s %(message)s",
+)
 
+def set_request_id(id):
+    global request_id
+    request_id = id
 
-def log(message, level=LogLevel.INFO):
-    """Log a message to the console."""
-    # with microsecond precision
-    current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
-    level_color, level_name = level.value
-    print(f'{level_color}{current_time}{Style.RESET_ALL} {shared.cmd_opts.character_server_name} {version_flag}: {message}')
+def get_request_id():
+    return request_id
+
+def log(message, level = logging.INFO):
+    logger.log(level, message, extra={
+        "server_name": shared.cmd_opts.character_server_name,
+        "server_version": version_flag,
+        "request_id": request_id
+    })
 
 def to_rgb_image(img):
     if not hasattr(img, 'mode') or img.mode != 'RGB':
@@ -56,4 +61,27 @@ def encode_np_to_base64(image):
 
 
 def get_or_default(obj, key, default):
+    if obj is None:
+        return default
+        
     return obj.get(key, default) if isinstance(obj, dict) else getattr(obj, key, default)
+
+
+def get_from_request(request, key, default):
+    params = get_or_default(request, "extra_generation_params", None)
+    return get_or_default(params, key, default)
+
+
+def clip_b64img(image_b64):
+    try:
+        img = decode_base64_to_image(image_b64)
+        return shared.interrogator.interrogate(img.convert('RGB'))
+    except Exception as e:
+        return ""
+
+
+def request_is_t2i(request):
+    if isinstance(request, dict):
+        return "hr_scale" in dict
+        
+    return hasattr(request, "hr_scale")

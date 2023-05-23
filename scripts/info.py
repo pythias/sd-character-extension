@@ -1,8 +1,13 @@
 import gradio as gr
-from character.lib import log, version_flag
+import time
+
+from character.lib import log, version_flag, get_request_id
 from modules import shared, scripts
+from modules.processing import Processed
 
 class Script(scripts.Script):
+    started_at = None
+
     def title(self):
         return "Extend Character Information"
 
@@ -13,12 +18,21 @@ class Script(scripts.Script):
         return [gr.Checkbox(label="Extend Character Information", value=True)]
     
     def process(self, p, *args):
-        # todo
+        self.started_at = time.perf_counter()
+
         p.extra_generation_params["Character"] = {
             "name": shared.cmd_opts.character_server_name,
             "version": version_flag,
+            "started_at": time.strftime('%Y-%m-%d %H:%M:%S %Z', time.localtime()),
+            "request_id": get_request_id(),
         }
+    
+    def postprocess(self, p, processed: Processed, *args):
+        elapsed = time.perf_counter() - self.started_at
+        for i, info in enumerate(processed.infotexts):
+            processed.infotexts[i] = f"{info}, Took {elapsed:.2f} seconds."
 
-shared.opts.data.update({'control_net_no_detectmap': True})
+        for i in range(len(processed.images)):
+            processed.images[i].info["parameters"] = f"{processed.images[i].info['parameters']}, Took {elapsed:.2f} seconds."
 
-log("Character Information Extension loaded")
+log("Information loaded")
