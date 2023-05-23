@@ -89,26 +89,12 @@ class V2ImageResponse(BaseModel):
     faces: List[str]
 
 
-class CaptionRequest(BaseModel):
-    image: str = Field(default="", title='Image', description='The image in base64 format.')
-
-
-class CaptionResponse(BaseModel):
-    caption: str = Field(default="", title='Caption', description='The caption of the image.')
-    by: str = Field(default="CLIP", title='By', description='The model used to generate the caption.')
-
-
 def convert_response(request, response):
     params = response.parameters
     info = json.loads(response.info)
 
-    if face.require_face_repairer(request) and not face.keep_original_image(request):
-        batch_size = get_or_default(request, "batch_size", 1)
-        for _ in range(batch_size):
-            response.images.pop()
-
     faces = []
-    
+
     if face.require_face(request):
         for base64_image in response.images:
             # todo 脸部裁切，在高清修复脸部时有数据
@@ -171,11 +157,6 @@ def remove_character_fields(request):
             request.extra_generation_params[key] = params[key]
         
         delattr(request, key)
-
-
-def resize_b64img(image_b64):
-    MAX_SIZE = (1024, 1024)
-    pass
 
 
 def apply_controlnet(request):

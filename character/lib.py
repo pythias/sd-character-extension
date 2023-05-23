@@ -7,8 +7,6 @@ from modules.api import api
 from modules.api.api import decode_base64_to_image
 from PIL import Image
 
-from character.metrics import hCaption
-
 import os
 import numpy as np
 import logging
@@ -68,10 +66,11 @@ def get_from_request(request, key, default):
     params = get_or_default(request, "extra_generation_params", None)
     return get_or_default(params, key, default)
 
-@hCaption.time()
+
 def clip_b64img(image_b64):
     try:
         img = decode_base64_to_image(image_b64)
         return shared.interrogator.interrogate(img.convert('RGB'))
     except Exception as e:
         return ""
+
