@@ -56,4 +56,12 @@ def encode_np_to_base64(image):
 
 
 def get_or_default(obj, key, default):
+    if obj is None:
+        return default
+        
     return obj.get(key, default) if isinstance(obj, dict) else getattr(obj, key, default)
+
+
+def get_from_request(request, key, default):
+    params = get_or_default(request, "extra_generation_params", None)
+    return get_or_default(params, key, default)

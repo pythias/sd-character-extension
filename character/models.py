@@ -40,7 +40,6 @@ default_tile_model = "controlnet11Models_tile [39a89b25]"
 default_tile_module = "tile_resample"
 
 control_net_models = external_code.get_models(update=True)
-log(f"ControlNet loaded, {global_state.cn_models_names}, {global_state.cn_models}")
 
 def find_closest_cn_model_name(search: str):
     if not search:
@@ -65,30 +64,25 @@ field_prefix = "character_"
 
 min_base64_image_size = 1000
 
-class CharacterCommonRequest():
-    def __init__(self, character_face_repair = True, character_face_repair_keep_original = False, character_auto_upscale = True, character_image = "", character_pose = "", **kwargs):
-        self.character_face_repair = character_face_repair
-        self.character_face_repair_keep_original = character_face_repair_keep_original
-        self.character_auto_upscale = character_auto_upscale
-        self.character_image = character_image
-        self.character_pose = character_pose
-
-
-class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI, CharacterCommonRequest):
+class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
+    # 大部分参数都丢 extra_generation_params 里面（默认值那种，省得定义那么多）
     steps: int = Field(default=20, title='Steps', description='Number of steps.')
     sampler_name: str = Field(default="Euler", title='Sampler', description='The sampler to use.')
+    character_image: str = Field(default="", title='Character Image', description='The character image in base64 format.')
+    character_pose: str = Field(default="", title='Character Pose', description='The character pose in base64 format.')
+    character_face: bool = Field(default=False, title='Character Face', description='Whether to crop faces.')
 
-
-class CharacterV2Img2ImgRequest(StableDiffusionImg2ImgProcessingAPI, CharacterCommonRequest):
+class CharacterV2Img2ImgRequest(StableDiffusionImg2ImgProcessingAPI):
     steps: int = Field(default=20, title='Steps', description='Number of steps.')
     sampler_name: str = Field(default="Euler", title='Sampler', description='The sampler to use.')
     denoising_strength = Field(default=0.75, title='Denoising Strength', description='The strength of the denoising.')
-
+    character_image: str = Field(default="", title='Character Image', description='The character image in base64 format.')
+    character_pose: str = Field(default="", title='Character Pose', description='The character pose in base64 format.')
+    
 
 class V2ImageResponse(BaseModel):
     images: List[str] = Field(default=None, title="Image", description="The generated image in base64 format.")
     parameters: dict
-    other: dict
     info: dict
     faces: List[str]
 
@@ -102,11 +96,11 @@ class CaptionResponse(BaseModel):
     by: str = Field(default="CLIP", title='By', description='The model used to generate the caption.')
 
 
-def convert_response(request, character_params, response):
+def convert_response(request, response):
     params = response.parameters
     info = json.loads(response.info)
 
-    if face.require_face_repairer(character_params) and not face.keep_original_image(character_params):
+    if face.require_face_repairer(request) and not face.keep_original_image(request):
         batch_size = get_or_default(request, "batch_size", 1)
         for _ in range(batch_size):
             response.images.pop()
@@ -119,7 +113,7 @@ def convert_response(request, character_params, response):
             continue
 
         # todo 脸部裁切，在高清修复脸部时有数据
-        if face.require_face(character_params):
+        if face.require_face(request):
             image_faces = face.crop(base64_image)
             cFace.inc(len(image_faces))
             faces.extend(image_faces)
@@ -129,7 +123,7 @@ def convert_response(request, character_params, response):
     if len(safety_images) == 0:
         return ApiException(code_character_nsfw, f"has nsfw concept, info:{info}").response()
 
-    return V2ImageResponse(images=safety_images, parameters=params, info=info, faces=faces, other=character_params)
+    return V2ImageResponse(images=safety_images, parameters=params, info=info, faces=faces)
 
 
 def simply_prompts(prompts: str):
@@ -170,18 +164,16 @@ def request_prepare(request):
 
 
 def remove_character_fields(request):
-    character_params = {}
-
     params = vars(request)
     keys = list(params.keys())
     for key in keys:
         if not key.startswith(field_prefix):
             continue
 
-        character_params[key] = params[key]
+        # move to extra_generation_params if is string and length < 1000
+        if isinstance(params[key], str) and len(params[key]) < min_base64_image_size:
+            request.extra_generation_params[key] = params[key]
         delattr(request, key)
-
-    return character_params
 
 
 def clip_b64img(image_b64):
@@ -204,6 +196,8 @@ def apply_controlnet(request):
         get_cn_empty_unit()
     ]
 
+    log(f"ControlNet units: {units}")
+
     # todo 对用户输入的处理
     request.alwayson_scripts.update({'ControlNet': {'args': [external_code.ControlNetUnit(**unit) for unit in units]}})
 
@@ -223,6 +217,7 @@ def valid_base64(image_b64):
 def get_cn_image_unit(request):
     image_b64 = get_or_default(request, f"{field_prefix}image", "")
     if not valid_base64(image_b64):
+        log(f"invalid base64 image: {len(image_b64)}")
         return get_cn_empty_unit()
 
     request.prompt = clip_b64img(image_b64) + "," + request.prompt
@@ -242,7 +237,7 @@ def get_cn_pose_unit(request):
 
     return {
         "module": get_or_default(request, f"{field_prefix}pose_preprocessor", default_open_pose_module),
-        "model": get_or_default(request, f"{field_prefix}pose_model", default_open_pose_model),
+        "model": find_closest_cn_model_name(get_or_default(request, f"{field_prefix}pose_model", default_open_pose_model)),
         "enabled": True,
         "image": pose_b64,
     }
@@ -255,7 +250,7 @@ def get_cn_tile_unit(request):
 
     return {
         "module": get_or_default(request, f"{field_prefix}tile_preprocessor", default_tile_module),
-        "model": get_or_default(request, f"{field_prefix}tile_model", default_tile_model),
+        "model": find_closest_cn_model_name(get_or_default(request, f"{field_prefix}tile_model", default_tile_model)),
         "enabled": True,
         "image": "",
     }

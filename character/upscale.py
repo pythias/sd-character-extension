@@ -1,10 +1,10 @@
 from modules.api.models import StableDiffusionProcessingImg2Img, StableDiffusionProcessingTxt2Img
 
-from character.lib import log
+from character.lib import log, get_or_default, get_from_request
 from character.models import CharacterV2Txt2ImgRequest, CharacterV2Img2ImgRequest
 
 def apply_auto_upscale(request):
-    auto_upscale = getattr(request, "character_auto_upscale", True)
+    auto_upscale = get_from_request(request, "character_auto_upscale", True)
     if not auto_upscale:
         return
 
