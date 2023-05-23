@@ -40,7 +40,8 @@ def setup_middleware(_: gr.Blocks, app: FastAPI):
     async def log_middleware(request: Request, call_next):
         request_id = str(uuid4())
         request_id = request_id.split('-')[-1]
-        lib.request_id_var.set(request_id)
+        if request.url.path.startswith("/character/v2/"):
+            lib.request_id_var.set(request_id)
 
         response = await call_next(request)
         response.headers["X-Request-ID"] = request_id
