@@ -28,8 +28,9 @@ class ApiHijack(api.Api):
     @hT2I.time()
     def character_v2_img2img(self, request: CharacterV2Img2ImgRequest):
         request_prepare(request)
+        apply_i2i_request(request)
+        apply_controlnet(request)
         face.apply_face_repairer(request)
-        upscale.apply_auto_upscale(request)
         return self.wrap_call(self.img2imgapi, t2i_counting, request)
 
 

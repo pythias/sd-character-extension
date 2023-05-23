@@ -79,3 +79,9 @@ def clip_b64img(image_b64):
     except Exception as e:
         return ""
 
+
+def request_is_t2i(request):
+    if isinstance(obj, dict):
+        return "hr_scale" in dict
+        
+    return hasattr(request, "hr_scale")

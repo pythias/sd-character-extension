@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from typing import Any, Optional, Dict, List
 
 from character import face
-from character.lib import log, get_or_default, clip_b64img
+from character.lib import log, get_or_default, clip_b64img, get_from_request
 from character.errors import *
 from character.metrics import *
 from character.nsfw import image_has_nsfw, image_has_illegal_words
@@ -78,6 +78,7 @@ class CharacterV2Img2ImgRequest(StableDiffusionImg2ImgProcessingAPI):
     steps: int = Field(default=20, title='Steps', description='Number of steps.')
     sampler_name: str = Field(default="Euler", title='Sampler', description='The sampler to use.')
     denoising_strength = Field(default=0.75, title='Denoising Strength', description='The strength of the denoising.')
+    character_input_image: str = Field(default="", title='Character Input Image', description='The character input image in base64 format.')
     character_image: str = Field(default="", title='Character Image', description='The character image in base64 format.')
     character_pose: str = Field(default="", title='Character Pose', description='The character pose in base64 format.')
     extra_generation_params: dict = Field(default={}, title='Extra Generation Params', description='Extra generation params.')
@@ -96,15 +97,15 @@ def convert_response(request, response):
 
     faces = []
 
-    if face.require_face_repairer(p) and not face.keep_original_image(p):
-        batch_size = get_or_default(p, "batch_size", 1)
-        for _ in range(batch_size):
-            response.images.pop()
+    source_images = []
+    if face.require_face_repairer(request) and not face.keep_original_image(request):
+        batch_size = get_or_default(request, "batch_size", 1)
+        source_images = response.images[batch_size:]
 
     crop_face = face.require_face(request)
 
     safety_images = []
-    for base64_image in response.images:
+    for base64_image in source_images:
         if image_has_nsfw(base64_image):
             cNSFW.inc()
             continue
@@ -142,7 +143,6 @@ def simply_prompts(prompts: str):
             unique_prompts[p_stripped.lower()] = p_stripped
 
     return ",".join(unique_prompts.values())
-
 
 
 def request_prepare(request):
@@ -249,6 +249,35 @@ def get_cn_empty_unit():
         "enabled": False,
         "image": "",
     }
+
+
+def apply_i2i_request(request):
+    image_b64 = get_or_default(request, "character_input_image", "")
+
+    if not image_b64 or len(image_b64) < min_base64_image_size:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    try:
+        request.init_images = [image_b64]
+
+        img = decode_base64_to_image(image_b64)
+        caption = shared.interrogator.interrogate(img.convert('RGB'))
+        request.prompt = caption + "," + request.prompt
+
+        auto_upscale = get_from_request(request, "character_auto_upscale", True)
+        if auto_upscale:
+            request.denoising_strength = get_from_request(request, "denoising_strength", 0.75)
+            request.image_cfg_scale = get_from_request(request, "image_cfg_scale", 7)
+            request.width = img.size[0] * 2
+            request.height = img.size[1] * 2
+            # todo if use pass the size, we should use the size
+            # request.width = get_from_request(request, "width", img.size[0] * 2)
+            # request.height = get_from_request(request, "height", img.size[1] * 2)
+            
+        
+    except Exception as e:
+        raise HTTPException(status_code=404, detail="Input image was invalid")
+
 
 
 def t2i_counting(request):
