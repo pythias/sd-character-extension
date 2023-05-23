@@ -9,7 +9,6 @@ from typing import Any, Optional, Dict, List
 
 from character import face
 from character.lib import log, get_or_default, clip_b64img
-from character.nsfw import image_has_nsfw, image_has_illegal_words
 from character.errors import *
 from character.metrics import *
 
@@ -109,28 +108,18 @@ def convert_response(request, response):
             response.images.pop()
 
     faces = []
-    safety_images = []
-    for base64_image in response.images:
-        if image_has_nsfw(base64_image):
-            cNSFW.inc()
-            continue
-
-        if image_has_illegal_words(base64_image):
-            cIllegal.inc()
-            continue
-
-        # todo 脸部裁切，在高清修复脸部时有数据
-        if face.require_face(request):
+    
+    if face.require_face(request):
+        for base64_image in response.images:
+            # todo 脸部裁切，在高清修复脸部时有数据
             image_faces = face.crop(base64_image)
             cFace.inc(len(image_faces))
             faces.extend(image_faces)
 
-        safety_images.append(base64_image)
-
-    if len(safety_images) == 0:
+    if len(response.images) == 0:
         return ApiException(code_character_nsfw, f"has nsfw concept, info:{info}").response()
 
-    return V2ImageResponse(images=safety_images, parameters=params, info=info, faces=faces)
+    return V2ImageResponse(images=response.images, parameters=params, info=info, faces=faces)
 
 
 def simply_prompts(prompts: str):
@@ -168,6 +157,7 @@ def request_prepare(request):
 
     request.prompt = simply_prompts(request.prompt)
     request.negative_prompt = simply_prompts(request.negative_prompt)
+    request.extra_generation_params['character_from_ui'] = False
 
 
 def remove_character_fields(request):

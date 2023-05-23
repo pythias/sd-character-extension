@@ -40,6 +40,7 @@ def image_has_nsfw(base64_image):
     checked_image, has_nsfw_concept = safety_checker(images=np_image, clip_input=safety_checker_input.pixel_values)
 
     if len(has_nsfw_concept) > 0:
+        log("image has nsfw concept", logging.WARN)
         return has_nsfw_concept[0]
     
     return False
@@ -49,7 +50,6 @@ def image_has_illegal_words(base64_image):
     """
     if captions contains "flag", "banner", "pennant",  "flags", "banners", "pennants" return True
     """
-
     caption = clip_b64img(base64_image)
     words = re.split(', | ', caption)
 
