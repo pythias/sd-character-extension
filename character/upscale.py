@@ -15,7 +15,7 @@ def apply_auto_upscale(request):
         request.hr_upscaler = "Latent"
         request.denoising_strength = 0.6
         request.enable_hr = True
-        log(message=f"hr enabled, {request.hr_scale}x{request.hr_upscaler}, denoising_strength: {request.denoising_strength}, enable_hr: {request.enable_hr}")
+        log(f"hr enabled, {request.hr_scale}x{request.hr_upscaler}, denoising_strength: {request.denoising_strength}, enable_hr: {request.enable_hr}")
         return
     
     # StableDiffusionProcessingImg2Img

@@ -1,14 +1,15 @@
 import os
 import sys
 import json
+import logging
 
 from enum import Enum
 from pydantic import BaseModel, Field
 from typing import Any, Optional, Dict, List
 
 from character import face
-from character.lib import log, LogLevel, get_or_default
-from character.nsfw import image_has_nsfw, tags_has_nsfw
+from character.lib import log, get_or_default, clip_b64img
+from character.nsfw import image_has_nsfw, image_has_illegal_words
 from character.errors import *
 from character.metrics import *
 
@@ -71,6 +72,7 @@ class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
     character_image: str = Field(default="", title='Character Image', description='The character image in base64 format.')
     character_pose: str = Field(default="", title='Character Pose', description='The character pose in base64 format.')
     character_face: bool = Field(default=False, title='Character Face', description='Whether to crop faces.')
+    extra_generation_params: dict = Field(default={}, title='Extra Generation Params', description='Extra generation params.')
 
 class CharacterV2Img2ImgRequest(StableDiffusionImg2ImgProcessingAPI):
     steps: int = Field(default=20, title='Steps', description='Number of steps.')
@@ -78,6 +80,7 @@ class CharacterV2Img2ImgRequest(StableDiffusionImg2ImgProcessingAPI):
     denoising_strength = Field(default=0.75, title='Denoising Strength', description='The strength of the denoising.')
     character_image: str = Field(default="", title='Character Image', description='The character image in base64 format.')
     character_pose: str = Field(default="", title='Character Pose', description='The character pose in base64 format.')
+    extra_generation_params: dict = Field(default={}, title='Extra Generation Params', description='Extra generation params.')
     
 
 class V2ImageResponse(BaseModel):
@@ -110,6 +113,10 @@ def convert_response(request, response):
     for base64_image in response.images:
         if image_has_nsfw(base64_image):
             cNSFW.inc()
+            continue
+
+        if image_has_illegal_words(base64_image):
+            cIllegal.inc()
             continue
 
         # todo 脸部裁切，在高清修复脸部时有数据
@@ -170,18 +177,10 @@ def remove_character_fields(request):
         if not key.startswith(field_prefix):
             continue
 
-        # move to extra_generation_params if is string and length < 1000
-        if isinstance(params[key], str) and len(params[key]) < min_base64_image_size:
+        if not isinstance(params[key], str) or (len(params[key]) < min_base64_image_size and len(params[key]) > 0):
             request.extra_generation_params[key] = params[key]
+        
         delattr(request, key)
-
-
-def clip_b64img(image_b64):
-    try:
-        img = decode_base64_to_image(image_b64)
-        return shared.interrogator.interrogate(img.convert('RGB'))
-    except Exception as e:
-        return ""
 
 
 def resize_b64img(image_b64):
@@ -196,8 +195,6 @@ def apply_controlnet(request):
         get_cn_empty_unit()
     ]
 
-    log(f"ControlNet units: {units}")
-
     # todo 对用户输入的处理
     request.alwayson_scripts.update({'ControlNet': {'args': [external_code.ControlNetUnit(**unit) for unit in units]}})
 
@@ -210,14 +207,13 @@ def valid_base64(image_b64):
         decode_base64_to_image(image_b64)
         return True
     except Exception as e:
-        log(f"invalid base64 image: {e}", LogLevel.ERROR)
         return False
 
 
 def get_cn_image_unit(request):
     image_b64 = get_or_default(request, f"{field_prefix}image", "")
     if not valid_base64(image_b64):
-        log(f"invalid base64 image: {len(image_b64)}")
+        log(f"invalid base64 image: {len(image_b64)}", "error")
         return get_cn_empty_unit()
 
     request.prompt = clip_b64img(image_b64) + "," + request.prompt

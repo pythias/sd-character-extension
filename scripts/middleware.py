@@ -1,10 +1,12 @@
-from character.lib import keys_path, log, LogLevel
+from character import lib
+from character.lib import keys_path, log
 from character.errors import *
 
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5
 
+from uuid import uuid4
 from fastapi import FastAPI, Request
 from modules import shared, script_callbacks
 
@@ -16,7 +18,7 @@ import os
 ignore_prefixes = ["/docs",  "/openapi.json", "/character/meta"]
 require_prefixes = ["/character", "/sdapi"]
 
-def signature_api(_: gr.Blocks, app: FastAPI):
+def setup_middleware(_: gr.Blocks, app: FastAPI):
     def signature_required(request: Request):
         if shared.cmd_opts.character_ignore_signature:
             return False
@@ -32,6 +34,17 @@ def signature_api(_: gr.Blocks, app: FastAPI):
                 break
         
         return required
+
+
+    @app.middleware("http")
+    async def log_middleware(request: Request, call_next):
+        request_id = str(uuid4())
+        lib.request_id_var.set(request_id)
+
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        return response
+
 
     @app.middleware("http")
     async def signature_middleware(request: Request, call_next):
@@ -63,7 +76,6 @@ def signature_api(_: gr.Blocks, app: FastAPI):
         sign_decoded = base64.b64decode(sign)
 
         if not verifier.verify(data_hash, sign_decoded):
-            log(f"Signature is mismatch. sign_name={sign_name}", LogLevel.ERROR)
             return ApiException(code_invalid_signature, "signature is mismatch.").response()
 
         scope = request.scope
@@ -81,6 +93,6 @@ def signature_api(_: gr.Blocks, app: FastAPI):
         new_request = Request(scope, receive_with_body)
         return await call_next(new_request)
 
-script_callbacks.on_app_started(signature_api)
+script_callbacks.on_app_started(setup_middleware)
 
-log("Signature loaded")
+log("Middleware loaded")
