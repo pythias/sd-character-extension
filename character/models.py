@@ -97,8 +97,6 @@ def convert_response(request, character_params, response):
     params = response.parameters
     info = json.loads(response.info)
 
-    log(f"convert_response: {face.require_face_repairer(character_params)}, {face.keep_original_image(character_params)}, {getattr(request, 'batch_size', 1)}")
-
     if face.require_face_repairer(character_params) and not face.keep_original_image(character_params):
         batch_size = get_or_default(request, "batch_size", 1)
         for _ in range(batch_size):
