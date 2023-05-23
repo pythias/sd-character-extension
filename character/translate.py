@@ -21,9 +21,7 @@ class PromptTranslator:
             return ""
 
         encoded_input = self.tokenizer(text, return_tensors="pt")
-        generated_tokens = self.model.generate(
-            **encoded_input, forced_bos_token_id=self.tokenizer.lang_code_to_id[tgt_lang]
-        )
+        generated_tokens = self.model.generate(**encoded_input, forced_bos_token_id=self.tokenizer.lang_code_to_id[tgt_lang])
         translated_text = self.tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
         return translated_text[0]
 
