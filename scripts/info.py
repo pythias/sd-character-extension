@@ -25,7 +25,7 @@ class Script(scripts.Script):
             "name": shared.cmd_opts.character_server_name,
             "version": version_flag,
             "started_at": time.strftime('%Y-%m-%d %H:%M:%S %Z', time.localtime()),
-            "request_id": lib.request_id_var.get(),
+            "request_id": lib.request_id_var.get(None),
         }
     
     def postprocess(self, p, processed: Processed, *args):
