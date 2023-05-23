@@ -207,13 +207,13 @@ def valid_base64(image_b64):
         decode_base64_to_image(image_b64)
         return True
     except Exception as e:
+        log(f"valid_base64 error: {e}", logging.ERROR)
         return False
 
 
 def get_cn_image_unit(request):
     image_b64 = get_or_default(request, f"{field_prefix}image", "")
     if not valid_base64(image_b64):
-        log(f"invalid base64 image: {len(image_b64)}", "error")
         return get_cn_empty_unit()
 
     request.prompt = clip_b64img(image_b64) + "," + request.prompt

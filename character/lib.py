@@ -24,7 +24,7 @@ request_id_var.set("initialization")
 logger = logging.getLogger("fastapi")
 logging.basicConfig(
     level=logging.INFO,
-    format="%(levelname)s %(asctime)s %(server_name)-15s %(server_version)s %(request_id)s %(message)s",
+    format="%(levelname)s %(asctime)s %(server_name)s %(server_version)s %(request_id)s %(message)s",
 )
 
 def log(message, level = logging.INFO):
