@@ -157,7 +157,7 @@ def simply_prompts(prompts: str):
 def request_prepare(request):
     if isinstance(request, dict):
         request.setdefault('extra_generation_params', {})
-    elif isinstance(request, Request):
+    else:
         if request.extra_generation_params is None:
             request.extra_generation_params = {}
 
