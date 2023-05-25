@@ -68,6 +68,7 @@ class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
     character_image: str = Field(default="", title='Character Image', description='The character image in base64 format.')
     character_face: bool = Field(default=False, title='Character Face', description='Whether to crop faces.')
     character_extra: dict = Field(default={}, title='Character Extra Params', description='Character Extra Params.')
+    extra_generation_params: dict = Field(default={}, title='Extra Generation Params', description='Extra Generation Params.')
 
 
 class CharacterV2Img2ImgRequest(StableDiffusionImg2ImgProcessingAPI):
@@ -77,6 +78,7 @@ class CharacterV2Img2ImgRequest(StableDiffusionImg2ImgProcessingAPI):
     character_input_image: str = Field(default="", title='Character Input Image', description='The character input image in base64 format.')
     character_image: str = Field(default="", title='Character Image', description='The character image in base64 format.')
     character_extra: dict = Field(default={}, title='Character Extra Params', description='Character Extra Params.')
+    extra_generation_params: dict = Field(default={}, title='Extra Generation Params', description='Extra Generation Params.')
     
 
 class V2ImageResponse(BaseModel):
@@ -124,12 +126,13 @@ def convert_response(request, response):
         # 如果需要保存
         image_urls = []
         for b64 in safety_images:
-            image_url = output.save_image(b64, request)
+            image_url = output.save_image(b64)
             image_urls.append(image_url)
+            image_urls.append(b64)
         
         face_urls = []
         for b64 in faces:
-            image_url = output.save_image(b64, request)
+            image_url = output.save_image(b64)
             face_urls.append(image_url)
 
         return V2ImageResponse(images=image_urls, parameters=params, info=info, faces=face_urls)
@@ -158,7 +161,7 @@ def request_prepare(request):
     if isinstance(request, dict):
         request.setdefault('extra_generation_params', {})
     else:
-        if request.extra_generation_params is None:
+        if not hasattr(request, 'extra_generation_params') or request.extra_generation_params is None:
             request.extra_generation_params = {}
 
     if lib.name_flag not in request.extra_generation_params:
@@ -287,16 +290,23 @@ def apply_i2i_request(request):
         request.prompt = caption + "," + request.prompt
 
         if upscale.require_upscale(request):
-            request.denoising_strength = lib.get_request_value(request, "denoising_strength", 0.75)
-            request.image_cfg_scale = lib.get_request_value(request, "image_cfg_scale", 7)
-            request.width = img.size[0] * 2
-            request.height = img.size[1] * 2
-            # todo if use pass the size, we should use the size
-            # request.width = get_or_default(request, "width", img.size[0] * 2)
-            # request.height = get_or_default(request, "height", img.size[1] * 2)
+            request.denoising_strength = lib.get_extra_value(request, "denoising_strength", 0.75)
+            request.image_cfg_scale = lib.get_extra_value(request, "image_cfg_scale", 7)
+            scale_by = lib.get_extra_value(request, "scale_by", 2)
+            request.width = lib.get_extra_value(request, "width", img.size[0] * scale_by)
+            request.height = lib.get_extra_value(request, "height", img.size[1] * scale_by)
+
+            # max size 2048 * 2048
+            if request.width > 2048 or request.height > 2048:
+                if request.width > request.height:
+                    radio = request.width / 2048
+                else:
+                    radio = request.height / 2048
+                
+                request.width = int(request.width / radio)
+                request.height = int(request.height / radio)
     except Exception as e:
         raise HTTPException(status_code=404, detail="Input image was invalid")
-
 
 
 def t2i_counting(request):

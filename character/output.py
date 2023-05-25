@@ -2,10 +2,12 @@ import base64
 import os
 import uuid
 import time
-from PIL import Image
 from io import BytesIO
 
 from character import lib
+
+from modules import shared
+
 
 def required_save(request):
     response_format = lib.get_extra_value(request, "response_format", 'b64')
@@ -26,10 +28,10 @@ def save_image(b64):
         if not os.path.exists(img_dir):
             os.makedirs(img_dir)
 
-        img = Image.open(BytesIO(img_bytes))
         img_filename = str(uuid.uuid4()) + '.png'
         img_filepath = os.path.join(img_dir, img_filename)
-        img.save(img_filepath)
+        with open(img_filepath, 'wb') as f:
+            f.write(img_bytes)
         
         return os.path.join(shared.cmd_opts.character_host, imd_relative_path, img_filename)
     except Exception as e:
