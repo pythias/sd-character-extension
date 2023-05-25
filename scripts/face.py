@@ -2,7 +2,6 @@ import cv2
 import gradio as gr
 
 from character import face, lib
-from character.lib import log, get_or_default
 
 import modules.scripts as scripts
 from modules import shared, scripts

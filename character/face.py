@@ -5,10 +5,9 @@ import numpy as np
 
 from typing import Optional, List
 from modules import scripts, processing
-# from modules.processing import StableDiffusionProcessing
 
+from character import lib
 from character.metrics import hDF
-from character.lib import log, get_or_default, get_from_request
 
 REPAIRER_NAME = "face editor ex"
 CROPPER_NAME = "FaceCropper"
@@ -128,33 +127,27 @@ def is_face_repairer_script(script: scripts.Script) -> bool:
 
 
 def require_face(request):
-    return get_from_request(request, "character_face", False)
+    # 老版本，所以在基础request里
+    return lib.get_request_value(request, "character_face", False)
 
 
 def require_face_repairer(request):
-    return get_from_request(request, "character_repair_face", True)
+    return lib.get_extra_value(request, "repair_face", True)
 
 
 def keep_original_image(request):
-    return get_from_request(request, "character_face_repair_keep_original", False)
+    return lib.get_extra_value(request, "keep_original", False)
 
 
 def apply_face_repairer(request):
     if not require_face_repairer(request):
         return
 
-    log("face repairer enabled")
-
     params = vars(request)
     keys = list(params.keys())
-    values = {}
-    for key in keys:
-        if not key.startswith("character_face_repair_"):
-            continue
-
-        key = key[len("character_face_repair_"):]
-        values[key] = params["character_face_repair_" + key]
-
+    values = lib.get_extra_value(request, 'face_repair_config', {})
     values["enabled"] = True
+    lib.log(f"face repairer enabled, {values}")
+
     unit = FaceUnit(**values)
     request.alwayson_scripts.update({REPAIRER_NAME: {'args': [unit]}})
