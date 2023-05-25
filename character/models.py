@@ -123,12 +123,11 @@ def convert_response(request, response):
         return ApiException(code_character_nsfw, f"has nsfw concept, info:{info}").response()
 
     if output.required_save(request):
-        # 如果需要保存
         image_urls = []
         for b64 in safety_images:
             image_url = output.save_image(b64)
             image_urls.append(image_url)
-            image_urls.append(b64)
+            # image_urls.append(b64)
         
         face_urls = []
         for b64 in faces:

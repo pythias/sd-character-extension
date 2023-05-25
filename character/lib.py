@@ -12,7 +12,7 @@ import logging
 import sys
 
 name_flag = "Character"
-version_flag = "v1.1.0"
+version_flag = "v1.1.1"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")
@@ -61,26 +61,26 @@ def encode_np_to_base64(image):
     return api.encode_pil_to_base64(pil)
 
 
-def get_or_default(obj, key, default):
+def _get_or_default(obj, key, default):
     if obj is None:
         return default
         
     return obj.get(key, default) if isinstance(obj, dict) else getattr(obj, key, default)
 
 
-get_request_value = get_or_default
+get_request_value = _get_or_default
 
 
 def get_extra_value(request, key, default):
     """
     获取自定义参数的值
     """
-    character_extra = get_or_default(request, "character_extra", None)
+    character_extra = _get_or_default(request, "character_extra", None)
     if character_extra is None:
-        extra = get_or_default(request, "extra_generation_params", {})
-        character_extra = get_or_default(extra, name_flag, {})
+        extra = _get_or_default(request, "extra_generation_params", {})
+        character_extra = _get_or_default(extra, name_flag, {})
     
-    return get_or_default(character_extra, key, default)
+    return _get_or_default(character_extra, key, default)
 
 
 def clip_b64img(image_b64):
