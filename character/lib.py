@@ -11,6 +11,7 @@ import numpy as np
 import logging
 import sys
 
+name_flag = "Character"
 version_flag = "v1.1.0"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
@@ -67,9 +68,19 @@ def get_or_default(obj, key, default):
     return obj.get(key, default) if isinstance(obj, dict) else getattr(obj, key, default)
 
 
-def get_from_request(request, key, default):
-    params = get_or_default(request, "extra_generation_params", None)
-    return get_or_default(params, key, default)
+get_request_value = get_or_default
+
+
+def get_extra_value(request, key, default):
+    """
+    获取自定义参数的值
+    """
+    character_extra = get_or_default(request, "character_extra", None)
+    if character_extra is None:
+        extra = get_or_default(request, "extra_generation_params", {})
+        character_extra = get_or_default(extra, name_flag, {})
+    
+    return get_or_default(character_extra, key, default)
 
 
 def clip_b64img(image_b64):
@@ -85,3 +96,4 @@ def request_is_t2i(request):
         return "hr_scale" in dict
         
     return hasattr(request, "hr_scale")
+

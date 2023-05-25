@@ -2,7 +2,6 @@ import gradio as gr
 import time
 
 from character import lib, face
-from character.lib import log, get_or_default
 from character.nsfw import image_has_nsfw, image_has_illegal_words
 from character.metrics import cNSFW, cIllegal
 
@@ -23,4 +22,4 @@ class Script(scripts.Script):
         # todo 和脸部修复的最后一个script操作冲突
         return
 
-log("Safety loaded")
+lib.log("Safety loaded")

@@ -7,8 +7,7 @@ from enum import Enum
 from pydantic import BaseModel, Field
 from typing import Any, Optional, Dict, List
 
-from character import face
-from character.lib import log, get_or_default, clip_b64img, get_from_request
+from character import face, lib, upscale, output
 from character.errors import *
 from character.metrics import *
 from character.nsfw import image_has_nsfw, image_has_illegal_words
@@ -30,16 +29,6 @@ extensions_control_net_path = os.path.join(extensions_dir, "sd-webui-controlnet"
 sys.path.append(extensions_control_net_path)
 from scripts import external_code, global_state
 
-# todo load from config
-# default_control_net_model = "controlnet11Models_softedge [f616a34f]"
-# default_control_net_module = "softedge_pidisafe"
-default_control_net_model = "controlnet11Models_lineart [5c23b17d]"
-default_control_net_module = "lineart_realistic"
-default_open_pose_model = "controlnet11Models_openpose [73c2b67d]"
-default_open_pose_module = "openpose"
-default_tile_model = "controlnet11Models_tile [39a89b25]"
-default_tile_module = "tile_resample"
-
 control_net_models = external_code.get_models(update=True)
 
 def find_closest_cn_model_name(search: str):
@@ -60,6 +49,13 @@ def find_closest_cn_model_name(search: str):
     applicable = sorted(applicable, key=lambda name: len(name))
     return global_state.cn_models_names[applicable[0]]
 
+default_control_net_model = find_closest_cn_model_name("controlnet11Models_lineart")
+default_control_net_module = "lineart_realistic"
+default_open_pose_model = find_closest_cn_model_name("controlnet11Models_openpose")
+default_open_pose_module = "openpose"
+default_tile_model = find_closest_cn_model_name("controlnet11Models_tile")
+default_tile_module = "tile_resample"
+lib.log(f"ControlNet default models, i2i:{default_control_net_model}, pose:{default_open_pose_model}, tile:{default_tile_model}")
 
 field_prefix = "character_"
 
@@ -70,9 +66,9 @@ class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
     steps: int = Field(default=20, title='Steps', description='Number of steps.')
     sampler_name: str = Field(default="Euler", title='Sampler', description='The sampler to use.')
     character_image: str = Field(default="", title='Character Image', description='The character image in base64 format.')
-    character_pose: str = Field(default="", title='Character Pose', description='The character pose in base64 format.')
     character_face: bool = Field(default=False, title='Character Face', description='Whether to crop faces.')
-    extra_generation_params: dict = Field(default={}, title='Extra Generation Params', description='Extra generation params.')
+    character_extra: dict = Field(default={}, title='Character Extra Params', description='Character Extra Params.')
+
 
 class CharacterV2Img2ImgRequest(StableDiffusionImg2ImgProcessingAPI):
     steps: int = Field(default=20, title='Steps', description='Number of steps.')
@@ -80,8 +76,7 @@ class CharacterV2Img2ImgRequest(StableDiffusionImg2ImgProcessingAPI):
     denoising_strength = Field(default=0.75, title='Denoising Strength', description='The strength of the denoising.')
     character_input_image: str = Field(default="", title='Character Input Image', description='The character input image in base64 format.')
     character_image: str = Field(default="", title='Character Image', description='The character image in base64 format.')
-    character_pose: str = Field(default="", title='Character Pose', description='The character pose in base64 format.')
-    extra_generation_params: dict = Field(default={}, title='Extra Generation Params', description='Extra generation params.')
+    character_extra: dict = Field(default={}, title='Character Extra Params', description='Character Extra Params.')
     
 
 class V2ImageResponse(BaseModel):
@@ -99,7 +94,7 @@ def convert_response(request, response):
 
     source_images = []
     if face.require_face_repairer(request) and not face.keep_original_image(request):
-        batch_size = get_or_default(request, "batch_size", 1)
+        batch_size = lib.get_request_value(request, "batch_size", 1)
         source_images = response.images[batch_size:]
 
     crop_face = face.require_face(request)
@@ -125,7 +120,21 @@ def convert_response(request, response):
     if len(safety_images) == 0:
         return ApiException(code_character_nsfw, f"has nsfw concept, info:{info}").response()
 
-    return V2ImageResponse(images=safety_images, parameters=params, info=info, faces=faces)
+    if output.required_save(request):
+        # 如果需要保存
+        image_urls = []
+        for b64 in safety_images:
+            image_url = output.save_image(b64, request)
+            image_urls.append(image_url)
+        
+        face_urls = []
+        for b64 in faces:
+            image_url = output.save_image(b64, request)
+            face_urls.append(image_url)
+
+        return V2ImageResponse(images=image_urls, parameters=params, info=info, faces=face_urls)
+    else:
+        return V2ImageResponse(images=safety_images, parameters=params, info=info, faces=faces)
 
 
 def simply_prompts(prompts: str):
@@ -146,6 +155,21 @@ def simply_prompts(prompts: str):
 
 
 def request_prepare(request):
+    if isinstance(request, dict):
+        request.setdefault('extra_generation_params', {})
+    elif isinstance(request, Request):
+        if request.extra_generation_params is None:
+            request.extra_generation_params = {}
+
+    if lib.name_flag not in request.extra_generation_params:
+        request.extra_generation_params[lib.name_flag] = {}
+
+    extra = lib.get_request_value(request, 'character_extra', {})
+    if isinstance(extra, dict):
+        request.extra_generation_params[lib.name_flag].update(extra)
+
+    request.extra_generation_params[lib.name_flag].update({"from_ui": False})
+
     if request.negative_prompt is None:
         request.negative_prompt = ""
 
@@ -162,8 +186,7 @@ def request_prepare(request):
 
     request.prompt = simply_prompts(request.prompt)
     request.negative_prompt = simply_prompts(request.negative_prompt)
-    request.extra_generation_params['character_from_ui'] = False
-
+    
 
 def remove_character_fields(request):
     params = vars(request)
@@ -172,8 +195,8 @@ def remove_character_fields(request):
         if not key.startswith(field_prefix):
             continue
 
-        if not isinstance(params[key], str) or (len(params[key]) < min_base64_image_size and len(params[key]) > 0):
-            request.extra_generation_params[key] = params[key]
+        # if not isinstance(params[key], str) or (len(params[key]) < min_base64_image_size and len(params[key]) > 0):
+        #     request.extra_generation_params['Character'].update({key[len(field_prefix):]: params[key]})
         
         delattr(request, key)
 
@@ -197,46 +220,45 @@ def valid_base64(image_b64):
         decode_base64_to_image(image_b64)
         return True
     except Exception as e:
-        log(f"valid_base64 error: {e}", logging.ERROR)
+        lib.log(f"valid_base64 error: {e}", logging.ERROR)
         return False
 
 
 def get_cn_image_unit(request):
-    image_b64 = get_or_default(request, f"{field_prefix}image", "")
+    image_b64 = lib.get_request_value(request, f"{field_prefix}image", "")
     if not valid_base64(image_b64):
         return get_cn_empty_unit()
 
-    request.prompt = clip_b64img(image_b64) + "," + request.prompt
+    request.prompt = lib.clip_b64img(image_b64) + "," + request.prompt
 
     return {
-        "module": get_or_default(request, f"{field_prefix}cn_preprocessor", default_control_net_module),
-        "model": find_closest_cn_model_name(get_or_default(request, f"{field_prefix}cn_model", default_control_net_model)),
+        "module": lib.get_extra_value(request, "cn_preprocessor", default_control_net_module),
+        "model": find_closest_cn_model_name(lib.get_extra_value(request, "cn_model", default_control_net_model)),
         "enabled": True,
         "image": image_b64,
     }
 
 
 def get_cn_pose_unit(request):
-    pose_b64 = get_or_default(request, f"{field_prefix}pose", "")
+    pose_b64 = lib.get_request_value(request, f"{field_prefix}pose", "")
     if not valid_base64(pose_b64):
         return get_cn_empty_unit()
 
     return {
-        "module": get_or_default(request, f"{field_prefix}pose_preprocessor", default_open_pose_module),
-        "model": find_closest_cn_model_name(get_or_default(request, f"{field_prefix}pose_model", default_open_pose_model)),
+        "module": lib.get_extra_value(request, "pose_preprocessor", default_open_pose_module),
+        "model": find_closest_cn_model_name(lib.get_extra_value(request, "pose_model", default_open_pose_model)),
         "enabled": True,
         "image": pose_b64,
     }
 
 
 def get_cn_tile_unit(request):
-    auto_upscale = get_or_default(request, f"{field_prefix}auto_upscale", False)
-    if not auto_upscale:
+    if not lib.get_extra_value(request, "scale_by_tile", False):
         return get_cn_empty_unit()
 
     return {
-        "module": get_or_default(request, f"{field_prefix}tile_preprocessor", default_tile_module),
-        "model": find_closest_cn_model_name(get_or_default(request, f"{field_prefix}tile_model", default_tile_model)),
+        "module": default_tile_module,
+        "model": find_closest_cn_model_name(default_tile_model),
         "enabled": True,
         "image": "",
     }
@@ -252,7 +274,7 @@ def get_cn_empty_unit():
 
 
 def apply_i2i_request(request):
-    image_b64 = get_or_default(request, "character_input_image", "")
+    image_b64 = lib.get_request_value(request, "character_input_image", "")
 
     if not image_b64 or len(image_b64) < min_base64_image_size:
         raise HTTPException(status_code=404, detail="Image not found")
@@ -264,17 +286,14 @@ def apply_i2i_request(request):
         caption = shared.interrogator.interrogate(img.convert('RGB'))
         request.prompt = caption + "," + request.prompt
 
-        auto_upscale = get_from_request(request, "character_auto_upscale", True)
-        if auto_upscale:
-            request.denoising_strength = get_from_request(request, "denoising_strength", 0.75)
-            request.image_cfg_scale = get_from_request(request, "image_cfg_scale", 7)
+        if upscale.require_upscale(request):
+            request.denoising_strength = lib.get_request_value(request, "denoising_strength", 0.75)
+            request.image_cfg_scale = lib.get_request_value(request, "image_cfg_scale", 7)
             request.width = img.size[0] * 2
             request.height = img.size[1] * 2
             # todo if use pass the size, we should use the size
-            # request.width = get_from_request(request, "width", img.size[0] * 2)
-            # request.height = get_from_request(request, "height", img.size[1] * 2)
-            
-        
+            # request.width = get_or_default(request, "width", img.size[0] * 2)
+            # request.height = get_or_default(request, "height", img.size[1] * 2)
     except Exception as e:
         raise HTTPException(status_code=404, detail="Input image was invalid")
 

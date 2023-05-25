@@ -37,6 +37,8 @@ class ApiHijack(api.Api):
     def wrap_call(self, processor_call, counting_call, request):
         try:
             counting_call(request)
+            
+            # 执行之前删除一些不必要的字段
             remove_character_fields(request)
 
             with hSD.time():
