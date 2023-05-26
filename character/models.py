@@ -308,6 +308,9 @@ def apply_i2i_request(request):
                 
                 request.width = int(request.width / radio)
                 request.height = int(request.height / radio)
+
+        lib.log(f"ENABLE-UPSCALE-i2i, scale: {scale_by}, size:{request.width}x{request.height}")
+
     except Exception as e:
         raise HTTPException(status_code=404, detail="Input image was invalid")
 

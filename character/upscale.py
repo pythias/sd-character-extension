@@ -15,6 +15,4 @@ def apply_auto_upscale(request):
         request.denoising_strength = lib.get_extra_value(request, "denoising_strength", 0.6)
         request.enable_hr = True
 
-        lib.log(f"ENABLE-upscale, scale: {request.hr_scale} by: {request.hr_upscaler}, denoising_strength: {request.denoising_strength}, enable_hr: {request.enable_hr}")
-
-    
+        lib.log(f"ENABLE-UPSCALE-t2i, scale: {request.hr_scale}, by: {request.hr_upscaler}, size:{lib.get_request_value(request, 'width', 512)}x{lib.get_request_value(request, 'height', 512)}")
