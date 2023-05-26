@@ -122,6 +122,10 @@ def convert_response(request, response):
     if len(safety_images) == 0:
         return ApiException(code_character_nsfw, f"has nsfw concept, info:{info}").response()
 
+    if lib.get_extra_value(request, "out_no_parameters", True):
+        # 因为请求参数中也有图片的存在，调试时用 parameters
+        params = {}
+
     if output.required_save(request):
         image_urls = []
         for b64 in safety_images:
