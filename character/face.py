@@ -128,7 +128,7 @@ def is_face_repairer_script(script: scripts.Script) -> bool:
 
 def require_face(request):
     # 老版本，所以在基础request里
-    return lib.get_request_value(request, "character_face", False)
+    return lib.get_extra_value(request, "crop_face", False)
 
 
 def require_face_repairer(request):
@@ -145,7 +145,7 @@ def apply_face_repairer(request):
 
     params = vars(request)
     keys = list(params.keys())
-    values = lib.get_extra_value(request, 'face_repair_config', {})
+    values = lib.get_extra_value(request, 'face_repair_params', {})
     values["enabled"] = True
     lib.log(f"ENABLE-face-repairer, {values}")
 
