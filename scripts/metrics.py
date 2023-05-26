@@ -29,6 +29,9 @@ def metrics_api(_, app: FastAPI):
 
     @app.middleware("http")
     async def log_time(req: Request, call_next):
+        if req.url.path.startswith('/character/meta'):
+            return await call_next(req)
+
         ts = time.time()
         res: Response = await call_next(req)
         duration = str(round(time.time() - ts, 3))
