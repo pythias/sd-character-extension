@@ -289,7 +289,7 @@ def apply_i2i_request(request):
         request.init_images = [image_b64]
 
         img = decode_base64_to_image(image_b64)
-        caption = shared.interrogator.interrogate(img.convert('RGB'))
+        caption = lib.clip_b64img(img)
         request.prompt = caption + "," + request.prompt
 
         if upscale.require_upscale(request):

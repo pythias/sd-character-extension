@@ -6,13 +6,15 @@ from modules.api import api
 from modules.api.api import decode_base64_to_image
 from PIL import Image
 
+from character.metrics import hCaption
+
 import os
 import numpy as np
 import logging
 import sys
 
 name_flag = "Character"
-version_flag = "v1.1.5"
+version_flag = "v1.1.6"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")
@@ -83,9 +85,13 @@ def get_extra_value(request, key, default):
     return _get_or_default(character_extra, key, default)
 
 
+@hCaption.time()
 def clip_b64img(image_b64):
     try:
-        img = decode_base64_to_image(image_b64)
+        if isinstance(image_b64, str):
+            img = decode_base64_to_image(image_b64)
+        else:
+            img = image_b64
         return deepbooru.model.tag(img)
         # return shared.interrogator.interrogate(img.convert('RGB'))
     except Exception as e:

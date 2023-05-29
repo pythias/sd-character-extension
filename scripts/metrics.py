@@ -1,5 +1,5 @@
 from character.lib import log, version_flag
-from character.metrics import cT2IImages
+from character.metrics import cT2IImages, iCharacter, totalMemory, gpuDriver
 
 from fastapi import FastAPI, Request
 
@@ -9,7 +9,6 @@ from prometheus_client import generate_latest
 
 from modules import script_callbacks, shared
 
-import gradio as gr
 import time
 
 def metrics_api(_, app: FastAPI):
@@ -33,7 +32,7 @@ def metrics_api(_, app: FastAPI):
             return await call_next(req)
 
         ts = time.time()
-        res: Response = await call_next(req)
+        res = await call_next(req)
         duration = str(round(time.time() - ts, 3))
         
         log('API {method} {endpoint} {duration} {code}'.format(
@@ -45,5 +44,15 @@ def metrics_api(_, app: FastAPI):
         return res
 
 script_callbacks.on_app_started(metrics_api)
+
+try:
+    iCharacter.info({
+        'version': version_flag,
+        'name': shared.cmd_opts.character_server_name,
+        'driver': f"{gpuDriver}",
+        'total_gpu_memory': f"{totalMemory}",
+    })
+except Exception as e:
+    pass
 
 log("Metrics loaded")
