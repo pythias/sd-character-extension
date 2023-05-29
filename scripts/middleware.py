@@ -7,7 +7,7 @@ from Crypto.Signature import PKCS1_v1_5
 
 from uuid import uuid4
 from fastapi import FastAPI, Request
-from modules import shared, script_callbacks
+from modules import script_callbacks
 
 import base64
 import gradio as gr
@@ -19,9 +19,6 @@ require_prefixes = ["/character", "/sdapi"]
 
 def setup_middleware(_: gr.Blocks, app: FastAPI):
     def signature_required(request: Request):
-        if shared.cmd_opts.character_ignore_signature:
-            return False
-
         for prefix in ignore_prefixes:
             if request.url.path.startswith(prefix):
                 return False

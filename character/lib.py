@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum
 from colorama import Fore, Style
-from modules import scripts, shared
+from modules import scripts, shared, deepbooru
 from modules.api import api
 from modules.api.api import decode_base64_to_image
 from PIL import Image
@@ -12,7 +12,7 @@ import logging
 import sys
 
 name_flag = "Character"
-version_flag = "v1.1.4"
+version_flag = "v1.1.5"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")
@@ -86,7 +86,8 @@ def get_extra_value(request, key, default):
 def clip_b64img(image_b64):
     try:
         img = decode_base64_to_image(image_b64)
-        return shared.interrogator.interrogate(img.convert('RGB'))
+        return deepbooru.model.tag(img)
+        # return shared.interrogator.interrogate(img.convert('RGB'))
     except Exception as e:
         return ""
 
