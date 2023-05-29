@@ -14,7 +14,7 @@ import logging
 import sys
 
 name_flag = "Character"
-version_flag = "v1.1.6"
+version_flag = "v1.1.7"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")
@@ -92,8 +92,8 @@ def clip_b64img(image_b64):
             img = decode_base64_to_image(image_b64)
         else:
             img = image_b64
-        return deepbooru.model.tag(img)
-        # return shared.interrogator.interrogate(img.convert('RGB'))
+        # return deepbooru.model.tag(img)
+        return shared.interrogator.interrogate(img.convert('RGB'))
     except Exception as e:
         return ""
 

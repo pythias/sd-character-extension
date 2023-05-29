@@ -1,7 +1,7 @@
 from character import face, upscale
 from character.lib import log
 from character.models import *
-from character.metrics import hT2I, hSD, hCaption
+from character.metrics import hT2I, hSD
 
 from fastapi import FastAPI, Request
 
