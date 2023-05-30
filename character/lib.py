@@ -11,10 +11,10 @@ from character.metrics import hCaption
 import os
 import numpy as np
 import logging
-import sys
+import re
 
 name_flag = "Character"
-version_flag = "v1.1.8"
+version_flag = "v1.1.9"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")
@@ -85,6 +85,13 @@ def get_extra_value(request, key, default):
     return _get_or_default(character_extra, key, default)
 
 
+def replace_man_with_men(text):
+    """
+    特殊模型的处理, 某些模型识别man很差, 改成men
+    """
+    return re.sub(r'\bman\b', 'men', text, flags=re.IGNORECASE)
+
+
 @hCaption.time()
 def clip_b64img(image_b64):
     try:
@@ -92,8 +99,10 @@ def clip_b64img(image_b64):
             img = decode_base64_to_image(image_b64)
         else:
             img = image_b64
-        # return deepbooru.model.tag(img)
-        return shared.interrogator.interrogate(img.convert('RGB'))
+
+        # caption = deepbooru.model.tag(img)
+        caption = shared.interrogator.interrogate(img.convert('RGB'))
+        return replace_man_with_men(caption)
     except Exception as e:
         return ""
 
