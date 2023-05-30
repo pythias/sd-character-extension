@@ -6,6 +6,7 @@ shared.opts.data.update({
     'control_net_max_models_num': 3,
 })
 
+
 # shared.opts.interrogate_clip_skip_categories
 # shared.opts.interrogate_clip_num_beams
 # shared.opts.interrogate_clip_min_length

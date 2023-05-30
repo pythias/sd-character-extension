@@ -174,7 +174,7 @@ def request_prepare(request):
     if isinstance(extra, dict):
         request.extra_generation_params[lib.name_flag].update(extra)
 
-    request.extra_generation_params[lib.name_flag].update({"from_ui": False})
+    request.extra_generation_params[lib.name_flag].update({"from_ui": False, "is_t2i": lib.request_is_t2i(request)})
 
     if request.negative_prompt is None:
         request.negative_prompt = ""
@@ -309,7 +309,7 @@ def apply_i2i_request(request):
                 request.width = int(request.width / radio)
                 request.height = int(request.height / radio)
 
-        lib.log(f"ENABLE-UPSCALE-i2i, scale: {scale_by}, size:{request.width}x{request.height}")
+        lib.log(f"ENABLE-UPSCALE-i2i, scale:{scale_by}, size:{request.width}x{request.height}, denoising:{request.denoising_strength}, cfg:{request.image_cfg_scale}")
 
     except Exception as e:
         raise HTTPException(status_code=404, detail="Input image was invalid")
