@@ -64,7 +64,9 @@ min_base64_image_size = 1000
 class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
     # 大部分参数都丢 extra_generation_params 里面（默认值那种，省得定义那么多）
     steps: int = Field(default=20, title='Steps', description='Number of steps.')
-    sampler_name: str = Field(default="Euler", title='Sampler', description='The sampler to use.')
+    sampler_name: str = Field(default="Euler a", title='Sampler', description='The sampler to use.')
+    hr_upscaler: str = Field(default="Latent", title='HR Upscaler', description='The HR upscaler to use.')
+    denoising_strength: float = Field(default=0.5, title='Denoising Strength', description='The strength of the denoising.')
     character_image: str = Field(default="", title='Character Image', description='The character image in base64 format.')
     character_face: bool = Field(default=False, title='Character Face', description='Whether to crop faces.')
     character_extra: dict = Field(default={}, title='Character Extra Params', description='Character Extra Params.')
@@ -73,8 +75,9 @@ class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
 
 class CharacterV2Img2ImgRequest(StableDiffusionImg2ImgProcessingAPI):
     steps: int = Field(default=20, title='Steps', description='Number of steps.')
-    sampler_name: str = Field(default="Euler", title='Sampler', description='The sampler to use.')
-    denoising_strength = Field(default=0.75, title='Denoising Strength', description='The strength of the denoising.')
+    sampler_name: str = Field(default="Euler a", title='Sampler', description='The sampler to use.')
+    image_cfg_scale: float = Field(default=7.0, title='Image Scale', description='The scale of the image.')
+    denoising_strength: float = Field(default=0.5, title='Denoising Strength', description='The strength of the denoising.')
     character_input_image: str = Field(default="", title='Character Input Image', description='The character input image in base64 format.')
     character_image: str = Field(default="", title='Character Image', description='The character image in base64 format.')
     character_extra: dict = Field(default={}, title='Character Extra Params', description='Character Extra Params.')
@@ -91,9 +94,10 @@ class V2ImageResponse(BaseModel):
 def convert_response(request, response):
     params = response.parameters
     info = json.loads(response.info)
+    info["nsfw"] = 0
+    info["illegal"] = 0
 
     faces = []
-
     source_images = []
     if face.require_face_repairer(request) and not face.keep_original_image(request):
         batch_size = lib.get_request_value(request, "batch_size", 1)
@@ -104,10 +108,12 @@ def convert_response(request, response):
     safety_images = []
     for base64_image in source_images:
         if image_has_nsfw(base64_image):
+            info["nsfw"] += 1
             cNSFW.inc()
             continue
 
         if image_has_illegal_words(base64_image):
+            info["illegal"] += 1
             cIllegal.inc()
             continue
 
@@ -143,12 +149,12 @@ def convert_response(request, response):
         return V2ImageResponse(images=safety_images, parameters=params, info=info, faces=faces)
 
 
-def simply_prompts(prompts: str):
-    if not prompts:
+def simply_prompts(prompt: str):
+    if not prompt:
         return ""
 
     # split the prompts and keep the original case
-    prompts = prompts.split(",")
+    prompts = prompt.split(",")
 
     unique_prompts = {}
     for p in prompts:
@@ -264,7 +270,7 @@ def get_cn_tile_unit(request):
 
     return {
         "module": default_tile_module,
-        "model": find_closest_cn_model_name(default_tile_model),
+        "model": default_tile_model,
         "enabled": True,
         "image": "",
     }
@@ -292,25 +298,7 @@ def apply_i2i_request(request):
         caption = lib.clip_b64img(img)
         request.prompt = caption + "," + request.prompt
 
-        if upscale.require_upscale(request):
-            request.denoising_strength = lib.get_extra_value(request, "denoising_strength", 0.75)
-            request.image_cfg_scale = lib.get_extra_value(request, "image_cfg_scale", 7)
-            scale_by = lib.get_extra_value(request, "scale_by", 2)
-            request.width = lib.get_extra_value(request, "width", img.size[0] * scale_by)
-            request.height = lib.get_extra_value(request, "height", img.size[1] * scale_by)
-
-            # max size 2048 * 2048
-            if request.width > 2048 or request.height > 2048:
-                if request.width > request.height:
-                    radio = request.width / 2048
-                else:
-                    radio = request.height / 2048
-                
-                request.width = int(request.width / radio)
-                request.height = int(request.height / radio)
-
-        lib.log(f"ENABLE-UPSCALE-i2i, scale:{scale_by}, size:{request.width}x{request.height}, denoising:{request.denoising_strength}, cfg:{request.image_cfg_scale}")
-
+        upscale.apply_i2i_upscale(request, img)
     except Exception as e:
         raise HTTPException(status_code=404, detail="Input image was invalid")
 

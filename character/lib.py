@@ -14,7 +14,7 @@ import logging
 import re
 
 name_flag = "Character"
-version_flag = "v1.1.9"
+version_flag = "v1.2.0"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")
@@ -109,7 +109,7 @@ def clip_b64img(image_b64):
 
 def request_is_t2i(request):
     if isinstance(request, dict):
-        return "hr_scale" in dict
+        return "hr_scale" in request
         
     return hasattr(request, "hr_scale")
 

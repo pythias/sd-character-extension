@@ -6,7 +6,7 @@ from modules import shared, scripts
 from modules.processing import Processed
 
 class Script(scripts.Script):
-    started_at = None
+    started_at = 0.0
 
     def title(self):
         return "Extend Character Information"

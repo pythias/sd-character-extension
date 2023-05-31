@@ -143,11 +143,9 @@ def apply_face_repairer(request):
     if not require_face_repairer(request):
         return
 
-    params = vars(request)
-    keys = list(params.keys())
     values = lib.get_extra_value(request, 'face_repair_params', {})
     values["enabled"] = True
-    lib.log(f"ENABLE-face-repairer, {values}")
+    lib.log(f"ENABLE-FACE-REPAIRER, {values}")
 
     unit = FaceUnit(**values)
     request.alwayson_scripts.update({REPAIRER_NAME: {'args': [unit]}})
