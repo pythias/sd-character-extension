@@ -104,12 +104,16 @@ def convert_response(request, response):
         if image_has_nsfw(base64_image):
             info["nsfw"] += 1
             cNSFW.inc()
-            continue
+
+            if not lib.get_extra_value(request, "allow_nsfw", False):
+                continue
 
         if image_has_illegal_words(base64_image):
             info["illegal"] += 1
             cIllegal.inc()
-            continue
+
+            if not lib.get_extra_value(request, "allow_illegal", False):
+                continue
 
         safety_images.append(base64_image)
 
