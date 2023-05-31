@@ -7,6 +7,8 @@ import base64
 import io
 import re
 import logging
+import opennsfw2 as n2
+
 
 from character.metrics import hDN
 from character.lib import models_path, log, clip_b64img
@@ -14,7 +16,7 @@ from character.lib import models_path, log, clip_b64img
 safety_model_id = "CompVis/stable-diffusion-safety-checker"
 safety_feature_extractor = None
 safety_checker = None
-
+n2_model = None
 
 def numpy_to_pil(images):
     if images.ndim == 3:
@@ -23,6 +25,15 @@ def numpy_to_pil(images):
     pil_images = [Image.fromarray(image) for image in images]
 
     return pil_images
+
+@hDN.time()
+def image_has_nsfw_v2(image_path):
+    global n2_model
+    if n2_model is None:
+        n2_model = n2.make_open_nsfw_model(weights_path=models_path)
+        
+    return n2.predict_image(image_path) > 0.8
+
 
 @hDN.time()
 def image_has_nsfw(base64_image):
