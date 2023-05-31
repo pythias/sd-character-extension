@@ -102,10 +102,10 @@ def convert_response(request, response):
     image_urls = []
     safety_images = []
     for base64_image in source_images:
-        image_url, image_path = output.save_image(base64_image)
+        image_url, _ = output.save_image(base64_image)
         image_urls.append(image_url)
 
-        if image_has_nsfw_v2(image_path):
+        if image_has_nsfw_v2(base64_image):
             info["nsfw-v2"] += 1
         
         if image_has_nsfw(base64_image):

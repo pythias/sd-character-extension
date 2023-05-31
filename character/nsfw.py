@@ -10,6 +10,8 @@ import logging
 import opennsfw2 as n2
 
 
+from modules.api.api import decode_base64_to_image
+
 from character.metrics import hDN
 from character.lib import models_path, log, clip_b64img
 
@@ -26,13 +28,21 @@ def numpy_to_pil(images):
 
     return pil_images
 
+
 @hDN.time()
-def image_has_nsfw_v2(image_path):
+def image_has_nsfw_v2(base64_image):
     global n2_model
     if n2_model is None:
         n2_model = n2.make_open_nsfw_model(weights_path=models_path + "/open_nsfw_weights.h5")
-        
-    return n2.predict_image(image_path) > 0.8
+
+    try:
+        pil_image = decode_base64_to_image(base64_image)
+        n2_image = n2.preprocess_image(pil_image)
+        nsfw_probability = float(n2_model(np.expand_dims(n2_image, 0)).numpy()[0][1])
+        return nsfw_probability > 0.8
+    except Exception as e:
+        log(f"image_has_nsfw_v2 error: {e}", logging.ERROR)
+        return False
 
 
 @hDN.time()
