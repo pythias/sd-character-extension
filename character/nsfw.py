@@ -30,7 +30,7 @@ def numpy_to_pil(images):
 def image_has_nsfw_v2(image_path):
     global n2_model
     if n2_model is None:
-        n2_model = n2.make_open_nsfw_model(weights_path=models_path)
+        n2_model = n2.make_open_nsfw_model(weights_path=models_path + "/open_nsfw_weights.h5")
         
     return n2.predict_image(image_path) > 0.8
 
