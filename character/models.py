@@ -65,6 +65,7 @@ class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
     # 大部分参数都丢 extra_generation_params 里面（默认值那种，省得定义那么多）
     steps: int = Field(default=20, title='Steps', description='Number of steps.')
     sampler_name: str = Field(default="Euler a", title='Sampler', description='The sampler to use.')
+    hr_upscaler: str = Field(default="Latent", title='HR Upscaler', description='The HR upscaler to use.')
     character_image: str = Field(default="", title='Character Image', description='The character image in base64 format.')
     character_face: bool = Field(default=False, title='Character Face', description='Whether to crop faces.')
     character_extra: dict = Field(default={}, title='Character Extra Params', description='Character Extra Params.')
