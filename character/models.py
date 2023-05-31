@@ -17,11 +17,7 @@ from modules.api.models import *
 from modules.paths_internal import extensions_dir
 from modules.api.api import decode_base64_to_image
 
-negative_default_prompts = "EasyNegative,worst quality,low quality"
-negative_nsfw_prompts = "nsfw,naked,nude,sex,ass,pussy,loli,kids,kid,child,children,teenager,teenagers,teen,baby face,big breasts"
-negative_watermark_prompts = "text,watermark,signature,logo"
-negative_body_prompts = "zombie,extra fingers,six fingers,missing fingers,extra arms,missing arms,extra legs,missing legs,bad face,bad hair,bad hands,bad pose"
-
+negative_default_prompts = "BadDream,FastNegativeEmbedding"
 high_quality_prompts = "8k,high quality,<lora:add_detail:1>"
 
 # 加载ControlNet，启动添加参数 --controlnet-dir
@@ -186,12 +182,7 @@ def request_prepare(request):
     if request.prompt is None:
         request.prompt = ""
 
-    request.negative_prompt = request.negative_prompt + "," \
-        + negative_default_prompts + "," \
-        + negative_nsfw_prompts + "," \
-        + negative_watermark_prompts + "," \
-        + negative_body_prompts
-
+    request.negative_prompt = request.negative_prompt + "," + negative_default_prompts
     request.prompt = request.prompt + "," + high_quality_prompts
 
     request.prompt = simply_prompts(request.prompt)

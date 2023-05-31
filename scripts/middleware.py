@@ -15,7 +15,7 @@ import time
 import os
 
 ignore_prefixes = ["/docs",  "/openapi.json", "/character/meta"]
-require_prefixes = ["/character", "/sdapi"]
+require_prefixes = ["/character", "/sdapi", "/sd_extra_networks", "/controlnet", "/tagger"]
 
 def setup_middleware(_: gr.Blocks, app: FastAPI):
     def signature_required(request: Request):
@@ -23,13 +23,7 @@ def setup_middleware(_: gr.Blocks, app: FastAPI):
             if request.url.path.startswith(prefix):
                 return False
     
-        required = False
-        for prefix in require_prefixes:
-            if request.url.path.startswith(prefix):
-                required = True
-                break
-        
-        return required
+        return True
 
 
     @app.middleware("http")
