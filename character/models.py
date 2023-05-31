@@ -66,6 +66,7 @@ class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
     steps: int = Field(default=20, title='Steps', description='Number of steps.')
     sampler_name: str = Field(default="Euler a", title='Sampler', description='The sampler to use.')
     hr_upscaler: str = Field(default="Latent", title='HR Upscaler', description='The HR upscaler to use.')
+    denoising_strength: float = Field(default=0.5, title='Denoising Strength', description='The strength of the denoising.')
     character_image: str = Field(default="", title='Character Image', description='The character image in base64 format.')
     character_face: bool = Field(default=False, title='Character Face', description='Whether to crop faces.')
     character_extra: dict = Field(default={}, title='Character Extra Params', description='Character Extra Params.')
