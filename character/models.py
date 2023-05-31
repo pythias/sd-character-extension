@@ -64,7 +64,7 @@ min_base64_image_size = 1000
 class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
     # 大部分参数都丢 extra_generation_params 里面（默认值那种，省得定义那么多）
     steps: int = Field(default=20, title='Steps', description='Number of steps.')
-    sampler_name: str = Field(default="Euler", title='Sampler', description='The sampler to use.')
+    sampler_name: str = Field(default="Euler a", title='Sampler', description='The sampler to use.')
     character_image: str = Field(default="", title='Character Image', description='The character image in base64 format.')
     character_face: bool = Field(default=False, title='Character Face', description='Whether to crop faces.')
     character_extra: dict = Field(default={}, title='Character Extra Params', description='Character Extra Params.')
@@ -73,8 +73,9 @@ class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
 
 class CharacterV2Img2ImgRequest(StableDiffusionImg2ImgProcessingAPI):
     steps: int = Field(default=20, title='Steps', description='Number of steps.')
-    sampler_name: str = Field(default="Euler", title='Sampler', description='The sampler to use.')
-    denoising_strength: float = Field(default=0.75, title='Denoising Strength', description='The strength of the denoising.')
+    sampler_name: str = Field(default="Euler a", title='Sampler', description='The sampler to use.')
+    image_cfg_scale: float = Field(default=7.0, title='Image Scale', description='The scale of the image.')
+    denoising_strength: float = Field(default=0.5, title='Denoising Strength', description='The strength of the denoising.')
     character_input_image: str = Field(default="", title='Character Input Image', description='The character input image in base64 format.')
     character_image: str = Field(default="", title='Character Image', description='The character image in base64 format.')
     character_extra: dict = Field(default={}, title='Character Extra Params', description='Character Extra Params.')
