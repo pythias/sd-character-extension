@@ -68,7 +68,6 @@ class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
     hr_upscaler: str = Field(default="Latent", title='HR Upscaler', description='The HR upscaler to use.')
     denoising_strength: float = Field(default=0.5, title='Denoising Strength', description='The strength of the denoising.')
     character_image: str = Field(default="", title='Character Image', description='The character image in base64 format.')
-    character_face: bool = Field(default=False, title='Character Face', description='Whether to crop faces.')
     character_extra: dict = Field(default={}, title='Character Extra Params', description='Character Extra Params.')
     extra_generation_params: dict = Field(default={}, title='Extra Generation Params', description='Extra Generation Params.')
 
@@ -79,7 +78,6 @@ class CharacterV2Img2ImgRequest(StableDiffusionImg2ImgProcessingAPI):
     image_cfg_scale: float = Field(default=7.0, title='Image Scale', description='The scale of the image.')
     denoising_strength: float = Field(default=0.5, title='Denoising Strength', description='The strength of the denoising.')
     character_input_image: str = Field(default="", title='Character Input Image', description='The character input image in base64 format.')
-    character_image: str = Field(default="", title='Character Image', description='The character image in base64 format.')
     character_extra: dict = Field(default={}, title='Character Extra Params', description='Character Extra Params.')
     extra_generation_params: dict = Field(default={}, title='Extra Generation Params', description='Extra Generation Params.')
     
