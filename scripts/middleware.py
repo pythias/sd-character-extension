@@ -23,7 +23,11 @@ def setup_middleware(_: gr.Blocks, app: FastAPI):
             if request.url.path.startswith(prefix):
                 return False
     
-        return True
+        for prefix in require_prefixes:
+            if request.url.path.startswith(prefix):
+                return True
+        
+        return False
 
 
     @app.middleware("http")
