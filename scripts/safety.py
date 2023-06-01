@@ -21,7 +21,4 @@ class Script(scripts.Script):
         # todo 和脸部修复的最后一个script操作冲突
         return
 
-
-nsfw.load_models()
-
 lib.log("Safety loaded")

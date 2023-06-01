@@ -7,6 +7,7 @@ import io
 import re
 import logging
 import opennsfw2 as n2
+import tensorflow as tf
 import time
 
 from modules.api.api import decode_base64_to_image
@@ -18,6 +19,7 @@ safety_model_id = "CompVis/stable-diffusion-safety-checker"
 safety_feature_extractor = None
 safety_checker = None
 n2_model = None
+cpu_device = '/cpu:0'
 
 def numpy_to_pil(images):
     if images.ndim == 3:
@@ -38,16 +40,19 @@ def load_models():
 
 @hDN.time()
 def image_has_nsfw_v2(base64_image):
-    try:
-        pil_image = decode_base64_to_image(base64_image)
-        n2_image = n2.preprocess_image(pil_image)
-        n2_image = np.expand_dims(n2_image, 0)
-        n2_image = n2_model(n2_image).cpu().numpy()
-        nsfw_probability = float(n2_image[0][1])
-        return nsfw_probability > 0.8
-    except Exception as e:
-        log(f"image_has_nsfw_v2 error: {e}", logging.ERROR)
-        return False
+    with tf.device(cpu_device):
+        try:
+            load_models()
+            
+            pil_image = decode_base64_to_image(base64_image)
+            n2_image = n2.preprocess_image(pil_image)
+            n2_image = np.expand_dims(n2_image, 0)
+            n2_image = n2_model(n2_image).cpu().numpy()
+            nsfw_probability = float(n2_image[0][1])
+            return nsfw_probability > 0.8
+        except Exception as e:
+            log(f"image_has_nsfw_v2 error: {e}", logging.ERROR)
+            return False
 
 
 @hDN.time()
