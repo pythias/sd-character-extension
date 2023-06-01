@@ -14,7 +14,7 @@ import logging
 import re
 
 name_flag = "Character"
-version_flag = "v1.2.2"
+version_flag = "v1.2.3"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")
@@ -113,3 +113,36 @@ def request_is_t2i(request):
         
     return hasattr(request, "hr_scale")
 
+
+def limit_size_max(w, h, radio, max):
+    """
+    限制最大尺寸
+    """
+    if w <= max and h <= max:
+        return w, h
+
+    if w > h:
+        w = max
+        h = int(w / radio)
+    else:
+        h = max
+        w = int(h * radio)
+    
+    return w, h
+
+
+def limit_size_min(w, h, radio, min):
+    """
+    限制最小尺寸
+    """
+    if w >= min and h >= min:
+        return w, h
+
+    if w < h:
+        w = min
+        h = int(w / radio)
+    else:
+        h = min
+        w = int(h * radio)
+    
+    return w, h
