@@ -20,6 +20,7 @@ safety_feature_extractor = None
 safety_checker = None
 n2_model = None
 cpu_device = '/cpu:0'
+cpu_all = "cpu"
 
 def numpy_to_pil(images):
     if images.ndim == 3:
@@ -42,7 +43,7 @@ def _load_models():
 
 @hDN.time()
 def image_has_nsfw_v2(base64_image):
-    with tf.device(cpu_device):
+    with tf.device(cpu_all):
         try:
             _load_models()
 
