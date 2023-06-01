@@ -106,9 +106,6 @@ def convert_response(request, response):
         image_urls.append(image_url)
 
         if image_has_nsfw_v2(base64_image):
-            info["nsfw-v2"] += 1
-        
-        if image_has_nsfw(base64_image):
             info["nsfw"] += 1
             cNSFW.inc()
 

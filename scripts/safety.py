@@ -1,8 +1,7 @@
 import gradio as gr
 import time
 
-from character import lib, face
-from character.nsfw import image_has_nsfw, image_has_illegal_words
+from character import lib, face, nsfw
 from character.metrics import cNSFW, cIllegal
 
 from modules import shared, scripts
@@ -21,5 +20,8 @@ class Script(scripts.Script):
     def postprocess(self, p: StableDiffusionProcessing, processed: Processed, *args):
         # todo 和脸部修复的最后一个script操作冲突
         return
+
+
+nsfw.load_models()
 
 lib.log("Safety loaded")

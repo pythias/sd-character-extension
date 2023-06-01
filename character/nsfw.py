@@ -7,7 +7,7 @@ import io
 import re
 import logging
 import opennsfw2 as n2
-import tensorflow as tf
+import time
 
 from modules.api.api import decode_base64_to_image
 
@@ -18,7 +18,6 @@ safety_model_id = "CompVis/stable-diffusion-safety-checker"
 safety_feature_extractor = None
 safety_checker = None
 n2_model = None
-cpu_device = '/cpu:0'
 
 def numpy_to_pil(images):
     if images.ndim == 3:
@@ -29,25 +28,26 @@ def numpy_to_pil(images):
     return pil_images
 
 
+def load_models():
+    global n2_model
+    if n2_model is None:
+        started_at = time.time()
+        n2_model = n2.make_open_nsfw_model(weights_path=models_path + "/open_nsfw_weights.h5")
+        log(f"nsfw_probability: model loaded in {time.time() - started_at} seconds")
+
+
 @hDN.time()
 def image_has_nsfw_v2(base64_image):
-    with tf.device(cpu_device):
-        log(f"nsfw_probability: before-percent:{gpu_used_memory_percent()}", logging.INFO)
-        global n2_model
-        if n2_model is None:
-            started_at = time.time()
-            n2_model = n2.make_open_nsfw_model(weights_path=models_path + "/open_nsfw_weights.h5")
-            log(f"nsfw_probability: model loaded in {time.time() - started_at} seconds, percent:{gpu_used_memory_percent()}")
-
-        try:
-            pil_image = decode_base64_to_image(base64_image)
-            n2_image = n2.preprocess_image(pil_image)
-            nsfw_probability = float(n2_model(np.expand_dims(n2_image, 0)).numpy()[0][1])
-            log(f"nsfw_probability: {nsfw_probability}, percent:{gpu_used_memory_percent()}")
-            return nsfw_probability > 0.8
-        except Exception as e:
-            log(f"image_has_nsfw_v2 error: {e}", logging.ERROR)
-            return False
+    try:
+        pil_image = decode_base64_to_image(base64_image)
+        n2_image = n2.preprocess_image(pil_image)
+        n2_image = np.expand_dims(n2_image, 0)
+        n2_image = n2_model(n2_image).cpu().numpy()
+        nsfw_probability = float(n2_image[0][1])
+        return nsfw_probability > 0.8
+    except Exception as e:
+        log(f"image_has_nsfw_v2 error: {e}", logging.ERROR)
+        return False
 
 
 @hDN.time()
