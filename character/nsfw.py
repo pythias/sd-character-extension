@@ -30,24 +30,26 @@ def numpy_to_pil(images):
     return pil_images
 
 
-def load_models():
+def _load_models():
     global n2_model
-    if n2_model is None:
-        started_at = time.time()
-        n2_model = n2.make_open_nsfw_model(weights_path=models_path + "/open_nsfw_weights.h5")
-        log(f"nsfw_probability: model loaded in {time.time() - started_at} seconds")
+    if n2_model is not None:
+        return
+    
+    started_at = time.time()
+    n2_model = n2.make_open_nsfw_model(weights_path=models_path + "/open_nsfw_weights.h5")
+    log(f"nsfw model loaded in {time.time() - started_at} seconds")
 
 
 @hDN.time()
 def image_has_nsfw_v2(base64_image):
     with tf.device(cpu_device):
         try:
-            load_models()
-            
+            _load_models()
+
             pil_image = decode_base64_to_image(base64_image)
             n2_image = n2.preprocess_image(pil_image)
             n2_image = np.expand_dims(n2_image, 0)
-            n2_image = n2_model(n2_image).cpu().numpy()
+            n2_image = n2_model(n2_image).numpy()
             nsfw_probability = float(n2_image[0][1])
             return nsfw_probability > 0.8
         except Exception as e:
