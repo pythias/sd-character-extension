@@ -1,4 +1,3 @@
-import torch
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 from transformers import AutoFeatureExtractor
 from PIL import Image
@@ -7,14 +6,20 @@ import base64
 import io
 import re
 import logging
+import opennsfw2 as n2
+import tensorflow as tf
+import time
 
-from character.metrics import hDN
+from modules.api.api import decode_base64_to_image
+
+from character.metrics import hDN, gpu_used_memory_percent
 from character.lib import models_path, log, clip_b64img
 
 safety_model_id = "CompVis/stable-diffusion-safety-checker"
 safety_feature_extractor = None
 safety_checker = None
-
+n2_model = None
+cpu_device = '/cpu:0'
 
 def numpy_to_pil(images):
     if images.ndim == 3:
@@ -23,6 +28,34 @@ def numpy_to_pil(images):
     pil_images = [Image.fromarray(image) for image in images]
 
     return pil_images
+
+
+def _load_models():
+    global n2_model
+    if n2_model is not None:
+        return
+    
+    started_at = time.time()
+    n2_model = n2.make_open_nsfw_model(weights_path=models_path + "/open_nsfw_weights.h5")
+    log(f"nsfw model loaded in {time.time() - started_at} seconds")
+
+
+@hDN.time()
+def image_has_nsfw_v2(base64_image):
+    with tf.device(cpu_device):
+        try:
+            _load_models()
+
+            pil_image = decode_base64_to_image(base64_image)
+            n2_image = n2.preprocess_image(pil_image)
+            n2_image = np.expand_dims(n2_image, 0)
+            n2_image = n2_model(n2_image).numpy()
+            nsfw_probability = float(n2_image[0][1])
+            return nsfw_probability > 0.8
+        except Exception as e:
+            log(f"image_has_nsfw_v2 error: {e}", logging.ERROR)
+            return False
+
 
 @hDN.time()
 def image_has_nsfw(base64_image):

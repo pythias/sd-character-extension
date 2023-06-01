@@ -13,7 +13,6 @@ def required_save(request):
     response_format = lib.get_extra_value(request, "response_format", 'b64')
     return response_format == 'url'
 
-
 def save_image(b64):
     """
     save base64 image to disk, return url
@@ -33,7 +32,7 @@ def save_image(b64):
         with open(img_filepath, 'wb') as f:
             f.write(img_bytes)
         
-        return os.path.join(shared.cmd_opts.character_host, imd_relative_path, img_filename)
+        return [os.path.join(shared.cmd_opts.character_host, imd_relative_path, img_filename), img_filepath]
     except Exception as e:
         lib.log("save_image error: %s" % e)
-        return b64
+        return [b64, ""]

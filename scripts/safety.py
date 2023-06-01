@@ -1,8 +1,7 @@
 import gradio as gr
 import time
 
-from character import lib, face
-from character.nsfw import image_has_nsfw, image_has_illegal_words
+from character import lib, face, nsfw
 from character.metrics import cNSFW, cIllegal
 
 from modules import shared, scripts

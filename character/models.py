@@ -10,7 +10,7 @@ from typing import Any, Optional, Dict, List
 from character import face, lib, upscale, output
 from character.errors import *
 from character.metrics import *
-from character.nsfw import image_has_nsfw, image_has_illegal_words
+from character.nsfw import image_has_nsfw, image_has_illegal_words, image_has_nsfw_v2
 
 from modules import shared, images
 from modules.api.models import *
@@ -99,9 +99,13 @@ def convert_response(request, response):
 
     crop_face = face.require_face(request)
 
+    image_urls = []
     safety_images = []
     for base64_image in source_images:
-        if image_has_nsfw(base64_image):
+        image_url, _ = output.save_image(base64_image)
+        image_urls.append(image_url)
+
+        if image_has_nsfw_v2(base64_image):
             info["nsfw"] += 1
             cNSFW.inc()
 
@@ -131,15 +135,9 @@ def convert_response(request, response):
         params = {}
 
     if output.required_save(request):
-        image_urls = []
-        for b64 in safety_images:
-            image_url = output.save_image(b64)
-            image_urls.append(image_url)
-            # image_urls.append(b64)
-        
         face_urls = []
         for b64 in faces:
-            image_url = output.save_image(b64)
+            image_url, _ = output.save_image(b64)
             face_urls.append(image_url)
 
         return V2ImageResponse(images=image_urls, parameters=params, info=info, faces=face_urls)
