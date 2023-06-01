@@ -14,7 +14,7 @@ import logging
 import re
 
 name_flag = "Character"
-version_flag = "v1.2.3"
+version_flag = "v1.2.4"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")
