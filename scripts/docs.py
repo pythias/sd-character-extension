@@ -61,7 +61,8 @@ def update_tags(_: gr.Blocks, app: FastAPI):
 
     app.description = app.description + description
 
+    log("Tags loaded")
 
 script_callbacks.on_app_started(update_tags)
 
-log("Tags loaded")
+

@@ -43,16 +43,16 @@ def metrics_api(_, app: FastAPI):
         ))
         return res
 
+    try:
+        iCharacter.info({
+            'version': version_flag,
+            'name': shared.cmd_opts.character_server_name,
+            'driver': f"{gpuDriver}",
+            'total_gpu_memory': f"{totalMemory}",
+        })
+    except Exception as e:
+        pass
+
+    log("Metrics loaded")
+
 script_callbacks.on_app_started(metrics_api)
-
-try:
-    iCharacter.info({
-        'version': version_flag,
-        'name': shared.cmd_opts.character_server_name,
-        'driver': f"{gpuDriver}",
-        'total_gpu_memory': f"{totalMemory}",
-    })
-except Exception as e:
-    pass
-
-log("Metrics loaded")
