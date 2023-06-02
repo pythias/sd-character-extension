@@ -5,6 +5,7 @@ from modules import scripts, shared, deepbooru
 from modules.api import api
 from modules.api.api import decode_base64_to_image
 from PIL import Image
+from starlette.exceptions import HTTPException
 
 from character.metrics import hCaption
 
@@ -14,12 +15,12 @@ import logging
 import re
 
 name_flag = "Character"
-version_flag = "v1.2.4"
+version_flag = "v1.2.5"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")
 
-request_id = "initialization"
+request_id = "init"
 
 # Set up the logger
 logger = logging.getLogger("fastapi")
@@ -93,18 +94,25 @@ def replace_man_with_men(text):
 
 
 @hCaption.time()
-def clip_b64img(image_b64):
-    try:
-        if isinstance(image_b64, str):
-            img = decode_base64_to_image(image_b64)
-        else:
-            img = image_b64
+def clip_b64img(image_b64, throw_exception = False):
+    if isinstance(image_b64, str):
+        img = decode_base64_to_image(image_b64)
+    else:
+        img = image_b64
 
-        # caption = deepbooru.model.tag(img)
-        caption = shared.interrogator.interrogate(img.convert('RGB'))
-        return replace_man_with_men(caption)
-    except Exception as e:
-        return ""
+    caption = shared.interrogator.interrogate(img.convert('RGB'))
+    if throw_exception and is_empty_caption(caption):
+        raise HTTPException(status_code=422, detail="Interrogate fail")
+
+    # 优化tags
+    return replace_man_with_men(caption)
+
+
+def is_empty_caption(caption):
+    """
+    判断是否为空标签, caption = 基础标签, artists.txt, flavors.txt, mediums.txt, movements.txt
+    """
+    return caption == "" or caption == "<error>" or caption[0] == ', '
 
 
 def request_is_t2i(request):

@@ -6,6 +6,7 @@ import logging
 from enum import Enum
 from pydantic import BaseModel, Field
 from typing import Any, Optional, Dict, List
+from starlette.exceptions import HTTPException
 
 from character import face, lib, upscale, output
 from character.errors import *
@@ -16,6 +17,7 @@ from modules import shared, images
 from modules.api.models import *
 from modules.paths_internal import extensions_dir
 from modules.api.api import decode_base64_to_image
+
 
 negative_default_prompts = "BadDream,FastNegativeEmbedding"
 high_quality_prompts = "8k,high quality,<lora:add_detail:1>"
@@ -232,7 +234,7 @@ def get_cn_image_unit(request):
     if not valid_base64(image_b64):
         return get_cn_empty_unit()
 
-    request.prompt = lib.clip_b64img(image_b64) + "," + request.prompt
+    request.prompt = lib.clip_b64img(image_b64, True) + "," + request.prompt
 
     return {
         "module": lib.get_extra_value(request, "cn_preprocessor", default_control_net_module),
@@ -280,18 +282,12 @@ def apply_i2i_request(request):
     image_b64 = lib.get_request_value(request, "character_input_image", "")
 
     if not image_b64 or len(image_b64) < min_base64_image_size:
-        raise HTTPException(status_code=404, detail="Image not found")
+        raise HTTPException(status_code=422, detail="Image not found")
 
-    try:
-        request.init_images = [image_b64]
-
-        img = decode_base64_to_image(image_b64)
-        caption = lib.clip_b64img(img)
-        request.prompt = caption + "," + request.prompt
-
-        upscale.apply_i2i_upscale(request, img)
-    except Exception as e:
-        raise HTTPException(status_code=404, detail="Input image was invalid")
+    request.init_images = [image_b64]
+    img = decode_base64_to_image(image_b64)    
+    request.prompt = lib.clip_b64img(img, True) + "," + request.prompt
+    upscale.apply_i2i_upscale(request, img)
 
 
 def t2i_counting(request):
