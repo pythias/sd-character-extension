@@ -201,14 +201,17 @@ def _remove_character_fields(request):
         delattr(request, key)
 
 
-def apply_controlnet(request):
+def apply_controlnet(p):
     units = [
-        get_cn_image_unit(request),
-        get_cn_pose_unit(request),
+        get_cn_image_unit(p),
+        get_cn_pose_unit(p),
         get_cn_empty_unit()
     ]
 
-    request.alwayson_scripts.update({'ControlNet': {'args': [external_code.ControlNetUnit(**unit) for unit in units]}})
+    params = {'ControlNet': {'args': [external_code.ControlNetUnit(**unit) for unit in units]}}
+
+    if p.scripts is not None and hasattr(p.scripts, 'alwayson_scripts'):
+        p.scripts.alwayson_scripts.update(params)
 
 
 def get_cn_image_unit(request):

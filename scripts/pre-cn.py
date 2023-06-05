@@ -17,5 +17,5 @@ class Script(scripts.Script):
     
     def process(self, p, *args):
         models.apply_controlnet(p)
-        
+
 
