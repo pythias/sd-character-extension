@@ -208,11 +208,7 @@ def apply_controlnet(p):
         get_cn_empty_unit()
     ]
 
-    params = {'ControlNet': {'args': [external_code.ControlNetUnit(**unit) for unit in units]}}
-
-    if p.scripts is not None and hasattr(p.scripts, 'alwayson_scripts'):
-        p.scripts.alwayson_scripts.update(params)
-
+    p.scripts.alwayson_scripts["ControlNet"] = {'args': [external_code.ControlNetUnit(**unit) for unit in units]}
 
 def get_cn_image_unit(request):
     image_b64 = requests.get_cn_image(request)
