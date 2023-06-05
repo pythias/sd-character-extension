@@ -68,9 +68,9 @@ def update_script_args(p, name, args):
     if p.scripts is None or not hasattr(p.scripts, 'alwayson_scripts'):
         return
     
-    for i, e in enumerate(p.scripts.alwayson_scripts):
-        if e.title() == name:
-            p.scripts.alwayson_scripts[i]['args'] = args
+    for s in p.scripts.alwayson_scripts:
+        if s.title() == name:
+            p.script_args[s.args_from:s.args_to] = args
             return
 
 
