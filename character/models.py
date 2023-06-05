@@ -8,10 +8,10 @@ from pydantic import BaseModel, Field
 from typing import Any, Optional, Dict, List
 from starlette.exceptions import HTTPException
 
-from character import face, lib, upscale, output
+from character import face, lib, output, requests
 from character.errors import *
 from character.metrics import *
-from character.nsfw import image_has_nsfw, image_has_illegal_words, image_has_nsfw_v2
+from character.nsfw import image_has_illegal_words, image_has_nsfw_v2
 
 from modules import shared, images
 from modules.api.models import *
@@ -57,8 +57,6 @@ lib.log(f"ControlNet default models, i2i:{default_control_net_model}, pose:{defa
 
 field_prefix = "character_"
 
-min_base64_image_size = 1000
-
 class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
     # 大部分参数都丢 extra_generation_params 里面（默认值那种，省得定义那么多）
     steps: int = Field(default=20, title='Steps', description='Number of steps.')
@@ -94,10 +92,11 @@ def convert_response(request, response):
     info["illegal"] = 0
 
     faces = []
-    source_images = []
     if face.require_face_repairer(request) and not face.keep_original_image(request):
-        batch_size = lib.get_request_value(request, "batch_size", 1)
+        batch_size = requests.get_value(request, "batch_size", 1)
         source_images = response.images[batch_size:]
+    else:
+        source_images = response.images
 
     crop_face = face.require_face(request)
 
@@ -111,14 +110,14 @@ def convert_response(request, response):
             info["nsfw"] += 1
             cNSFW.inc()
 
-            if not lib.get_extra_value(request, "allow_nsfw", False):
+            if not requests.get_extra_value(request, "allow_nsfw", False):
                 continue
 
         if image_has_illegal_words(base64_image):
             info["illegal"] += 1
             cIllegal.inc()
 
-            if not lib.get_extra_value(request, "allow_illegal", False):
+            if not requests.get_extra_value(request, "allow_illegal", False):
                 continue
 
         safety_images.append(base64_image)
@@ -132,7 +131,7 @@ def convert_response(request, response):
     if len(safety_images) == 0:
         return ApiException(code_character_nsfw, f"has nsfw concept, info:{info}").response()
 
-    if lib.get_extra_value(request, "out_no_parameters", True):
+    if requests.get_extra_value(request, "out_no_parameters", True):
         # 因为请求参数中也有图片的存在，调试时用 parameters
         params = {}
 
@@ -164,22 +163,9 @@ def simply_prompts(prompt: str):
     return ",".join(unique_prompts.values())
 
 
-def request_prepare(request):
-    if isinstance(request, dict):
-        request.setdefault('extra_generation_params', {})
-    else:
-        if not hasattr(request, 'extra_generation_params') or request.extra_generation_params is None:
-            request.extra_generation_params = {}
-
-    if lib.name_flag not in request.extra_generation_params:
-        request.extra_generation_params[lib.name_flag] = {}
-
-    extra = lib.get_request_value(request, 'character_extra', {})
-    if isinstance(extra, dict):
-        request.extra_generation_params[lib.name_flag].update(extra)
-
-    request.extra_generation_params[lib.name_flag].update({"from_ui": False, "is_t2i": lib.request_is_t2i(request)})
-
+def _prepare_request(request):
+    requests.extra_init(request)
+    
     if request.negative_prompt is None:
         request.negative_prompt = ""
 
@@ -191,17 +177,26 @@ def request_prepare(request):
 
     request.prompt = simply_prompts(request.prompt)
     request.negative_prompt = simply_prompts(request.negative_prompt)
-    
 
-def remove_character_fields(request):
+    _remove_character_fields(request)
+
+
+def prepare_request_i2i(request):
+    _prepare_request(request)
+
+    image_b64 = requests.get_i2i_image(request)
+    request.init_images = [image_b64]
+
+
+def prepare_request_t2i(request):
+    _prepare_request(request)
+
+def _remove_character_fields(request):
     params = vars(request)
     keys = list(params.keys())
     for key in keys:
         if not key.startswith(field_prefix):
             continue
-
-        # if not isinstance(params[key], str) or (len(params[key]) < min_base64_image_size and len(params[key]) > 0):
-        #     request.extra_generation_params['Character'].update({key[len(field_prefix):]: params[key]})
         
         delattr(request, key)
 
@@ -213,52 +208,37 @@ def apply_controlnet(request):
         get_cn_empty_unit()
     ]
 
-    # todo 对用户输入的处理
     request.alwayson_scripts.update({'ControlNet': {'args': [external_code.ControlNetUnit(**unit) for unit in units]}})
 
 
-def valid_base64(image_b64):
-    if not image_b64 or len(image_b64) < min_base64_image_size:
-        return False
-
-    try:
-        decode_base64_to_image(image_b64)
-        return True
-    except Exception as e:
-        lib.log(f"valid_base64 error: {e}", logging.ERROR)
-        return False
-
-
 def get_cn_image_unit(request):
-    image_b64 = lib.get_request_value(request, f"{field_prefix}image", "")
-    if not valid_base64(image_b64):
+    image_b64 = requests.get_cn_image(request)
+    if not lib.valid_base64(image_b64):
         return get_cn_empty_unit()
 
-    request.prompt = lib.clip_b64img(image_b64, True) + "," + request.prompt
-
     return {
-        "module": lib.get_extra_value(request, "cn_preprocessor", default_control_net_module),
-        "model": find_closest_cn_model_name(lib.get_extra_value(request, "cn_model", default_control_net_model)),
+        "module": requests.get_extra_value(request, "cn_preprocessor", default_control_net_module),
+        "model": find_closest_cn_model_name(requests.get_extra_value(request, "cn_model", default_control_net_model)),
         "enabled": True,
         "image": image_b64,
     }
 
 
 def get_cn_pose_unit(request):
-    pose_b64 = lib.get_request_value(request, f"{field_prefix}pose", "")
-    if not valid_base64(pose_b64):
+    pose_b64 = requests.get_pose_image(request)
+    if not lib.valid_base64(pose_b64):
         return get_cn_empty_unit()
 
     return {
-        "module": lib.get_extra_value(request, "pose_preprocessor", default_open_pose_module),
-        "model": find_closest_cn_model_name(lib.get_extra_value(request, "pose_model", default_open_pose_model)),
+        "module": requests.get_extra_value(request, "pose_preprocessor", default_open_pose_module),
+        "model": find_closest_cn_model_name(requests.get_extra_value(request, "pose_model", default_open_pose_model)),
         "enabled": True,
         "image": pose_b64,
     }
 
 
 def get_cn_tile_unit(request):
-    if not lib.get_extra_value(request, "scale_by_tile", False):
+    if not requests.get_extra_value(request, "scale_by_tile", False):
         return get_cn_empty_unit()
 
     return {
@@ -276,30 +256,4 @@ def get_cn_empty_unit():
         "enabled": False,
         "image": "",
     }
-
-
-def apply_i2i_request(request):
-    image_b64 = lib.get_request_value(request, "character_input_image", "")
-
-    if not image_b64 or len(image_b64) < min_base64_image_size:
-        raise HTTPException(status_code=422, detail="Image not found")
-
-    request.init_images = [image_b64]
-    img = decode_base64_to_image(image_b64)    
-    request.prompt = lib.clip_b64img(img, True) + "," + request.prompt
-    upscale.apply_i2i_upscale(request, img)
-
-
-def t2i_counting(request):
-    cT2I.inc()
-    cT2IImages.inc(request.batch_size)
-    params_counting(request)
-
-
-def params_counting(request):
-    cPrompts.inc(request.prompt.count(",") + 1)
-    cNegativePrompts.inc(request.negative_prompt.count(",") + 1)
-    cLoras.inc(request.prompt.count("<"))
-    cSteps.inc(request.steps)
-    cPixels.inc(request.width * request.height)
 

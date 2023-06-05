@@ -2,15 +2,14 @@ import base64
 import os
 import uuid
 import time
-from io import BytesIO
 
-from character import lib
+from character import lib, requests
 
 from modules import shared
 
 
 def required_save(request):
-    response_format = lib.get_extra_value(request, "response_format", 'b64')
+    response_format = requests.get_extra_value(request, "response_format", 'b64')
     return response_format == 'url'
 
 def save_image(b64):

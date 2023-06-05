@@ -22,7 +22,6 @@ class FaceCropper(scripts.Script):
         return [enabled]
 
     def postprocess(self, p, processed: Processed, enabled: bool, *args):
-        # todo 脸部检测
+        # todo 和脸部修复的最后一个script操作冲突
         return
 
-lib.log("Face loaded")

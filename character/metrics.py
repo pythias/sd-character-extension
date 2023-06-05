@@ -15,14 +15,14 @@ nvmlShutdown()
 iCharacter = Info('sd_character', 'Description of sd-character-extension')
 
 hT2I = Histogram('character_t2i_latency_seconds', 'Text to image latency', buckets=(3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 10.0, 12.0, 20.0, float("inf")))
+hI2I = Histogram('character_i2i_latency_seconds', 'Image to image latency', buckets=(3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 10.0, 12.0, 20.0, float("inf")))
 hSD = Histogram('character_processing_latency_seconds', 'Stable diffusion processing latency', buckets=(3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 10.0, 12.0, 20.0, float("inf")))
 hDF = Histogram('character_face_latency_seconds', 'Detect face latency')
 hDN = Histogram('character_nsfw_latency_seconds', 'Detect nsfw latency')
 hCaption = Histogram('character_caption_latency_seconds', 'Caption latency')
 hRepair = Histogram('character_repair_latency_seconds', 'Repair latency')
 
-cT2I = Counter('character_t2i_requests', 'Text to image requests')
-cT2IImages = Counter('character_t2i_images', 'Text to image images')
+cImages = Counter('character_images', 'Images generated')
 cFace = Counter('character_faces', 'Detect face')
 cNSFW = Counter('character_nsfw', 'NSFW images')
 cIllegal = Counter('character_illegal', 'Illegal images')
@@ -73,3 +73,11 @@ gGPUUsedMemory.set_function(gpu_used_memory)
 gGPUTemperature.set_function(gpu_temperature)
 gGPUMemoryPercent.set_function(gpu_used_memory_percent)
 
+
+def count_request(request):
+    cImages.inc(request.batch_size)
+    cPrompts.inc(request.prompt.count(",") + 1)
+    cNegativePrompts.inc(request.negative_prompt.count(",") + 1)
+    cLoras.inc(request.prompt.count("<"))
+    cSteps.inc(request.steps)
+    cPixels.inc(request.width * request.height)
