@@ -139,13 +139,17 @@ def keep_original_image(request):
     return requests.get_extra_value(request, "keep_original", False)
 
 
-def apply_face_repairer(request):
-    if not require_face_repairer(request):
+def apply_face_repairer(p):
+    if not require_face_repairer(p):
         return
 
-    values = requests.get_extra_value(request, 'face_repair_params', {})
+    values = requests.get_extra_value(p, 'face_repair_params', {})
     values["enabled"] = True
     lib.log(f"ENABLE-FACE-REPAIRER, {values}")
 
     unit = FaceUnit(**values)
-    request.alwayson_scripts.update({REPAIRER_NAME: {'args': [vars(unit)]}})
+
+    p.scripts.alwayson_scripts[REPAIRER_NAME] = {'args': [vars(unit)]}
+    # request.alwayson_scripts.update({REPAIRER_NAME: {'args': [vars(unit)]}})
+
+
