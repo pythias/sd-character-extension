@@ -149,7 +149,7 @@ def apply_face_repairer(p):
 
     unit = FaceUnit(**values)
 
-    p.scripts.alwayson_scripts[REPAIRER_NAME] = {'args': [vars(unit)]}
+    requests.update_script_args(p, REPAIRER_NAME, [vars(unit)])
     # request.alwayson_scripts.update({REPAIRER_NAME: {'args': [vars(unit)]}})
 
 

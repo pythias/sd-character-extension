@@ -64,4 +64,14 @@ def get_extra_value(request, key, default):
     return get_value(character_extra, key, default)
 
 
+def update_script_args(p, name, args):
+    if p.scripts is None or not hasattr(p.scripts, 'alwayson_scripts'):
+        return
+    
+    for i, e in enumerate(p.scripts.alwayson_scripts):
+        if e.title() == name:
+            p.scripts.alwayson_scripts[i]['args'] = args
+            return
+
+
 get_value = lib.get_or_default
