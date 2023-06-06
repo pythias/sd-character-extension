@@ -47,15 +47,12 @@ def find_closest_cn_model_name(search: str):
     applicable = sorted(applicable, key=lambda name: len(name))
     return global_state.cn_models_names[applicable[0]]
 
-default_control_net_model = find_closest_cn_model_name("controlnet11Models_lineart")
+default_control_net_model = "controlnet11Models_lineart"
 default_control_net_module = "lineart_realistic"
-default_open_pose_model = find_closest_cn_model_name("controlnet11Models_openpose")
+default_open_pose_model = "controlnet11Models_openpose"
 default_open_pose_module = "openpose"
-default_tile_model = find_closest_cn_model_name("controlnet11Models_tile")
+default_tile_model = "controlnet11Models_tile"
 default_tile_module = "tile_resample"
-lib.log(f"ControlNet default models, i2i:{default_control_net_model}, pose:{default_open_pose_model}, tile:{default_tile_model}")
-
-field_prefix = "character_"
 
 class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
     # 大部分参数都丢 extra_generation_params 里面（默认值那种，省得定义那么多）
@@ -195,42 +192,45 @@ def _remove_character_fields(request):
     params = vars(request)
     keys = list(params.keys())
     for key in keys:
-        if not key.startswith(field_prefix):
+        if not key.startswith("character_"):
             continue
         
         delattr(request, key)
 
 
-def apply_controlnet(p):
+def apply_controlnet(request):
     units = [
-        get_cn_image_unit(p),
-        get_cn_pose_unit(p),
-        get_cn_empty_unit()
+        get_cn_image_unit(request),
+        get_cn_pose_unit(request),
+        
+        _get_cn_empty_unit(),
+        _get_cn_empty_unit(),
+        _get_cn_empty_unit()
     ]
 
-    requests.update_script_args(p, "ControlNet", [external_code.ControlNetUnit(**unit) for unit in units])
+    requests.update_script_args(request, "ControlNet", [_to_process_unit(unit) for unit in units])
 
-def get_cn_image_unit(p):
-    image_b64 = requests.get_cn_image(p)
+def get_cn_image_unit(request):
+    image_b64 = requests.get_cn_image(request)
     if not lib.valid_base64(image_b64):
-        return get_cn_empty_unit()
+        return _get_cn_empty_unit()
 
     return {
-        "module": requests.get_extra_value(p, "cn_preprocessor", default_control_net_module),
-        "model": find_closest_cn_model_name(requests.get_extra_value(p, "cn_model", default_control_net_model)),
+        "module": requests.get_extra_value(request, "cn_preprocessor", default_control_net_module),
+        "model": requests.get_extra_value(request, "cn_model", default_control_net_model),
         "enabled": True,
         "image": image_b64,
     }
 
 
-def get_cn_pose_unit(p):
-    pose_b64 = requests.get_pose_image(p)
+def get_cn_pose_unit(request):
+    pose_b64 = requests.get_pose_image(request)
     if not lib.valid_base64(pose_b64):
-        return get_cn_empty_unit()
+        return _get_cn_empty_unit()
 
     return {
-        "module": requests.get_extra_value(p, "pose_preprocessor", default_open_pose_module),
-        "model": find_closest_cn_model_name(requests.get_extra_value(p, "pose_model", default_open_pose_model)),
+        "module": requests.get_extra_value(request, "pose_preprocessor", default_open_pose_module),
+        "model": requests.get_extra_value(request, "pose_model", default_open_pose_model),
         "enabled": True,
         "image": pose_b64,
     }
@@ -238,7 +238,7 @@ def get_cn_pose_unit(p):
 
 def get_cn_tile_unit(p):
     if not requests.get_extra_value(p, "scale_by_tile", False):
-        return get_cn_empty_unit()
+        return _get_cn_empty_unit()
 
     return {
         "module": default_tile_module,
@@ -248,7 +248,7 @@ def get_cn_tile_unit(p):
     }
 
 
-def get_cn_empty_unit():
+def _get_cn_empty_unit():
     return {
         "model": "none",
         "module": "none",
@@ -256,3 +256,9 @@ def get_cn_empty_unit():
         "image": "",
     }
 
+
+def _to_process_unit(unit):
+    if unit["enabled"]:
+        unit["model"] = find_closest_cn_model_name(unit["model"])
+
+    return external_code.ControlNetUnit(**unit)

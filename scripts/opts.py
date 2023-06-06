@@ -6,7 +6,7 @@ from modules import shared, script_callbacks
 def update_options(_, app):
     updated_options = {
         'control_net_no_detectmap': True,
-        'control_net_max_models_num': 3,
+        'control_net_max_models_num': 5,
         'interrogate_keep_models_in_memory': True,
         'interrogate_clip_num_beams': 1,
         'interrogate_clip_skip_categories': [],

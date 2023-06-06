@@ -1,8 +1,5 @@
 from character import lib, names
 
-
-# todo 调整参数名字
-
 def get_cn_image(request):
     return get_extra_value(request, names.ParamLineArt, "")
 
@@ -13,18 +10,12 @@ def get_i2i_image(request):
     return get_extra_value(request, names.ParamImage, "")
 
 def extra_init(request):
-    if isinstance(request, dict):
-        request.setdefault('extra_generation_params', {})
-
-    if not hasattr(request, 'extra_generation_params') or request.extra_generation_params is None:
-        request.extra_generation_params = {}
-
-    if names.Name not in request.extra_generation_params:
-        request.extra_generation_params[names.Name] = {}
-
-    extra = get_value(request, 'character_extra', {})
+    request.extra_generation_params.setdefault(names.Name, {})
+    extra = get_value(request, names.ParamExtra, {})
     if isinstance(extra, dict):
         request.extra_generation_params[names.Name].update(extra)
+    else:
+        lib.log(f"extra is not dict, {type(extra)}")
 
     # delete extra
     if hasattr(request, names.ParamExtra):
@@ -47,10 +38,7 @@ def update_extra(request, key, value):
 
 
 def update_extras(request, values):
-    if isinstance(request, dict):
-        request["extra_generation_params"][names.Name].update(values)
-    else:
-        request.extra_generation_params[names.Name].update(values)
+    request.extra_generation_params[names.Name].update(values)
 
 
 def get_extra_value(request, key, default):
