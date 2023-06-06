@@ -4,13 +4,13 @@ from character import lib, names
 # todo 调整参数名字
 
 def get_cn_image(request):
-    return get_extra_value(request, "cn_image", "")
+    return get_extra_value(request, names.ParamLineArt, "")
 
 def get_pose_image(request):
-    return get_extra_value(request, "pose_image", "")
+    return get_extra_value(request, names.ParamPose, "")
 
 def get_i2i_image(request):
-    return get_extra_value(request, "i2i_image", "")
+    return get_extra_value(request, names.ParamImage, "")
 
 def extra_init(request):
     if isinstance(request, dict):
@@ -27,7 +27,7 @@ def extra_init(request):
         request.extra_generation_params[names.Name].update(extra)
 
     # delete extra
-    if hasattr(request, 'character_extra'):
+    if hasattr(request, names.ParamExtra):
         del request.character_extra
 
     # 对老版本请求的兼容
@@ -35,11 +35,11 @@ def extra_init(request):
     # character_input_image -> i2i_image
     cn_image_base64 = get_value(request, "character_image", "")
     if cn_image_base64 != "":
-        update_extra(request, "cn_image", cn_image_base64)
+        update_extra(request, names.ParamLineArt, cn_image_base64)
     
     i2i_image_base64 = get_value(request, "character_input_image", "")
     if i2i_image_base64 != "":
-        update_extra(request, "i2i_image", i2i_image_base64)
+        update_extra(request, names.ParamImage, i2i_image_base64)
 
 
 def update_extra(request, key, value):
@@ -56,7 +56,7 @@ def get_extra_value(request, key, default):
     """
     获取自定义参数的值
     """
-    character_extra = get_value(request, "character_extra", None)
+    character_extra = get_value(request, names.ParamExtra, None)
     if character_extra is None:
         extra = get_value(request, "extra_generation_params", {})
         character_extra = get_value(extra, names.Name, {})
@@ -70,7 +70,9 @@ def update_script_args(p, name, args):
     
     for s in p.scripts.alwayson_scripts:
         if s.title() == name:
-            p.script_args[s.args_from:s.args_to] = args
+            script_args = list(p.script_args)  # Convert to list
+            script_args[s.args_from:s.args_to] = args  # Now you can assign to a slice
+            p.script_args = tuple(script_args)  # Convert back to tuple if necessary
             return
 
 
