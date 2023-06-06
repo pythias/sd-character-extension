@@ -10,7 +10,7 @@ class Script(scripts.Script):
     started_at = 0.0
 
     def title(self):
-        return "character info"
+        return "Character Info"
 
     def show(self, is_img2img):
         return scripts.AlwaysVisible

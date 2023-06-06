@@ -10,7 +10,7 @@ class Script(scripts.Script):
     prompts_from_image = {}
 
     def title(self):
-        return "character i2i"
+        return "Character I2I"
 
     def show(self, is_img2img):
         if is_img2img:

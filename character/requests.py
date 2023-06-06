@@ -67,13 +67,18 @@ def _update_script_args(p, name, args):
     # 过程中参数处理
     if p.scripts is None or not hasattr(p.scripts, 'alwayson_scripts'):
         return
-    
+
     for s in p.scripts.alwayson_scripts:
         if s.title().lower() == name.lower():
             script_args = list(p.script_args)
-            script_args[s.args_from:s.args_to] = args
+            if len(args) > s.args_to - s.args_from:
+                script_args[s.args_from:s.args_from] = args[:s.args_to - s.args_from]
+            elif len(args) < s.args_to - s.args_from:
+                script_args[s.args_from:s.args_from+len(args)] = args
+            else:
+                script_args[s.args_from:s.args_to] = args
+            
             p.script_args = tuple(script_args)
-            return
-
+            break
 
 get_value = lib.get_or_default
