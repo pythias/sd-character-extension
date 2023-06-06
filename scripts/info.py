@@ -10,13 +10,13 @@ class Script(scripts.Script):
     started_at = 0.0
 
     def title(self):
-        return "Extend Character Information"
+        return "character info"
 
     def show(self, is_img2img):
         return scripts.AlwaysVisible
 
     def ui(self, is_img2img):
-        return [gr.Checkbox(label="Extend Character Information", value=True)]
+        return [gr.Checkbox(label="Character Information", value=True)]
     
     def process(self, p, *args):
         self.started_at = time.perf_counter()

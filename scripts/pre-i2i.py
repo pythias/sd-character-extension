@@ -10,7 +10,7 @@ class Script(scripts.Script):
     prompts_from_image = {}
 
     def title(self):
-        return "Character Preprocessing For Image-to-Image"
+        return "character i2i"
 
     def show(self, is_img2img):
         if is_img2img:
@@ -19,7 +19,7 @@ class Script(scripts.Script):
         return False
 
     def ui(self, is_img2img):
-        return [gr.Checkbox(label="Character Preprocessing For Image-to-Image", value=True)]
+        return [gr.Checkbox(label="Character I2I", value=True)]
     
     def process(self, p, *args):
         if nsfw.prompt_has_illegal_words(p.prompt):
