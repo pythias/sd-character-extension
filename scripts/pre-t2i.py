@@ -22,6 +22,7 @@ class Script(scripts.Script):
         if nsfw.prompt_has_illegal_words(p.prompt):
             raise errors.ApiException(errors.code_character_nsfw, "has nsfw concept")
 
+        face.apply_face_repairer(p)
         upscale.apply_t2i_upscale(p)
 
         image_b64 = requests.get_cn_image(p)
@@ -38,4 +39,4 @@ class Script(scripts.Script):
             raise errors.ApiException(errors.code_character_nsfw, "has nsfw concept")
 
         metrics.count_request(p)
-        face.apply_face_repairer(p)
+        

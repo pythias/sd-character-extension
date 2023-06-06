@@ -123,7 +123,7 @@ def find_face_repairer_script(script_runner: scripts.ScriptRunner) -> Optional[s
 
 
 def is_face_repairer_script(script: scripts.Script) -> bool:
-    return script.title() == REPAIRER_NAME
+    return script.title().lower() == REPAIRER_NAME
 
 
 def require_face(request):

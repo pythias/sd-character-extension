@@ -70,7 +70,7 @@ def update_script_args(p, name, args):
         return
     
     for s in p.scripts.alwayson_scripts:
-        if s.title() == name:
+        if s.title().lower() == name.lower():
             script_args = list(p.script_args)
             script_args[s.args_from:s.args_to] = args
             p.script_args = tuple(script_args)
