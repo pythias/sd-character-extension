@@ -210,34 +210,34 @@ def apply_controlnet(p):
 
     requests.update_script_args(p, "ControlNet", [external_code.ControlNetUnit(**unit) for unit in units])
 
-def get_cn_image_unit(request):
-    image_b64 = requests.get_cn_image(request)
+def get_cn_image_unit(p):
+    image_b64 = requests.get_cn_image(p)
     if not lib.valid_base64(image_b64):
         return get_cn_empty_unit()
 
     return {
-        "module": requests.get_extra_value(request, "cn_preprocessor", default_control_net_module),
-        "model": find_closest_cn_model_name(requests.get_extra_value(request, "cn_model", default_control_net_model)),
+        "module": requests.get_extra_value(p, "cn_preprocessor", default_control_net_module),
+        "model": find_closest_cn_model_name(requests.get_extra_value(p, "cn_model", default_control_net_model)),
         "enabled": True,
         "image": image_b64,
     }
 
 
-def get_cn_pose_unit(request):
-    pose_b64 = requests.get_pose_image(request)
+def get_cn_pose_unit(p):
+    pose_b64 = requests.get_pose_image(p)
     if not lib.valid_base64(pose_b64):
         return get_cn_empty_unit()
 
     return {
-        "module": requests.get_extra_value(request, "pose_preprocessor", default_open_pose_module),
-        "model": find_closest_cn_model_name(requests.get_extra_value(request, "pose_model", default_open_pose_model)),
+        "module": requests.get_extra_value(p, "pose_preprocessor", default_open_pose_module),
+        "model": find_closest_cn_model_name(requests.get_extra_value(p, "pose_model", default_open_pose_model)),
         "enabled": True,
         "image": pose_b64,
     }
 
 
-def get_cn_tile_unit(request):
-    if not requests.get_extra_value(request, "scale_by_tile", False):
+def get_cn_tile_unit(p):
+    if not requests.get_extra_value(p, "scale_by_tile", False):
         return get_cn_empty_unit()
 
     return {

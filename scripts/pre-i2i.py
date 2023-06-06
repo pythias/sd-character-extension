@@ -25,8 +25,6 @@ class Script(scripts.Script):
         if nsfw.prompt_has_illegal_words(p.prompt):
             raise errors.ApiException(errors.code_character_nsfw, "has nsfw concept")
         
-        face.apply_face_repairer(p)
-
         image_b64 = requests.get_i2i_image(p)
         if not image_b64 or len(image_b64) < lib.min_base64_image_size:
             raise HTTPException(status_code=422, detail="Input image not found")
@@ -43,3 +41,5 @@ class Script(scripts.Script):
             raise errors.ApiException(errors.code_character_nsfw, "has nsfw concept")
 
         metrics.count_request(p)
+
+        face.apply_face_repairer(p)

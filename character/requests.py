@@ -43,13 +43,14 @@ def extra_init(request):
 
 
 def update_extra(request, key, value):
-    request.extra_generation_params[names.Name].update({
-        key: value,
-    })
+    update_extras(request, {key: value})
 
 
 def update_extras(request, values):
-    request.extra_generation_params[names.Name].update(values)
+    if isinstance(request, dict):
+        request["extra_generation_params"][names.Name].update(values)
+    else:
+        request.extra_generation_params[names.Name].update(values)
 
 
 def get_extra_value(request, key, default):
@@ -70,9 +71,9 @@ def update_script_args(p, name, args):
     
     for s in p.scripts.alwayson_scripts:
         if s.title() == name:
-            script_args = list(p.script_args)  # Convert to list
-            script_args[s.args_from:s.args_to] = args  # Now you can assign to a slice
-            p.script_args = tuple(script_args)  # Convert back to tuple if necessary
+            script_args = list(p.script_args)
+            script_args[s.args_from:s.args_to] = args
+            p.script_args = tuple(script_args)
             return
 
 
