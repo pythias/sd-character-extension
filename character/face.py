@@ -6,7 +6,7 @@ import numpy as np
 from typing import Optional, List
 from modules import scripts, processing
 
-from character import lib
+from character import lib, requests
 from character.metrics import hDF
 
 REPAIRER_NAME = "face editor ex"
@@ -123,29 +123,31 @@ def find_face_repairer_script(script_runner: scripts.ScriptRunner) -> Optional[s
 
 
 def is_face_repairer_script(script: scripts.Script) -> bool:
-    return script.title() == REPAIRER_NAME
+    return script.title().lower() == REPAIRER_NAME
 
 
 def require_face(request):
     # 老版本，所以在基础request里
-    return lib.get_extra_value(request, "crop_face", False)
+    return requests.get_extra_value(request, "crop_face", False)
 
 
 def require_face_repairer(request):
-    return lib.get_extra_value(request, "repair_face", True)
+    return requests.get_extra_value(request, "repair_face", True)
 
 
 def keep_original_image(request):
-    return lib.get_extra_value(request, "keep_original", False)
+    return requests.get_extra_value(request, "keep_original", False)
 
 
-def apply_face_repairer(request):
-    if not require_face_repairer(request):
+def apply_face_repairer(p):
+    if not require_face_repairer(p):
         return
 
-    values = lib.get_extra_value(request, 'face_repair_params', {})
+    values = requests.get_extra_value(p, 'face_repair_params', {})
     values["enabled"] = True
     lib.log(f"ENABLE-FACE-REPAIRER, {values}")
 
     unit = FaceUnit(**values)
-    request.alwayson_scripts.update({REPAIRER_NAME: {'args': [unit]}})
+
+    requests.update_script_args(p, REPAIRER_NAME, [vars(unit)])
+    # request.alwayson_scripts.update({REPAIRER_NAME: {'args': [vars(unit)]}})

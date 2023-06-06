@@ -1,53 +1,40 @@
-from character import face, upscale
-from character.lib import log
-from character.models import *
-from character.metrics import hT2I, hSD
+from character import models, errors, lib, face
+from character.metrics import hT2I, hI2I, hSD
 
-from fastapi import FastAPI, Request
-
-from modules import shared, script_callbacks
 from modules.api import api
-from modules.api.models import TextToImageResponse
 
 
 class ApiHijack(api.Api):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.add_api_route("/character/v2/txt2img", self.character_v2_txt2img, tags=["Character"], methods=["POST"], response_model=V2ImageResponse)
-        self.add_api_route("/character/v2/img2img", self.character_v2_img2img, tags=["Character"], methods=["POST"], response_model=V2ImageResponse)
+        self.add_api_route("/character/v2/txt2img", self.character_v2_txt2img, tags=["Character"], methods=["POST"], response_model=models.V2ImageResponse)
+        self.add_api_route("/character/v2/img2img", self.character_v2_img2img, tags=["Character"], methods=["POST"], response_model=models.V2ImageResponse)
+
+        lib.log("API loaded")
 
     @hT2I.time()
-    def character_v2_txt2img(self, request: CharacterV2Txt2ImgRequest):
-        request_prepare(request)
-        apply_controlnet(request)
-        face.apply_face_repairer(request)
-        upscale.apply_t2i_upscale(request)
-        return self.wrap_call(self.text2imgapi, t2i_counting, request)
+    def character_v2_txt2img(self, request: models.CharacterV2Txt2ImgRequest):
+        # 由于需要控制其他script的参数，所以必须在接口层而不是 script 的生命周期中处理（顺序控制需要修改WebUI的代码）
+        models.prepare_request_t2i(request)
+        models.apply_controlnet(request)
+        return self.wrap_call(self.text2imgapi, request)
 
-    @hT2I.time()
-    def character_v2_img2img(self, request: CharacterV2Img2ImgRequest):
-        request_prepare(request)
-        apply_i2i_request(request)
-        apply_controlnet(request)
-        face.apply_face_repairer(request)
-        return self.wrap_call(self.img2imgapi, t2i_counting, request)
+    @hI2I.time()
+    def character_v2_img2img(self, request: models.CharacterV2Img2ImgRequest):
+        models.prepare_request_i2i(request)
+        models.apply_controlnet(request)
+        return self.wrap_call(self.img2imgapi, request)
 
-
-    def wrap_call(self, processor_call, counting_call, request):
+    def wrap_call(self, processor_call, request):
         try:
-            counting_call(request)
-            
-            # 执行之前删除一些不必要的字段
-            remove_character_fields(request)
-
             with hSD.time():
                 response = processor_call(request)
-            return convert_response(request, response)
-        except ApiException as e:
+            return models.convert_response(request, response)
+        except errors.ApiException as e:
             return e.response()
 
 
 api.Api = ApiHijack
 
-log("API loaded")
+

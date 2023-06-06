@@ -1,5 +1,5 @@
 from character.lib import log, version_flag
-from character.metrics import cT2IImages, iCharacter, totalMemory, gpuDriver
+from character.metrics import cImages, iCharacter, totalMemory, gpuDriver
 
 from fastapi import FastAPI, Request
 
@@ -10,6 +10,7 @@ from prometheus_client import generate_latest
 from modules import script_callbacks, shared
 
 import time
+import torch
 
 def metrics_api(_, app: FastAPI):
     @app.get('/character/meta/status', tags=["Status"])
@@ -18,7 +19,9 @@ def metrics_api(_, app: FastAPI):
             "name": shared.cmd_opts.character_server_name,
             "version": version_flag,
             "online": True,
-            "images": cT2IImages.collect()[0].samples[0].value,
+            "images": cImages.collect()[0].samples[0].value,
+            "memory_allocated": torch.cuda.memory_allocated(),
+            "max_memory_allocated": torch.cuda.max_memory_allocated(),
         }
 
     @app.get('/character/meta/metrics', tags=["Status"])

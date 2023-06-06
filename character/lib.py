@@ -14,13 +14,14 @@ import numpy as np
 import logging
 import re
 
-name_flag = "Character"
-version_flag = "v1.2.6"
+version_flag = "v1.2.7"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")
 
 request_id = "init"
+
+min_base64_image_size = 1000
 
 # Set up the logger
 logger = logging.getLogger("fastapi")
@@ -63,28 +64,11 @@ def encode_np_to_base64(image):
     pil = Image.fromarray(image)
     return api.encode_pil_to_base64(pil)
 
-
-def _get_or_default(obj, key, default):
+def get_or_default(obj, key, default):
     if obj is None:
         return default
         
     return obj.get(key, default) if isinstance(obj, dict) else getattr(obj, key, default)
-
-
-get_request_value = _get_or_default
-
-
-def get_extra_value(request, key, default):
-    """
-    获取自定义参数的值
-    """
-    character_extra = _get_or_default(request, "character_extra", None)
-    if character_extra is None:
-        extra = _get_or_default(request, "extra_generation_params", {})
-        character_extra = _get_or_default(extra, name_flag, {})
-    
-    return _get_or_default(character_extra, key, default)
-
 
 def replace_man_with_men(text):
     """
@@ -92,6 +76,15 @@ def replace_man_with_men(text):
     """
     return re.sub(r'\bman\b', 'men', text, flags=re.IGNORECASE)
 
+def valid_base64(image_b64):
+    if not image_b64 or len(image_b64) < min_base64_image_size:
+        return False
+
+    try:
+        decode_base64_to_image(image_b64)
+        return True
+    except Exception as e:
+        return False
 
 @hCaption.time()
 def clip_b64img(image_b64, throw_exception = False):

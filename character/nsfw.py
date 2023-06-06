@@ -1,4 +1,5 @@
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
+from regex import R
 from transformers import AutoFeatureExtractor
 from PIL import Image
 import numpy as np
@@ -12,7 +13,7 @@ import time
 
 from modules.api.api import decode_base64_to_image
 
-from character.metrics import hDN, gpu_used_memory_percent
+from character.metrics import hDN
 from character.lib import models_path, log, clip_b64img
 
 safety_model_id = "CompVis/stable-diffusion-safety-checker"
@@ -31,21 +32,15 @@ def numpy_to_pil(images):
     return pil_images
 
 
-def _load_models():
-    global n2_model
-    if n2_model is not None:
-        return
-    
-    started_at = time.time()
-    n2_model = n2.make_open_nsfw_model(weights_path=models_path + "/open_nsfw_weights.h5")
-    log(f"nsfw model loaded in {time.time() - started_at} seconds")
-
-
 @hDN.time()
 def image_has_nsfw_v2(base64_image):
     with tf.device(cpu_all):
         try:
-            _load_models()
+            global n2_model
+            if n2_model is None:
+                started_at = time.time()
+                n2_model = n2.make_open_nsfw_model(weights_path=models_path + "/open_nsfw_weights.h5")
+                log(f"nsfw model loaded in {time.time() - started_at} seconds")
 
             pil_image = decode_base64_to_image(base64_image)
             n2_image = n2.preprocess_image(pil_image)
@@ -84,7 +79,14 @@ def image_has_illegal_words(base64_image):
     if captions contains "flag", "banner", "pennant",  "flags", "banners", "pennants" return True
     """
     caption = clip_b64img(base64_image)
-    words = re.split(', | ', caption)
+    return prompt_has_illegal_words(caption)
+
+
+def prompt_has_illegal_words(prompt):
+    """
+    if prompt contains "flag", "banner", "pennant",  "flags", "banners", "pennants" return True
+    """
+    words = re.split(', | ', prompt)
 
     # Defining the keywords
     keywords = ["flag", "banner", "pennant", "flags", "banners", "pennants", "map", "maps"]

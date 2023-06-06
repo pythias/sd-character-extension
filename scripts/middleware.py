@@ -1,4 +1,4 @@
-from character.lib import keys_path, log, set_request_id
+from character.lib import keys_path, log, set_request_id, version_flag
 from character.errors import *
 
 from Crypto.Hash import SHA256
@@ -7,7 +7,7 @@ from Crypto.Signature import PKCS1_v1_5
 
 from uuid import uuid4
 from fastapi import FastAPI, Request
-from modules import script_callbacks
+from modules import script_callbacks, shared
 
 import base64
 import gradio as gr
@@ -15,18 +15,20 @@ import time
 import os
 
 ignore_prefixes = ["/docs",  "/openapi.json", "/character/meta"]
-require_prefixes = ["/character", "/sdapi", "/sd_extra_networks", "/controlnet", "/tagger"]
 
 def setup_middleware(_: gr.Blocks, app: FastAPI):
     def signature_required(request: Request):
+        # 文档和它的接口使用独立的Basic Auth
         for prefix in ignore_prefixes:
             if request.url.path.startswith(prefix):
                 return False
-    
-        for prefix in require_prefixes:
-            if request.url.path.startswith(prefix):
-                return True
+            
+        if shared.cmd_opts.nowebui:
+            # require_prefixes = ["/character", "/sdapi", "/sd_extra_networks", "/controlnet", "/tagger"]
+            # WebUI （非 API）不需要签名，使用Basic Auth
+            return True
         
+        # WebUI 仅用于测试
         return False
 
 
@@ -39,6 +41,9 @@ def setup_middleware(_: gr.Blocks, app: FastAPI):
 
         response = await call_next(request)
         response.headers["X-Request-ID"] = request_id
+        response.headers["X-Request-From"] = request.headers.get('X-Signature-Name', 'my')
+        response.headers["X-Server-Name"] = shared.cmd_opts.character_server_name
+        response.headers["X-Server-Version"] = version_flag
         return response
 
 
