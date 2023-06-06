@@ -10,7 +10,7 @@ class Script(scripts.Script):
         return "Character Preprocessing For Text-to-Image"
 
     def show(self, is_img2img):
-        if not is_img2img:
+        if is_img2img:
             return False
         
         return scripts.AlwaysVisible

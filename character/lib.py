@@ -14,7 +14,7 @@ import numpy as np
 import logging
 import re
 
-version_flag = "v1.2.6"
+version_flag = "v1.2.7"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")

@@ -14,9 +14,9 @@ class Script(scripts.Script):
 
     def show(self, is_img2img):
         if is_img2img:
-            return False
+            return scripts.AlwaysVisible
         
-        return scripts.AlwaysVisible
+        return False
 
     def ui(self, is_img2img):
         return [gr.Checkbox(label="Character Preprocessing For Image-to-Image", value=True)]
