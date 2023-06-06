@@ -10,7 +10,10 @@ def apply_t2i_upscale(request):
     if not require_upscale(request):
         return
 
+    # p.setup_prompts() 在 process 之后，所以需要处理一下高清时的参数
     request.enable_hr = True
+    request.setup_prompts()
+
     request.width, request.height = lib.limit_size_max(request.width, request.height, request.width / request.height, 2048)
     lib.log(f"ENABLE-UPSCALE-t2i, scale:{request.hr_scale}, size:{request.width}x{request.height}, denoising:{request.denoising_strength}, scaler:{request.hr_upscaler}")
 

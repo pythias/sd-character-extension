@@ -39,5 +39,3 @@ class Script(scripts.Script):
 
         metrics.count_request(p)
         face.apply_face_repairer(p)
-
-

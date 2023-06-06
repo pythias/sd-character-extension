@@ -1,6 +1,6 @@
 import gradio as gr
 
-from character import models
+from character import models, lib
 from modules import scripts
 
 class Script(scripts.Script):
@@ -17,5 +17,3 @@ class Script(scripts.Script):
     
     def process(self, p, *args):
         models.apply_controlnet(p)
-
-

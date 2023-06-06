@@ -41,5 +41,6 @@ class Script(scripts.Script):
             raise errors.ApiException(errors.code_character_nsfw, "has nsfw concept")
 
         metrics.count_request(p)
-
         face.apply_face_repairer(p)
+
+        
