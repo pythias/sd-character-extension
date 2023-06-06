@@ -66,6 +66,17 @@ def get_extra_value(request, key, default):
 
 
 def update_script_args(p, name, args):
+    if hasattr(p, 'scripts'):
+        _update_script_args(p, name, args)
+    else:
+        _update_request_scripts(p, name, args)
+
+def _update_request_scripts(request, name, args):
+    # 接口请求数据处理
+    request.alwayson_scripts.update({name: {'args': args}})
+
+def _update_script_args(p, name, args):
+    # 过程中参数处理
     if p.scripts is None or not hasattr(p.scripts, 'alwayson_scripts'):
         return
     
