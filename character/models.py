@@ -2,17 +2,18 @@ import os
 import sys
 import json
 import logging
+import math
 
 from enum import Enum
 from pydantic import BaseModel, Field
 from typing import Any, Optional, Dict, List
 
-from character import face, lib, output, requests, errors
+from character import face, lib, output, requests, errors, names
 from character.errors import *
 from character.metrics import *
 from character.nsfw import image_has_illegal_words, image_has_nsfw_v2
 
-from modules import shared, images
+from modules import shared, images, processing
 from modules.processing import StableDiffusionProcessing
 from modules.api.models import *
 from modules.paths_internal import extensions_dir
@@ -90,7 +91,8 @@ def convert_response(request, response):
     faces = []
     if face.require_face_repairer(request) and not face.keep_original_image(request):
         batch_size = requests.get_value(request, "batch_size", 1)
-        source_images = response.images[batch_size:]
+        multi_count = requests.get_multi_count(request)
+        source_images = response.images[(batch_size * multi_count):]
     else:
         source_images = response.images
 
@@ -256,4 +258,10 @@ def apply_multi_process(p: StableDiffusionProcessing):
         return
     
     prompts = lib.to_multi_prompts(p.prompt)
+    
     p.prompt = prompts
+    p.n_iter = math.ceil(len(p.prompt) * p.batch_size)
+    processing.fix_seed(p)
+    p.seed = [p.seed + i for i in range(len(p.prompt))]
+
+    requests.set_multi_count(p, len(p.prompt))

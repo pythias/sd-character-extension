@@ -3,6 +3,7 @@ Name = "Character"
 ParamExtra = "character_extra"
 ParamFromUI = "from_webui"
 ParamMultiEnabled = "multi_enabled"
+ParamMultiCount = "multi_count"
 
 ParamImage = "i2i_image"
 ParamPose = "pose_image"

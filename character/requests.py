@@ -6,6 +6,12 @@ def from_webui(request):
 def multi_enabled(request):
     return get_extra_value(request, names.ParamMultiEnabled, False)
 
+def set_multi_count(request, count):
+    update_extra(request, names.ParamMultiCount, count)
+
+def get_multi_count(request):
+    return get_extra_value(request, names.ParamMultiCount, 1)
+
 def get_cn_image(request):
     return get_extra_value(request, names.ParamLineArt, "")
 

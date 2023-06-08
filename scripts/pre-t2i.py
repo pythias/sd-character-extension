@@ -32,6 +32,7 @@ class Script(scripts.Script):
         image_b64 = requests.get_cn_image(p)
         if not image_b64 or len(image_b64) < lib.min_base64_image_size:
             metrics.count_request(p)
+            models.apply_multi_process(p)
             return
         
         requests.update_extra(p, "prompt-origin", p.prompt)
