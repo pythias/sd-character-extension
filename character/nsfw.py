@@ -65,16 +65,22 @@ def prompt_has_illegal_words(prompt):
     """
     if prompt contains "flag", "banner", "pennant",  "flags", "banners", "pennants" return True
     """
-    words = re.split(', | ', prompt)
+    if type(prompt) == str:
+        prompts = [prompt]
+    else:
+        prompts = prompt
 
-    # Defining the keywords
-    keywords = ["flag", "banner", "pennant", "flags", "banners", "pennants", "map", "maps"]
+    for prompt in prompts:
+        words = re.split(', | ', prompt)
 
-    # Check if any of the keywords is in the caption
-    for keyword in keywords:
-        if keyword in words:
-            log(f"image has illegal word, {keyword}", logging.WARN)
-            return True
+        # Defining the keywords
+        keywords = ["flag", "banner", "pennant", "flags", "banners", "pennants", "map", "maps"]
+
+        # Check if any of the keywords is in the caption
+        for keyword in keywords:
+            if keyword in words:
+                log(f"image has illegal word, {keyword}", logging.WARN)
+                return True
 
     return False
 

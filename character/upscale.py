@@ -1,4 +1,5 @@
 from character import lib, requests
+from modules.processing import StableDiffusionProcessingTxt2Img, StableDiffusionProcessingImg2Img
 
 max_size = 1536
 min_size = 256
@@ -7,7 +8,7 @@ def require_upscale(request):
     return requests.get_extra_value(request, "require_upscale", True)
 
 
-def apply_t2i_upscale(request):
+def apply_t2i_upscale(request: StableDiffusionProcessingTxt2Img):
     if not require_upscale(request):
         return
 
@@ -19,7 +20,7 @@ def apply_t2i_upscale(request):
     lib.log(f"ENABLE-UPSCALE, scale:{request.hr_scale}, size:{request.width}x{request.height}, denoising:{request.denoising_strength}, scaler:{request.hr_upscaler}")
 
 
-def apply_i2i_upscale(request, img):
+def apply_i2i_upscale(request: StableDiffusionProcessingImg2Img, img):
     if not require_upscale(request):
         return
     

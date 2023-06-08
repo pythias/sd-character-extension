@@ -1,7 +1,8 @@
 import gradio as gr
 
-from character import requests, lib, upscale, face, metrics, nsfw, errors, names
+from character import requests, lib, upscale, face, metrics, nsfw, errors, names, models
 from modules import scripts
+from modules.processing import StableDiffusionProcessing
 
 class Script(scripts.Script):
     prompts_from_image = {}
@@ -42,4 +43,5 @@ class Script(scripts.Script):
             errors.raise_nsfw()
 
         metrics.count_request(p)
+        models.apply_multi_process(p)
         

@@ -6,7 +6,6 @@ import logging
 from enum import Enum
 from pydantic import BaseModel, Field
 from typing import Any, Optional, Dict, List
-from starlette.exceptions import HTTPException
 
 from character import face, lib, output, requests, errors
 from character.errors import *
@@ -14,9 +13,9 @@ from character.metrics import *
 from character.nsfw import image_has_illegal_words, image_has_nsfw_v2
 
 from modules import shared, images
+from modules.processing import StableDiffusionProcessing
 from modules.api.models import *
 from modules.paths_internal import extensions_dir
-from modules.api.api import decode_base64_to_image
 
 
 negative_default_prompts = "BadDream,FastNegativeEmbedding"
@@ -167,12 +166,10 @@ def prepare_request_i2i(request):
 
     image_b64 = requests.get_i2i_image(request)
     request.init_images = [image_b64]
-    _apply_multi_process(request)
 
 def prepare_request_t2i(request):
     _prepare_request(request)
     _apply_controlnet(request)
-    _apply_multi_process(request)
 
 def _remove_character_fields(request):
     params = vars(request)
@@ -250,12 +247,13 @@ def _to_process_unit(unit):
     return external_code.ControlNetUnit(**unit)
 
 
-def _apply_multi_process(request):
-    if not requests.multi_enabled(request):
+def apply_multi_process(p: StableDiffusionProcessing):
+    if not requests.multi_enabled(p):
         return
     
     # request.prompt only
-    if request.prompt.find("|") == -1:
+    if p.prompt.find("|") == -1:
         return
     
-    request.prompt = lib.to_multi_prompts(request.prompt)
+    prompts = lib.to_multi_prompts(p.prompt)
+    p.prompt = prompts

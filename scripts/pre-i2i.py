@@ -1,7 +1,9 @@
 import gradio as gr
+from httpx import request
 
-from character import requests, lib, upscale, face, metrics, nsfw, errors, names
+from character import requests, lib, upscale, face, metrics, nsfw, errors, names, models
 from modules import scripts
+from modules.processing import StableDiffusionProcessing
 from modules.api.api import decode_base64_to_image
 
 from starlette.exceptions import HTTPException
@@ -45,5 +47,6 @@ class Script(scripts.Script):
 
         metrics.count_request(p)
         face.apply_face_repairer(p)
+        models.apply_multi_process(p)
 
         
