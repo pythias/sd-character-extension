@@ -1,6 +1,6 @@
 import gradio as gr
 
-from character import requests, lib, upscale, face, metrics, nsfw, errors
+from character import requests, lib, upscale, face, metrics, nsfw, errors, names
 from modules import scripts
 from modules.api.api import decode_base64_to_image
 
@@ -10,7 +10,7 @@ class Script(scripts.Script):
     prompts_from_image = {}
 
     def title(self):
-        return "Character I2I"
+        return names.ExtensionI2I
 
     def show(self, is_img2img):
         if is_img2img:
@@ -19,14 +19,14 @@ class Script(scripts.Script):
         return False
 
     def ui(self, is_img2img):
-        return [gr.Checkbox(label="Character API ONlY", value=True)]
+        return [gr.Label(visible=False)]
     
-    def process(self, p, enabled, *args):
-        if not enabled:
+    def process(self, p, *args):
+        if lib.is_webui():
             return
         
         if nsfw.prompt_has_illegal_words(p.prompt):
-            raise errors.ApiException(errors.code_character_nsfw, "has nsfw concept")
+            errors.raise_nsfw()
         
         image_b64 = requests.get_i2i_image(p)
         if not image_b64 or len(image_b64) < lib.min_base64_image_size:
@@ -41,7 +41,7 @@ class Script(scripts.Script):
         p.prompt = caption + "," + p.prompt
 
         if nsfw.prompt_has_illegal_words(caption):
-            raise errors.ApiException(errors.code_character_nsfw, "has nsfw concept")
+            errors.raise_nsfw()
 
         metrics.count_request(p)
         face.apply_face_repairer(p)

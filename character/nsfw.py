@@ -53,27 +53,6 @@ def image_has_nsfw_v2(base64_image):
             return False
 
 
-@hDN.time()
-def image_has_nsfw(base64_image):
-    global safety_feature_extractor, safety_checker
-    if safety_feature_extractor is None:
-        safety_feature_extractor = AutoFeatureExtractor.from_pretrained(safety_model_id, cache_dir=models_path)
-        safety_checker = StableDiffusionSafetyChecker.from_pretrained(safety_model_id, cache_dir=models_path)
-
-    image = Image.open(io.BytesIO(base64.b64decode(base64_image)))
-    np_image = np.array(image) / 255.0
-    np_image = np.expand_dims(np_image, axis=0)
-    pil_images = numpy_to_pil(np_image)
-
-    safety_checker_input = safety_feature_extractor(pil_images, return_tensors="pt")
-    _, has_nsfw_concept = safety_checker(images=np_image, clip_input=safety_checker_input.pixel_values)
-
-    if len(has_nsfw_concept) > 0:
-        return has_nsfw_concept[0]
-    
-    return False
-
-
 def image_has_illegal_words(base64_image):
     """
     if captions contains "flag", "banner", "pennant",  "flags", "banners", "pennants" return True

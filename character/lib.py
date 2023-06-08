@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum
 from colorama import Fore, Style
-from modules import scripts, shared, deepbooru
+from modules import scripts, shared
 from modules.api import api
 from modules.api.api import decode_base64_to_image
 from PIL import Image
@@ -13,8 +13,9 @@ import os
 import numpy as np
 import logging
 import re
+import itertools
 
-version_flag = "v1.2.7"
+version_flag = "v1.2.8"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")
@@ -108,6 +109,10 @@ def is_empty_caption(caption):
     return caption == "" or caption == "<error>" or caption[0] == ', '
 
 
+def is_webui():
+    return not shared.cmd_opts.nowebui
+
+
 def request_is_t2i(request):
     if isinstance(request, dict):
         return "hr_scale" in request
@@ -147,3 +152,37 @@ def limit_size_min(w, h, radio, min):
         w = int(h * radio)
     
     return w, h
+
+
+def simply_prompts(prompt: str):
+    if not prompt:
+        return ""
+
+    # split the prompts and keep the original case
+    prompts = prompt.split(",")
+
+    unique_prompts = {}
+    for p in prompts:
+        p_stripped = p.strip()  # remove leading/trailing whitespace
+        if p_stripped != "":
+            # note the use of lower() for the comparison but storing the original string
+            unique_prompts[p_stripped.lower()] = p_stripped
+
+    return ",".join(unique_prompts.values())
+
+
+def to_multi_prompts(prompt: str):
+    # split the prompt into tags
+    tags = prompt.split(',')
+    
+    # for each tag, split it further by '|' and strip whitespace
+    split_tags = [tag.split('|') for tag in tags]
+    
+    # remove empty strings
+    split_tags = [[item.strip() for item in tag_list if item.strip()] for tag_list in split_tags]
+    
+    # get the cartesian product of all split tags
+    product = list(itertools.product(*split_tags))
+    
+    # join the individual tuples in the cartesian product with ','
+    return [','.join(tup) for tup in product]

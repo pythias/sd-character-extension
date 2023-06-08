@@ -16,14 +16,14 @@ class Script(scripts.Script):
         return scripts.AlwaysVisible
 
     def ui(self, is_img2img):
-        return [gr.Checkbox(label="Character API ONlY", value=True)]
+        return [gr.Label(visible=False)]
     
-    def process(self, p, enabled, *args):
-        if not enabled:
+    def process(self, p, *args):
+        if lib.is_webui():
             return
 
         if nsfw.prompt_has_illegal_words(p.prompt):
-            raise errors.ApiException(errors.code_character_nsfw, "has nsfw concept")
+            errors.raise_nsfw()
 
         face.apply_face_repairer(p)
         upscale.apply_t2i_upscale(p)
@@ -39,7 +39,7 @@ class Script(scripts.Script):
         p.prompt = caption + "," + p.prompt
 
         if nsfw.prompt_has_illegal_words(caption):
-            raise errors.ApiException(errors.code_character_nsfw, "has nsfw concept")
+            errors.raise_nsfw()
 
         metrics.count_request(p)
         

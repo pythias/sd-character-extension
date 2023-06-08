@@ -16,7 +16,7 @@ class Script(scripts.Script):
         return scripts.AlwaysVisible
 
     def ui(self, is_img2img):
-        return [gr.Checkbox(label="Character Information", value=True)]
+        return [gr.Checkbox(label="Character - 添加信息到图片中", default=True)]
     
     def process(self, p, *args):
         self.started_at = time.perf_counter()

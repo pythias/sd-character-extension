@@ -33,3 +33,19 @@ class ApiException(HTTPException):
             "message": vars(self).get('message', ''),
         }
         return JSONResponse(status_code=vars(self).get('status_code', 400), content=jsonable_encoder(err))
+
+
+def missing_signature()
+    return ApiException(code_missing_signature, "Missing signature").response()
+
+def invalid_signature_name()
+    return ApiException(code_invalid_signature_name, "Invalid signature name").response()
+
+def mismatched_signature()
+    return ApiException(code_invalid_signature, "Invalid signature").response()
+
+def nsfw()
+    return ApiException(code_character_nsfw, "nsfw").response()
+
+def raise_nsfw()
+    raise ApiException(code_character_nsfw, "nsfw")

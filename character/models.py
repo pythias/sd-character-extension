@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from typing import Any, Optional, Dict, List
 from starlette.exceptions import HTTPException
 
-from character import face, lib, output, requests
+from character import face, lib, output, requests, errors
 from character.errors import *
 from character.metrics import *
 from character.nsfw import image_has_illegal_words, image_has_nsfw_v2
@@ -73,7 +73,7 @@ class CharacterV2Img2ImgRequest(StableDiffusionImg2ImgProcessingAPI):
     character_input_image: str = Field(default="", title='Character Input Image', description='The character input image in base64 format.')
     character_extra: dict = Field(default={}, title='Character Extra Params', description='Character Extra Params.')
     extra_generation_params: dict = Field(default={}, title='Extra Generation Params', description='Extra Generation Params.')
-    
+
 
 class V2ImageResponse(BaseModel):
     images: List[str] = Field(default=None, title="Image", description="The generated image in base64 format.")
@@ -126,7 +126,7 @@ def convert_response(request, response):
             faces.extend(image_faces)
 
     if len(safety_images) == 0:
-        return ApiException(code_character_nsfw, f"has nsfw concept, info:{info}").response()
+        return errors.nsfw()
 
     if requests.get_extra_value(request, "out_no_parameters", True):
         # 因为请求参数中也有图片的存在，调试时用 parameters
@@ -143,23 +143,6 @@ def convert_response(request, response):
         return V2ImageResponse(images=safety_images, parameters=params, info=info, faces=faces)
 
 
-def simply_prompts(prompt: str):
-    if not prompt:
-        return ""
-
-    # split the prompts and keep the original case
-    prompts = prompt.split(",")
-
-    unique_prompts = {}
-    for p in prompts:
-        p_stripped = p.strip()  # remove leading/trailing whitespace
-        if p_stripped != "":
-            # note the use of lower() for the comparison but storing the original string
-            unique_prompts[p_stripped.lower()] = p_stripped
-
-    return ",".join(unique_prompts.values())
-
-
 def _prepare_request(request):
     requests.extra_init(request)
     
@@ -172,21 +155,24 @@ def _prepare_request(request):
     request.negative_prompt = request.negative_prompt + "," + negative_default_prompts
     request.prompt = request.prompt + "," + high_quality_prompts
 
-    request.prompt = simply_prompts(request.prompt)
-    request.negative_prompt = simply_prompts(request.negative_prompt)
+    request.prompt = lib.simply_prompts(request.prompt)
+    request.negative_prompt = lib.simply_prompts(request.negative_prompt)
 
     _remove_character_fields(request)
 
 
 def prepare_request_i2i(request):
     _prepare_request(request)
+    _apply_controlnet(request)
 
     image_b64 = requests.get_i2i_image(request)
     request.init_images = [image_b64]
-
+    _apply_multi_process(request)
 
 def prepare_request_t2i(request):
     _prepare_request(request)
+    _apply_controlnet(request)
+    _apply_multi_process(request)
 
 def _remove_character_fields(request):
     params = vars(request)
@@ -198,7 +184,7 @@ def _remove_character_fields(request):
         delattr(request, key)
 
 
-def apply_controlnet(request):
+def _apply_controlnet(request):
     units = [
         get_cn_image_unit(request),
         get_cn_pose_unit(request),
@@ -262,3 +248,14 @@ def _to_process_unit(unit):
         unit["model"] = find_closest_cn_model_name(unit["model"])
 
     return external_code.ControlNetUnit(**unit)
+
+
+def _apply_multi_process(request):
+    if not requests.multi_enabled(request):
+        return
+    
+    # request.prompt only
+    if request.prompt.find("|") == -1:
+        return
+    
+    request.prompt = lib.to_multi_prompts(request.prompt)

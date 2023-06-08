@@ -1,5 +1,8 @@
 from character import lib, names
 
+def multi_enabled(request):
+    return get_extra_value(request, names.ParamMultiEnabled, False)
+
 def get_cn_image(request):
     return get_extra_value(request, names.ParamLineArt, "")
 
