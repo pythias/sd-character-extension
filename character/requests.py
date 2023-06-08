@@ -1,5 +1,8 @@
 from character import lib, names
 
+def from_webui(request):
+    return get_extra_value(request, names.ParamFromUI, True)
+
 def multi_enabled(request):
     return get_extra_value(request, names.ParamMultiEnabled, False)
 
@@ -34,6 +37,8 @@ def extra_init(request):
     i2i_image_base64 = get_value(request, "character_input_image", "")
     if i2i_image_base64 != "":
         update_extra(request, names.ParamImage, i2i_image_base64)
+
+    update_extra(request, names.ParamFromUI, False)
 
 
 def update_extra(request, key, value):

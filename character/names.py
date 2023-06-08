@@ -1,7 +1,7 @@
 Name = "Character"
 
 ParamExtra = "character_extra"
-
+ParamFromUI = "from_webui"
 ParamMultiEnabled = "multi_enabled"
 
 ParamImage = "i2i_image"

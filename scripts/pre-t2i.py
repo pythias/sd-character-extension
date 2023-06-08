@@ -19,7 +19,7 @@ class Script(scripts.Script):
         return [gr.Label(visible=False)]
     
     def process(self, p, *args):
-        if lib.is_webui():
+        if requests.from_webui(p):
             return
 
         if nsfw.prompt_has_illegal_words(p.prompt):
