@@ -38,6 +38,7 @@ def update_extra(request, key, value):
 
 
 def update_extras(request, values):
+    request.extra_generation_params.setdefault(names.Name, {})
     request.extra_generation_params[names.Name].update(values)
 
 

@@ -19,9 +19,12 @@ class Script(scripts.Script):
         return False
 
     def ui(self, is_img2img):
-        return [gr.Checkbox(label="Character I2I", value=True)]
+        return [gr.Checkbox(label="Character API ONlY", value=True)]
     
-    def process(self, p, *args):
+    def process(self, p, enabled, *args):
+        if not enabled:
+            return
+        
         if nsfw.prompt_has_illegal_words(p.prompt):
             raise errors.ApiException(errors.code_character_nsfw, "has nsfw concept")
         

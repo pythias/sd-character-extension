@@ -1,13 +1,13 @@
 import gradio as gr
 
-from character import requests, lib, upscale, face, metrics, nsfw, errors
+from character import requests, lib, upscale, face, metrics, nsfw, errors, names
 from modules import scripts
 
 class Script(scripts.Script):
     prompts_from_image = {}
 
     def title(self):
-        return "Character T2I"
+        return names.ExtensionT2I
 
     def show(self, is_img2img):
         if is_img2img:
@@ -16,9 +16,12 @@ class Script(scripts.Script):
         return scripts.AlwaysVisible
 
     def ui(self, is_img2img):
-        return [gr.Checkbox(label="Character T2I", value=True)]
+        return [gr.Checkbox(label="Character API ONlY", value=True)]
     
-    def process(self, p, *args):
+    def process(self, p, enabled, *args):
+        if not enabled:
+            return
+
         if nsfw.prompt_has_illegal_words(p.prompt):
             raise errors.ApiException(errors.code_character_nsfw, "has nsfw concept")
 

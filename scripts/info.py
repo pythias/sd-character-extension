@@ -27,7 +27,6 @@ class Script(scripts.Script):
             "request_id": get_request_id(),
         })
 
-    
     def postprocess(self, p, processed: Processed, *args):
         elapsed = time.perf_counter() - self.started_at
         for i, info in enumerate(processed.infotexts):
