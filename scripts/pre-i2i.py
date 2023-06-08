@@ -37,16 +37,15 @@ class Script(scripts.Script):
         img = decode_base64_to_image(image_b64)
         upscale.apply_i2i_upscale(p, img)
 
-        requests.update_extra(p, "prompt-origin", p.prompt)
         caption = lib.clip_b64img(img, True)
         requests.update_extra(p, "prompt-caption", caption)
-        p.prompt = caption + "," + p.prompt
+
+        models.append_prompt(p, caption)
 
         if nsfw.prompt_has_illegal_words(caption):
             errors.raise_nsfw()
 
         metrics.count_request(p)
         face.apply_face_repairer(p)
-        models.apply_multi_process(p)
 
         

@@ -32,17 +32,14 @@ class Script(scripts.Script):
         image_b64 = requests.get_cn_image(p)
         if not image_b64 or len(image_b64) < lib.min_base64_image_size:
             metrics.count_request(p)
-            models.apply_multi_process(p)
             return
         
-        requests.update_extra(p, "prompt-origin", p.prompt)
         caption = lib.clip_b64img(image_b64, True)
         requests.update_extra(p, "prompt-caption", caption)
-        p.prompt = caption + "," + p.prompt
+        models.append_prompt(p, caption)
 
         if nsfw.prompt_has_illegal_words(caption):
             errors.raise_nsfw()
 
         metrics.count_request(p)
-        models.apply_multi_process(p)
         

@@ -89,12 +89,12 @@ def convert_response(request, response):
     info["illegal"] = 0
 
     faces = []
+    source_images = response.images
     if face.require_face_repairer(request) and not face.keep_original_image(request):
         batch_size = requests.get_value(request, "batch_size", 1)
         multi_count = requests.get_multi_count(request)
-        source_images = response.images[(batch_size * multi_count):]
-    else:
-        source_images = response.images
+        lib.log(f"batch_size: {batch_size}, multi_count: {multi_count}, images: {len(response.images)}")
+        # source_images = response.images[(batch_size * multi_count):]
 
     crop_face = face.require_face(request)
 
@@ -168,10 +168,12 @@ def prepare_request_i2i(request):
 
     image_b64 = requests.get_i2i_image(request)
     request.init_images = [image_b64]
+    _apply_multi_process(request)
 
 def prepare_request_t2i(request):
     _prepare_request(request)
     _apply_controlnet(request)
+    _apply_multi_process(request)
 
 def _remove_character_fields(request):
     params = vars(request)
@@ -249,7 +251,7 @@ def _to_process_unit(unit):
     return external_code.ControlNetUnit(**unit)
 
 
-def apply_multi_process(p: StableDiffusionProcessing):
+def _apply_multi_process(p: StableDiffusionProcessing):
     if not requests.multi_enabled(p):
         return
     
@@ -257,11 +259,28 @@ def apply_multi_process(p: StableDiffusionProcessing):
     if p.prompt.find("|") == -1:
         return
     
+    processing.fix_seed(p)
+    
     prompts = lib.to_multi_prompts(p.prompt)
     
     p.prompt = prompts
-    p.n_iter = math.ceil(len(p.prompt) * p.batch_size)
-    processing.fix_seed(p)
+    p.batch_size = 1
+    p.n_iter = len(p.prompt)
     p.seed = [p.seed + i for i in range(len(p.prompt))]
+    # p.subseed = [p.subseed + i for i in range(len(p.prompt))]
+    # p.setup_prompts()
+    # self.all_negative_prompts = self.batch_size * self.n_iter * [self.negative_prompt]
 
     requests.set_multi_count(p, len(p.prompt))
+
+    lib.log(f"ENABLE-MULTIPLE, count: {len(p.prompt)}, {p.seed}, {p.subseed}")
+
+
+def append_prompt(p, prompt):
+    if type(p.prompt) == str:
+        p.prompt = p.prompt + "," + prompt
+    elif type(p.prompt) == list:
+        for i in range(len(p.prompt)):
+            p.prompt[i] = p.prompt[i] + "," + prompt
+
+    
