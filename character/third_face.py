@@ -151,7 +151,7 @@ def apply_face_repairer(p):
     
     values = requests.get_extra_value(p, 'face_repair_params', {})
     values["enabled"] = True
-    lib.log(f"ENABLE-FACE-REPAIRER, {values}")
-
     unit = FaceUnit(**values)
     requests.update_script_args(p, REPAIRER_NAME, [vars(unit)])
+
+    lib.log(f"ENABLE-FACE-REPAIRER, {vars(unit)}")

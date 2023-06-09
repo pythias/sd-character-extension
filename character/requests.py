@@ -62,6 +62,16 @@ def update_extras(request, values):
     request.extra_generation_params[names.Name].update(values)
 
 
+def clear_temporary_extras(request):
+    """
+    瘦身，清除临时参数
+    remove key start with "_"
+    """
+    for key in list(request.extra_generation_params[names.Name].keys()):
+        if key.startswith("_"):
+            del request.extra_generation_params[names.Name][key]
+
+
 def get_extra_value(request, key, default):
     """
     获取自定义参数的值

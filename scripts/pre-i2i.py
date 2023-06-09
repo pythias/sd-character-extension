@@ -47,5 +47,6 @@ class Script(scripts.Script):
 
         metrics.count_request(p)
         third_face.apply_face_repairer(p)
+        requests.clear_temporary_extras(p)
 
         

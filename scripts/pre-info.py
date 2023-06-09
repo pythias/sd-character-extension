@@ -3,7 +3,7 @@ import time
 
 from character import requests, lib
 from modules import shared, scripts
-from modules.processing import Processed
+from modules.processing import Processed, program_version
 
 class Script(scripts.Script):
     started_at = 0.0
@@ -15,14 +15,15 @@ class Script(scripts.Script):
         return scripts.AlwaysVisible
 
     def ui(self, is_img2img):
-        return [gr.Checkbox(label="Character - 添加信息到图片中", default=True)]
+        return [gr.Label(visible=False)]
     
     def process(self, p, *args):
         self.started_at = time.perf_counter()
         requests.update_extras(p, {
             "name": shared.cmd_opts.character_server_name,
             "version": lib.version_flag,
-            "started_at": time.strftime('%Y-%m-%d %H:%M:%S %Z', time.localtime()),
+            "program_version": program_version(),
+            "request_at": time.strftime('%Y-%m-%d %H:%M:%S %Z', time.localtime()),
             "request_id": lib.get_request_id(),
         })
 
@@ -32,4 +33,4 @@ class Script(scripts.Script):
             processed.infotexts[i] = f"{info}, Took {elapsed:.2f} seconds."
 
         for i in range(len(processed.images)):
-            processed.images[i].info["parameters"] = f"{processed.images[i].info['parameters']}, Took {elapsed:.2f} seconds."
+            processed.images[i].info["parameters"] = f"{processed.images[i].info['parameters']}\nTook: {elapsed:.2f}"
