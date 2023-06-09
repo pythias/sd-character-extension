@@ -63,13 +63,16 @@ class FaceUnit:
         strength1: float = 0.4,
         strength2: float = 0.0,
         max_face_count: int = 20,
-        mask_size: int = 24,
-        mask_blur: int = 0,
+        mask_size: int = 32,
+        mask_blur: int = 16,
         prompt_for_face: str = '',
         apply_inside_mask_only: bool = False,
         save_original_image: bool = False,
         show_intermediate_steps: bool = False,
-        apply_scripts_to_faces: bool = False,
+        apply_scripts_to_faces: bool = False,                    
+        face_size: int = 300,
+        use_minimal_area: bool = False,
+        ignore_larger_faces: bool = True,
         **_kwargs,
     ):
         self.enabled = enabled
@@ -85,6 +88,9 @@ class FaceUnit:
         self.save_original_image = save_original_image
         self.show_intermediate_steps = show_intermediate_steps
         self.apply_scripts_to_faces = apply_scripts_to_faces
+        self.face_size = face_size
+        self.use_minimal_area = use_minimal_area
+        self.ignore_larger_faces = ignore_larger_faces
 
     def __eq__(self, other):
         if not isinstance(other, FaceUnit):
@@ -142,12 +148,10 @@ def keep_original_image(request):
 def apply_face_repairer(p):
     if not require_face_repairer(p):
         return
-
+    
     values = requests.get_extra_value(p, 'face_repair_params', {})
     values["enabled"] = True
-    lib.log(f"ENABLE-FACE-REPAIRER, {values}")
-
     unit = FaceUnit(**values)
-
     requests.update_script_args(p, REPAIRER_NAME, [vars(unit)])
-    # request.alwayson_scripts.update({REPAIRER_NAME: {'args': [vars(unit)]}})
+
+    lib.log(f"ENABLE-FACE-REPAIRER, {vars(unit)}")

@@ -1,4 +1,4 @@
-from character.lib import keys_path, log, set_request_id, version_flag
+from character import lib, errors
 from character.errors import *
 
 from Crypto.Hash import SHA256
@@ -23,13 +23,12 @@ def setup_middleware(_: gr.Blocks, app: FastAPI):
             if request.url.path.startswith(prefix):
                 return False
             
-        if shared.cmd_opts.nowebui:
+        if lib.is_webui():
             # require_prefixes = ["/character", "/sdapi", "/sd_extra_networks", "/controlnet", "/tagger"]
             # WebUI （非 API）不需要签名，使用Basic Auth
-            return True
-        
-        # WebUI 仅用于测试
-        return False
+            return False
+
+        return True
 
 
     @app.middleware("http")
@@ -37,13 +36,13 @@ def setup_middleware(_: gr.Blocks, app: FastAPI):
         request_id = str(uuid4())
         request_id = request_id.split('-')[-1]
         if request.url.path.startswith("/character/v2/"):
-            set_request_id(request_id)
+            lib.set_request_id(request_id)
 
         response = await call_next(request)
         response.headers["X-Request-ID"] = request_id
         response.headers["X-Request-From"] = request.headers.get('X-Signature-Name', 'my')
         response.headers["X-Server-Name"] = shared.cmd_opts.character_server_name
-        response.headers["X-Server-Version"] = version_flag
+        response.headers["X-Server-Version"] = lib.version_flag
         return response
 
 
@@ -57,17 +56,18 @@ def setup_middleware(_: gr.Blocks, app: FastAPI):
         sign_timestamp = request.headers.get('X-Signature-Time', '')
 
         if not sign or not sign_name or not sign_timestamp:
-            return ApiException(code_missing_signature, "signature is missing.").response()
+            return errors.missing_signature()
 
-        key_path = os.path.join(keys_path, f"{sign_name}_rsa_public.pem")
+        key_path = os.path.join(lib.keys_path, f"{sign_name}_rsa_public.pem")
         if not os.path.exists(key_path):
-            return ApiException(code_invalid_signature, "signature name is invalid.").response()
+            return errors.invalid_signature_name()
 
         with open(key_path, mode='rb') as pem_file:
             key_data = pem_file.read()
 
         verifier = PKCS1_v1_5.new(RSA.importKey(key_data.strip()))
 
+        # AUTODL的宿主机时间不可控
         # if (int(sign_timestamp) + 60) < int(time.time()):
         #    return ApiException(code_expired_signature, "signature was expired.").response()
 
@@ -77,7 +77,7 @@ def setup_middleware(_: gr.Blocks, app: FastAPI):
         sign_decoded = base64.b64decode(sign)
 
         if not verifier.verify(data_hash, sign_decoded):
-            return ApiException(code_invalid_signature, "signature is mismatch.").response()
+            return errors.mismatched_signature()
 
         scope = request.scope
         receive = request.receive
@@ -96,4 +96,4 @@ def setup_middleware(_: gr.Blocks, app: FastAPI):
 
 script_callbacks.on_app_started(setup_middleware)
 
-log("Middleware loaded")
+lib.log("Middleware loaded")

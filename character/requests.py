@@ -1,5 +1,23 @@
 from character import lib, names
 
+def is_debug(request):
+    return get_extra_value(request, "debug", False)
+
+def from_webui(request):
+    return get_extra_value(request, names.ParamFromUI, True)
+
+def set_request_from_api(request):
+    update_extra(request, names.ParamFromUI, False)
+
+def multi_enabled(request):
+    return get_extra_value(request, names.ParamMultiEnabled, False)
+
+def set_multi_count(request, count):
+    update_extra(request, names.ParamMultiCount, count)
+
+def get_multi_count(request):
+    return get_extra_value(request, names.ParamMultiCount, 1)
+
 def get_cn_image(request):
     return get_extra_value(request, names.ParamLineArt, "")
 
@@ -32,13 +50,26 @@ def extra_init(request):
     if i2i_image_base64 != "":
         update_extra(request, names.ParamImage, i2i_image_base64)
 
+    set_request_from_api(request)
+
 
 def update_extra(request, key, value):
     update_extras(request, {key: value})
 
 
 def update_extras(request, values):
+    request.extra_generation_params.setdefault(names.Name, {})
     request.extra_generation_params[names.Name].update(values)
+
+
+def clear_temporary_extras(request):
+    """
+    瘦身，清除临时参数
+    remove key start with "_"
+    """
+    for key in list(request.extra_generation_params[names.Name].keys()):
+        if key.startswith("_"):
+            del request.extra_generation_params[names.Name][key]
 
 
 def get_extra_value(request, key, default):

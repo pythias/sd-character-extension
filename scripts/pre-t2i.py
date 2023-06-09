@@ -1,13 +1,14 @@
 import gradio as gr
 
-from character import requests, lib, upscale, face, metrics, nsfw, errors
+from character import requests, lib, upscale, third_face, metrics, nsfw, errors, names, models
 from modules import scripts
+from modules.processing import StableDiffusionProcessing
 
 class Script(scripts.Script):
     prompts_from_image = {}
 
     def title(self):
-        return "Character T2I"
+        return names.ExtensionT2I
 
     def show(self, is_img2img):
         if is_img2img:
@@ -16,27 +17,29 @@ class Script(scripts.Script):
         return scripts.AlwaysVisible
 
     def ui(self, is_img2img):
-        return [gr.Checkbox(label="Character T2I", value=True)]
+        return [gr.Label(visible=False)]
     
     def process(self, p, *args):
-        if nsfw.prompt_has_illegal_words(p.prompt):
-            raise errors.ApiException(errors.code_character_nsfw, "has nsfw concept")
+        if requests.from_webui(p):
+            return
 
-        face.apply_face_repairer(p)
+        if nsfw.prompt_has_illegal_words(p.prompt):
+            errors.raise_nsfw()
+
+        metrics.count_request(p)
+        third_face.apply_face_repairer(p)
         upscale.apply_t2i_upscale(p)
 
         image_b64 = requests.get_cn_image(p)
         if not image_b64 or len(image_b64) < lib.min_base64_image_size:
-            metrics.count_request(p)
             return
         
-        requests.update_extra(p, "prompt-origin", p.prompt)
         caption = lib.clip_b64img(image_b64, True)
         requests.update_extra(p, "prompt-caption", caption)
-        p.prompt = caption + "," + p.prompt
+        models.append_prompt(p, caption)
 
         if nsfw.prompt_has_illegal_words(caption):
-            raise errors.ApiException(errors.code_character_nsfw, "has nsfw concept")
+            errors.raise_nsfw()
 
-        metrics.count_request(p)
+        requests.clear_temporary_extras(p)
         
