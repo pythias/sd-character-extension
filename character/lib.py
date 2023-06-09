@@ -120,6 +120,12 @@ def request_is_t2i(request):
     return hasattr(request, "hr_scale")
 
 
+def limit_size(w, h, radio, min, max):
+    w, h = limit_size_min(w, h, radio, min)
+    w, h = limit_size_max(w, h, radio, max)
+    return w, h
+
+
 def limit_size_max(w, h, radio, max):
     """
     限制最大尺寸

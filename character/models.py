@@ -1,5 +1,6 @@
 import json
 import time
+from turtle import width
 
 from pydantic import BaseModel, Field
 from typing import List
@@ -34,6 +35,8 @@ class CharacterV2Img2ImgRequest(StableDiffusionImg2ImgProcessingAPI):
     character_input_image: str = Field(default="", title='Character Input Image', description='The character input image in base64 format.')
     character_extra: dict = Field(default={}, title='Character Extra Params', description='Character Extra Params.')
     extra_generation_params: dict = Field(default={}, title='Extra Generation Params', description='Extra Generation Params.')
+    width: int = Field(default=0, title='Width', description='The width of the image.')
+    height: int = Field(default=0, title='Height', description='The height of the image.')
 
 
 class V2ImageResponse(BaseModel):
@@ -57,7 +60,6 @@ def convert_response(request, response):
         batch_size = requests.get_value(request, "batch_size", 1)
         multi_count = requests.get_multi_count(request)
         source_images = source_images[(batch_size * multi_count):]
-        lib.log(f"batch_size: {batch_size}, multi_count: {multi_count}, src: {len(response.images)}, fixed: {len(source_images)}")
 
     crop_face = third_face.require_face(request)
 
