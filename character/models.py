@@ -12,7 +12,6 @@ from modules import processing
 from modules.processing import StableDiffusionProcessing
 from modules.api.models import StableDiffusionTxt2ImgProcessingAPI, StableDiffusionImg2ImgProcessingAPI
 
-
 negative_default_prompts = "BadDream,FastNegativeEmbedding"
 high_quality_prompts = "8k,high quality,<lora:add_detail:1>"
 
@@ -50,7 +49,7 @@ def convert_response(request, response):
 
     if requests.is_debug(request):
         info["nsfw-scores"] = []
-        info["illegal-words"] = []
+        info["nsfw-words"] = []
 
     faces = []
     source_images = response.images
@@ -72,15 +71,15 @@ def convert_response(request, response):
             started_at = time.perf_counter()
             nsfw_score = image_nsfw_score(base64_image)
             seconds = time.perf_counter() - started_at
-            lib.log(f"nsfw_score: {nsfw_score}, time: {seconds}")
+            lib.log(f"nsfw: {nsfw_score}, time: {seconds}")
 
             started_at = time.perf_counter()
             illegal_word = image_has_illegal_words(base64_image)
             seconds = time.perf_counter() - started_at
-            lib.log(f"illegal_word: {illegal_word}, time: {seconds}")
+            lib.log(f"word: {illegal_word}, time: {seconds}")
 
             info["nsfw-scores"].append({"score": nsfw_score, "time": seconds})
-            info["illegal-words"].append({"word": illegal_word, "time": seconds})
+            info["nsfw-words"].append({"word": illegal_word, "time": seconds})
         else:
             nsfw_score = image_nsfw_score(base64_image)
             if nsfw_score > 0.75:
