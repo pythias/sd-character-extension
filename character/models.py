@@ -93,8 +93,8 @@ def convert_response(request, response):
     if face.require_face_repairer(request) and not face.keep_original_image(request):
         batch_size = requests.get_value(request, "batch_size", 1)
         multi_count = requests.get_multi_count(request)
-        lib.log(f"batch_size: {batch_size}, multi_count: {multi_count}, images: {len(response.images)}")
-        # source_images = response.images[(batch_size * multi_count):]
+        source_images = source_images[(batch_size * multi_count):]
+        lib.log(f"batch_size: {batch_size}, multi_count: {multi_count}, src: {len(response.images)}, fixed: {len(source_images)}")
 
     crop_face = face.require_face(request)
 
@@ -198,49 +198,56 @@ def _apply_controlnet(request):
     requests.update_script_args(request, "ControlNet", [_to_process_unit(unit) for unit in units])
 
 def get_cn_image_unit(request):
+    unit = _get_cn_empty_unit()
     image_b64 = requests.get_cn_image(request)
     if not lib.valid_base64(image_b64):
-        return _get_cn_empty_unit()
+        return unit
 
-    return {
-        "module": requests.get_extra_value(request, "cn_preprocessor", default_control_net_module),
-        "model": requests.get_extra_value(request, "cn_model", default_control_net_model),
-        "enabled": True,
-        "image": image_b64,
-    }
+    unit["module"] = requests.get_extra_value(request, "cn_preprocessor", default_control_net_module)
+    unit["model"] = requests.get_extra_value(request, "cn_model", default_control_net_model)
+    unit["image"] = image_b64
+    unit["enabled"] = True
+    return unit
 
 
 def get_cn_pose_unit(request):
+    unit = _get_cn_empty_unit()
     pose_b64 = requests.get_pose_image(request)
     if not lib.valid_base64(pose_b64):
-        return _get_cn_empty_unit()
+        return unit
 
-    return {
-        "module": requests.get_extra_value(request, "pose_preprocessor", default_open_pose_module),
-        "model": requests.get_extra_value(request, "pose_model", default_open_pose_model),
-        "enabled": True,
-        "image": pose_b64,
-    }
+    unit["module"] = requests.get_extra_value(request, "pose_preprocessor", default_open_pose_module)
+    unit["model"] = requests.get_extra_value(request, "pose_model", default_open_pose_model)
+    unit["image"] = pose_b64
+    unit["enabled"] = True
+    return unit
 
 
 def get_cn_tile_unit(p):
+    unit = _get_cn_empty_unit()
     if not requests.get_extra_value(p, "scale_by_tile", False):
-        return _get_cn_empty_unit()
+        return unit
 
-    return {
-        "module": default_tile_module,
-        "model": default_tile_model,
-        "enabled": True,
-        "image": "",
-    }
+    unit["module"] = default_tile_module
+    unit["model"] = default_tile_model
+    unit["enabled"] = True
+    unit["image"] = ""
+    return unit
 
 
 def _get_cn_empty_unit():
+    # 参数在 ControlNetUnit 不同版本中默认值不一样，这里统一一下，目前兼容至 1.1.220
     return {
         "model": "none",
         "module": "none",
         "enabled": False,
         "image": "",
+        "processor_res": 512,
+        "threshold_a": 64,
+        "threshold_b": 64,
+        "weight": 1.0,
+        "guidance_start": 0.0,
+        "guidance_end": 1.0,
     }
 
 
