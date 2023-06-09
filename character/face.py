@@ -142,12 +142,12 @@ def keep_original_image(request):
 def apply_face_repairer(p):
     if not require_face_repairer(p):
         return
+    
+    lib.log("ignore face repairer, hr is enough")
 
-    values = requests.get_extra_value(p, 'face_repair_params', {})
-    values["enabled"] = True
-    lib.log(f"ENABLE-FACE-REPAIRER, {values}")
+    # values = requests.get_extra_value(p, 'face_repair_params', {})
+    # values["enabled"] = True
+    # lib.log(f"ENABLE-FACE-REPAIRER, {values}")
 
-    unit = FaceUnit(**values)
-
-    requests.update_script_args(p, REPAIRER_NAME, [vars(unit)])
-    # request.alwayson_scripts.update({REPAIRER_NAME: {'args': [vars(unit)]}})
+    # unit = FaceUnit(**values)
+    # requests.update_script_args(p, REPAIRER_NAME, [vars(unit)])

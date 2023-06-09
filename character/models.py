@@ -83,7 +83,7 @@ def convert_response(request, response):
             info["illegal-words"].append({"word": illegal_word, "time": seconds})
         else:
             nsfw_score = image_nsfw_score(base64_image)
-            if nsfw_score > 0.8:
+            if nsfw_score > 0.75:
                 cNSFW.inc()
                 continue
 
