@@ -18,6 +18,6 @@ def update_options(_, app):
     shared.opts.data.update(updated_options)
     lib.log("Options has been set")
     
-    lib.log(f"Extras has been loaded, names:{third_extra.enabled_extras}")
-    
+    third_extra.load_extras()
+        
 script_callbacks.on_app_started(update_options)
