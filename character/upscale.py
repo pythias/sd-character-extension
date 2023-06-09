@@ -24,10 +24,10 @@ def apply_t2i_upscale(request: StableDiffusionProcessingTxt2Img):
     width, height = lib.limit_size(request.width * request.hr_scale, request.height * request.hr_scale, request.width / request.height, min_size, max_size)
 
     # 回到放大前的尺寸
-    request.width = width / request.hr_scale
-    request.height = height / request.hr_scale
+    request.width = int(width / request.hr_scale)
+    request.height = int(height / request.hr_scale)
 
-    lib.log(f"ENABLE-UPSCALE, scale:{request.hr_scale}, target-size:{request.width}x{request.height}, denoising:{request.denoising_strength}, scaler:{request.hr_upscaler}")
+    lib.log(f"ENABLE-UPSCALE, scale:{request.hr_scale}, in:{request.width}x{request.height}, target:{width}x{height}, denoising:{request.denoising_strength}, scaler:{request.hr_upscaler}")
 
 
 def apply_i2i_upscale(request: StableDiffusionProcessingImg2Img, img):
