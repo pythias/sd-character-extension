@@ -15,7 +15,7 @@ import logging
 import re
 import itertools
 
-version_flag = "v1.2.10"
+version_flag = "v1.2.11"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")

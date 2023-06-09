@@ -149,9 +149,11 @@ def apply_face_repairer(p):
     if not require_face_repairer(p):
         return
     
-    values = requests.get_extra_value(p, 'face_repair_params', {})
-    values["enabled"] = True
-    unit = FaceUnit(**values)
-    requests.update_script_args(p, REPAIRER_NAME, [vars(unit)])
+    lib.log("skip face editor")
+    
+    # values = requests.get_extra_value(p, 'face_repair_params', {})
+    # values["enabled"] = True
+    # unit = FaceUnit(**values)
+    # requests.update_script_args(p, REPAIRER_NAME, [vars(unit)])
 
-    lib.log(f"ENABLE-FACE-REPAIRER, {vars(unit)}")
+    # lib.log(f"ENABLE-FACE-REPAIRER, {vars(unit)}")
