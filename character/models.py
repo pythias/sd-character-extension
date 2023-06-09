@@ -161,9 +161,6 @@ def _remove_character_fields(request):
         delattr(request, key)
 
 def _apply_multi_process(p: StableDiffusionProcessing):
-    if not requests.multi_enabled(p):
-        return
-    
     prompts = lib.to_multi_prompts(p.prompt)
     if len(prompts) == 1:
         return
