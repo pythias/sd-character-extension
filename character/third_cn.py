@@ -3,22 +3,7 @@ import sys
 
 from character import lib, requests
 from modules.paths_internal import extensions_dir
-
-_loaded = False
-def load_controlnet():
-    if lib.is_webui():
-        return
-    
-    global _loaded
-    if _loaded:
-        return
-    
-    sys.path.append(os.path.join(extensions_dir, "sd-webui-controlnet"))
-    from scripts import controlnet_version
-    lib.log(f"ControlNet Loaded, version: {controlnet_version.version_flag}")
-
-load_controlnet()
-
+sys.path.append(os.path.join(extensions_dir, "sd-webui-controlnet"))
 from scripts import external_code, global_state, controlnet_version
 
 default_control_net_model = "controlnet11Models_lineart"
@@ -30,6 +15,8 @@ default_tile_module = "tile_resample"
 
 control_net_models = external_code.get_models(update=True)
 control_net_version = controlnet_version.version_flag
+
+lib.log(f"ControlNet Loaded, version: {control_net_version}")
 
 def find_closest_cn_model_name(search: str):
     if not search:

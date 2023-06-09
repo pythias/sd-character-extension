@@ -1,4 +1,5 @@
 import json
+import time
 
 from pydantic import BaseModel, Field
 from typing import List
@@ -68,10 +69,18 @@ def convert_response(request, response):
         image_urls.append(image_url)
 
         if requests.is_debug(request):
+            started_at = time.perf_counter()
             nsfw_score = image_nsfw_score(base64_image)
+            seconds = time.perf_counter() - started_at
+            lib.log(f"nsfw_score: {nsfw_score}, time: {seconds}")
+
+            started_at = time.perf_counter()
             illegal_word = image_has_illegal_words(base64_image)
-            info["nsfw-scores"].append(nsfw_score)
-            info["illegal-words"].append(illegal_word)
+            seconds = time.perf_counter() - started_at
+            lib.log(f"illegal_word: {illegal_word}, time: {seconds}")
+
+            info["nsfw-scores"].append({"score": nsfw_score, "time": seconds})
+            info["illegal-words"].append({"word": illegal_word, "time": seconds})
         else:
             nsfw_score = image_nsfw_score(base64_image)
             if nsfw_score > 0.8:

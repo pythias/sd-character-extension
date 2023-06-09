@@ -28,8 +28,8 @@ def update_options(_, app):
         extra_networks.register_extra_network(extra_networks_lora.ExtraNetworkLora())
         extra_networks.register_extra_network(extra_networks_hypernet.ExtraNetworkHypernet())
 
-        log(f"Extra networks has been registered, networks:{extra_networks.extra_network_registry}")
+        lib.log(f"Extra networks has been registered, networks:{extra_networks.extra_network_registry}")
 
-    log("Options has been set.")
+    lib.log("Options has been set.")
 
 script_callbacks.on_app_started(update_options)

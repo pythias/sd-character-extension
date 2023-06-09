@@ -20,7 +20,7 @@ character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")
 
-request_id = "init"
+request_id = "-"
 
 min_base64_image_size = 1000
 
