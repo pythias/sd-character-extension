@@ -4,7 +4,7 @@ import time
 from pydantic import BaseModel, Field
 from typing import List
 
-from character import face, lib, output, requests, errors, names, third_cn
+from character import lib, output, requests, errors, names, third_cn, third_face
 from character.metrics import cNSFW, cIllegal, cFace
 from character.nsfw import image_has_illegal_words, image_nsfw_score
 
@@ -53,13 +53,13 @@ def convert_response(request, response):
 
     faces = []
     source_images = response.images
-    if face.require_face_repairer(request) and not face.keep_original_image(request):
+    if third_face.require_face_repairer(request) and not third_face.keep_original_image(request):
         batch_size = requests.get_value(request, "batch_size", 1)
         multi_count = requests.get_multi_count(request)
         source_images = source_images[(batch_size * multi_count):]
         lib.log(f"batch_size: {batch_size}, multi_count: {multi_count}, src: {len(response.images)}, fixed: {len(source_images)}")
 
-    crop_face = face.require_face(request)
+    crop_face = third_face.require_face(request)
 
     image_urls = []
     safety_images = []
@@ -94,7 +94,7 @@ def convert_response(request, response):
 
         if crop_face:
             # todo 脸部裁切，在高清修复脸部时有数据
-            image_faces = face.crop(base64_image)
+            image_faces = third_face.crop(base64_image)
             cFace.inc(len(image_faces))
             faces.extend(image_faces)
 

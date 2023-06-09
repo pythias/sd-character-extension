@@ -1,6 +1,6 @@
 import gradio as gr
 
-from character import requests, lib, upscale, face, metrics, nsfw, errors, names, models
+from character import requests, lib, upscale, third_face, metrics, nsfw, errors, names, models
 from modules import scripts
 from modules.processing import StableDiffusionProcessing
 
@@ -26,7 +26,7 @@ class Script(scripts.Script):
         if nsfw.prompt_has_illegal_words(p.prompt):
             errors.raise_nsfw()
 
-        face.apply_face_repairer(p)
+        third_face.apply_face_repairer(p)
         upscale.apply_t2i_upscale(p)
 
         image_b64 = requests.get_cn_image(p)

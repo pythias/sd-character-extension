@@ -1,7 +1,7 @@
 import gradio as gr
 from httpx import request
 
-from character import requests, lib, upscale, face, metrics, nsfw, errors, names, models
+from character import requests, lib, upscale, third_face, metrics, nsfw, errors, names, models
 from modules import scripts
 from modules.processing import StableDiffusionProcessing
 from modules.api.api import decode_base64_to_image
@@ -46,6 +46,6 @@ class Script(scripts.Script):
             errors.raise_nsfw()
 
         metrics.count_request(p)
-        face.apply_face_repairer(p)
+        third_face.apply_face_repairer(p)
 
         
