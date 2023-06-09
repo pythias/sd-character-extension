@@ -1,4 +1,4 @@
-from character import models, errors, lib, face
+from character import models, errors, lib
 from character.metrics import hT2I, hI2I, hSD
 
 from modules.api import api
