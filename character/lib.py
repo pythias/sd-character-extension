@@ -172,6 +172,13 @@ def simply_prompts(prompt: str):
 
 
 def to_multi_prompts(prompt: str):
+    if prompt.find("|") == -1 and prompt.find(";") == -1:
+        return [prompt]
+
+    if ";" in prompt:
+        prompts = prompt.split(";")
+        return [split_prompt.strip() for split_prompt in prompts if split_prompt.strip()]
+
     # split the prompt into tags
     tags = prompt.split(',')
     

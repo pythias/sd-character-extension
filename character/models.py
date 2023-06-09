@@ -127,7 +127,10 @@ def _prepare_request(request):
     request.negative_prompt = request.negative_prompt + "," + negative_default_prompts
     request.prompt = request.prompt + "," + high_quality_prompts
 
-    request.prompt = lib.simply_prompts(request.prompt)
+    if ";" not in request.prompt:
+        # 多图模式时，不要删除重复
+        request.prompt = lib.simply_prompts(request.prompt)
+
     request.negative_prompt = lib.simply_prompts(request.negative_prompt)
 
     _remove_character_fields(request)
@@ -159,14 +162,12 @@ def _apply_multi_process(p: StableDiffusionProcessing):
     if not requests.multi_enabled(p):
         return
     
-    # request.prompt only
-    if p.prompt.find("|") == -1:
+    prompts = lib.to_multi_prompts(p.prompt)
+    if len(prompts) == 1:
         return
     
     processing.fix_seed(p)
-    
-    prompts = lib.to_multi_prompts(p.prompt)
-    
+
     p.prompt = prompts
     p.batch_size = 1
     p.n_iter = len(p.prompt)
