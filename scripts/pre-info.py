@@ -30,7 +30,7 @@ class Script(scripts.Script):
     def postprocess(self, p, processed: Processed, *args):
         elapsed = time.perf_counter() - self.started_at
         for i, info in enumerate(processed.infotexts):
-            processed.infotexts[i] = f"{info}, Took {elapsed:.2f} seconds."
+            processed.infotexts[i] = f"{info}\nElapsed: {elapsed:.2f}"
 
         for i in range(len(processed.images)):
-            processed.images[i].info["parameters"] = f"{processed.images[i].info['parameters']}\nTook: {elapsed:.2f}"
+            processed.images[i].info["parameters"] = f"{processed.images[i].info['parameters']}\nElapsed: {elapsed:.2f}"
