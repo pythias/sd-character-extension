@@ -1,58 +1,19 @@
-import os
-import sys
 import json
-import logging
-import math
 
-from enum import Enum
 from pydantic import BaseModel, Field
-from typing import Any, Optional, Dict, List
+from typing import List
 
-from character import face, lib, output, requests, errors, names
-from character.errors import *
-from character.metrics import *
-from character.nsfw import image_has_illegal_words, image_has_nsfw_v2
+from character import face, lib, output, requests, errors, names, third_cn
+from character.metrics import cNSFW, cIllegal, cFace
+from character.nsfw import image_has_illegal_words, image_nsfw_score
 
-from modules import shared, images, processing
+from modules import processing
 from modules.processing import StableDiffusionProcessing
-from modules.api.models import *
-from modules.paths_internal import extensions_dir
+from modules.api.models import StableDiffusionTxt2ImgProcessingAPI, StableDiffusionImg2ImgProcessingAPI
 
 
 negative_default_prompts = "BadDream,FastNegativeEmbedding"
 high_quality_prompts = "8k,high quality,<lora:add_detail:1>"
-
-# 加载ControlNet，启动添加参数 --controlnet-dir
-extensions_control_net_path = os.path.join(extensions_dir, "sd-webui-controlnet")
-sys.path.append(extensions_control_net_path)
-from scripts import external_code, global_state
-
-control_net_models = external_code.get_models(update=True)
-
-def find_closest_cn_model_name(search: str):
-    if not search:
-        return None
-
-    if search in global_state.cn_models:
-        return search
-
-    search = search.lower()
-    if search in global_state.cn_models_names:
-        return global_state.cn_models_names.get(search)
-    
-    applicable = [name for name in global_state.cn_models_names.keys() if search in name.lower()]
-    if not applicable:
-        return None
-
-    applicable = sorted(applicable, key=lambda name: len(name))
-    return global_state.cn_models_names[applicable[0]]
-
-default_control_net_model = "controlnet11Models_lineart"
-default_control_net_module = "lineart_realistic"
-default_open_pose_model = "controlnet11Models_openpose"
-default_open_pose_module = "openpose"
-default_tile_model = "controlnet11Models_tile"
-default_tile_module = "tile_resample"
 
 class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
     # 大部分参数都丢 extra_generation_params 里面（默认值那种，省得定义那么多）
@@ -85,8 +46,10 @@ class V2ImageResponse(BaseModel):
 def convert_response(request, response):
     params = response.parameters
     info = json.loads(response.info)
-    info["nsfw"] = 0
-    info["illegal"] = 0
+
+    if requests.is_debug(request):
+        info["nsfw-scores"] = []
+        info["illegal-words"] = []
 
     faces = []
     source_images = response.images
@@ -104,18 +67,19 @@ def convert_response(request, response):
         image_url, _ = output.save_image(base64_image)
         image_urls.append(image_url)
 
-        if image_has_nsfw_v2(base64_image):
-            info["nsfw"] += 1
-            cNSFW.inc()
-
-            if not requests.get_extra_value(request, "allow_nsfw", False):
+        if requests.is_debug(request):
+            nsfw_score = image_nsfw_score(base64_image)
+            illegal_word = image_has_illegal_words(base64_image)
+            info["nsfw-scores"].append(nsfw_score)
+            info["illegal-words"].append(illegal_word)
+        else:
+            nsfw_score = image_nsfw_score(base64_image)
+            if nsfw_score > 0.8:
+                cNSFW.inc()
                 continue
 
-        if image_has_illegal_words(base64_image):
-            info["illegal"] += 1
-            cIllegal.inc()
-
-            if not requests.get_extra_value(request, "allow_illegal", False):
+            if image_has_illegal_words(base64_image):
+                cIllegal.inc()
                 continue
 
         safety_images.append(base64_image)
@@ -129,8 +93,7 @@ def convert_response(request, response):
     if len(safety_images) == 0:
         return errors.nsfw()
 
-    if requests.get_extra_value(request, "out_no_parameters", True):
-        # 因为请求参数中也有图片的存在，调试时用 parameters
+    if not requests.is_debug(request):
         params = {}
 
     if output.required_save(request):
@@ -164,7 +127,7 @@ def _prepare_request(request):
 
 def prepare_request_i2i(request):
     _prepare_request(request)
-    _apply_controlnet(request)
+    third_cn.apply_args(request)
 
     image_b64 = requests.get_i2i_image(request)
     request.init_images = [image_b64]
@@ -172,7 +135,7 @@ def prepare_request_i2i(request):
 
 def prepare_request_t2i(request):
     _prepare_request(request)
-    _apply_controlnet(request)
+    third_cn.apply_args(request)
     _apply_multi_process(request)
 
 def _remove_character_fields(request):
@@ -183,80 +146,6 @@ def _remove_character_fields(request):
             continue
         
         delattr(request, key)
-
-
-def _apply_controlnet(request):
-    units = [
-        get_cn_image_unit(request),
-        get_cn_pose_unit(request),
-        
-        _get_cn_empty_unit(),
-        _get_cn_empty_unit(),
-        _get_cn_empty_unit()
-    ]
-
-    requests.update_script_args(request, "ControlNet", [_to_process_unit(unit) for unit in units])
-
-def get_cn_image_unit(request):
-    unit = _get_cn_empty_unit()
-    image_b64 = requests.get_cn_image(request)
-    if not lib.valid_base64(image_b64):
-        return unit
-
-    unit["module"] = requests.get_extra_value(request, "cn_preprocessor", default_control_net_module)
-    unit["model"] = requests.get_extra_value(request, "cn_model", default_control_net_model)
-    unit["image"] = image_b64
-    unit["enabled"] = True
-    return unit
-
-
-def get_cn_pose_unit(request):
-    unit = _get_cn_empty_unit()
-    pose_b64 = requests.get_pose_image(request)
-    if not lib.valid_base64(pose_b64):
-        return unit
-
-    unit["module"] = requests.get_extra_value(request, "pose_preprocessor", default_open_pose_module)
-    unit["model"] = requests.get_extra_value(request, "pose_model", default_open_pose_model)
-    unit["image"] = pose_b64
-    unit["enabled"] = True
-    return unit
-
-
-def get_cn_tile_unit(p):
-    unit = _get_cn_empty_unit()
-    if not requests.get_extra_value(p, "scale_by_tile", False):
-        return unit
-
-    unit["module"] = default_tile_module
-    unit["model"] = default_tile_model
-    unit["enabled"] = True
-    unit["image"] = ""
-    return unit
-
-
-def _get_cn_empty_unit():
-    # 参数在 ControlNetUnit 不同版本中默认值不一样，这里统一一下，目前兼容至 1.1.220
-    return {
-        "model": "none",
-        "module": "none",
-        "enabled": False,
-        "image": "",
-        "processor_res": 512,
-        "threshold_a": 64,
-        "threshold_b": 64,
-        "weight": 1.0,
-        "guidance_start": 0.0,
-        "guidance_end": 1.0,
-    }
-
-
-def _to_process_unit(unit):
-    if unit["enabled"]:
-        unit["model"] = find_closest_cn_model_name(unit["model"])
-
-    return external_code.ControlNetUnit(**unit)
-
 
 def _apply_multi_process(p: StableDiffusionProcessing):
     if not requests.multi_enabled(p):

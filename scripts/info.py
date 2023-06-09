@@ -1,8 +1,7 @@
 import gradio as gr
 import time
 
-from character import requests
-from character.lib import log, version_flag, get_request_id
+from character import requests, lib
 from modules import shared, scripts
 from modules.processing import Processed
 
@@ -22,9 +21,9 @@ class Script(scripts.Script):
         self.started_at = time.perf_counter()
         requests.update_extras(p, {
             "name": shared.cmd_opts.character_server_name,
-            "version": version_flag,
+            "version": lib.version_flag,
             "started_at": time.strftime('%Y-%m-%d %H:%M:%S %Z', time.localtime()),
-            "request_id": get_request_id(),
+            "request_id": lib.get_request_id(),
         })
 
     def postprocess(self, p, processed: Processed, *args):

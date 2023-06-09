@@ -1,7 +1,13 @@
 from character import lib, names
 
+def is_debug(request):
+    return get_extra_value(request, "debug", False)
+
 def from_webui(request):
     return get_extra_value(request, names.ParamFromUI, True)
+
+def set_request_from_api(request):
+    update_extra(request, names.ParamFromUI, False)
 
 def multi_enabled(request):
     return get_extra_value(request, names.ParamMultiEnabled, False)
@@ -44,7 +50,7 @@ def extra_init(request):
     if i2i_image_base64 != "":
         update_extra(request, names.ParamImage, i2i_image_base64)
 
-    update_extra(request, names.ParamFromUI, False)
+    set_request_from_api(request)
 
 
 def update_extra(request, key, value):

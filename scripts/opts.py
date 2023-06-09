@@ -1,6 +1,6 @@
 import sys
 import os
-from character.lib import log
+from character import lib
 from modules import shared, script_callbacks
 
 def update_options(_, app):
@@ -17,8 +17,9 @@ def update_options(_, app):
 
     shared.opts.data.update(updated_options)
 
-    if shared.cmd_opts.nowebui:
+    if not lib.is_webui():
         from modules.paths_internal import extensions_builtin_dir
+
         sys.path.append(extensions_builtin_dir)
         sys.path.append(os.path.join(extensions_builtin_dir, "Lora"))
         from Lora import extra_networks_lora
@@ -27,7 +28,7 @@ def update_options(_, app):
         extra_networks.register_extra_network(extra_networks_lora.ExtraNetworkLora())
         extra_networks.register_extra_network(extra_networks_hypernet.ExtraNetworkHypernet())
 
-        log(f"Extra networks has been registered, networks:{extra_networks.extra_network_registry}")    
+        log(f"Extra networks has been registered, networks:{extra_networks.extra_network_registry}")
 
     log("Options has been set.")
 

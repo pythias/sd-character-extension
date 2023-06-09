@@ -1,10 +1,5 @@
-from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
-from regex import R
-from transformers import AutoFeatureExtractor
 from PIL import Image
 import numpy as np
-import base64
-import io
 import re
 import logging
 import opennsfw2 as n2
@@ -23,17 +18,9 @@ n2_model = None
 cpu_device = '/cpu:0'
 cpu_all = "cpu"
 
-def numpy_to_pil(images):
-    if images.ndim == 3:
-        images = images[None, ...]
-    images = (images * 255).round().astype("uint8")
-    pil_images = [Image.fromarray(image) for image in images]
-
-    return pil_images
-
 
 @hDN.time()
-def image_has_nsfw_v2(base64_image):
+def image_nsfw_score(base64_image):
     with tf.device(cpu_all):
         try:
             global n2_model
@@ -47,9 +34,9 @@ def image_has_nsfw_v2(base64_image):
             n2_image = np.expand_dims(n2_image, 0)
             n2_image = n2_model(n2_image).numpy()
             nsfw_probability = float(n2_image[0][1])
-            return nsfw_probability > 0.8
+            return nsfw_probability
         except Exception as e:
-            log(f"image_has_nsfw_v2 error: {e}", logging.ERROR)
+            log(f"image_nsfw_score error: {e}", logging.ERROR)
             return False
 
 
@@ -80,7 +67,7 @@ def prompt_has_illegal_words(prompt):
         for keyword in keywords:
             if keyword in words:
                 log(f"image has illegal word, {keyword}", logging.WARN)
-                return True
+                return keyword
 
     return False
 
