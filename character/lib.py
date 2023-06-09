@@ -15,7 +15,7 @@ import logging
 import re
 import itertools
 
-version_flag = "v1.2.8"
+version_flag = "v1.2.9"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")
@@ -82,8 +82,7 @@ def valid_base64(image_b64):
         return False
 
     try:
-        decode_base64_to_image(image_b64)
-        return True
+        return decode_base64_to_image(image_b64)
     except Exception as e:
         return False
 

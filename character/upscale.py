@@ -21,7 +21,7 @@ def apply_t2i_upscale(request: StableDiffusionProcessingTxt2Img):
     if (scale_by > 0 and scale_by < 10):
         request.hr_scale = scale_by
     
-    width, height = lib.limit_size(request.width * request.hr_scale, request.height * request.hr_scale, request.width / request.height, min_size, max_size)
+    width, height = lib.limit_size(request.width, request.height, request.width / request.height, min_size, max_size)
 
     # 回到放大前的尺寸
     request.width = int(width / request.hr_scale)
@@ -37,7 +37,7 @@ def apply_i2i_upscale(request: StableDiffusionProcessingImg2Img, img):
     image_width, image_height = img.size[0:2]
     
     if request.width > 0 and request.height > 0:
-        # 必须同时指定width和height, 管大不管小
+        # 必须同时指定width和height
         request.width, request.height = lib.limit_size(request.width, request.height, request.width / request.height, min_size, max_size)
         lib.log(f"ENABLE-UPSCALE, in-size:{image_width}x{image_height}, set-size:{request.width}x{request.height}, denoising:{request.denoising_strength}, cfg:{request.image_cfg_scale}")
     else:

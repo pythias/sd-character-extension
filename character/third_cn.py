@@ -50,9 +50,12 @@ def apply_args(request):
 def _get_cn_image_unit(request):
     unit = _get_cn_empty_unit()
     image_b64 = requests.get_cn_image(request)
-    if not lib.valid_base64(image_b64):
+    img = lib.valid_base64(image_b64)
+    if not img:
         return unit
 
+    # processor_res
+    unit["processor_res"] = min(max(img.size[0:2]), 512)
     unit["module"] = requests.get_extra_value(request, "cn_preprocessor", default_control_net_module)
     unit["model"] = requests.get_extra_value(request, "cn_model", default_control_net_model)
     unit["image"] = image_b64
@@ -63,9 +66,11 @@ def _get_cn_image_unit(request):
 def _get_cn_pose_unit(request):
     unit = _get_cn_empty_unit()
     pose_b64 = requests.get_pose_image(request)
-    if not lib.valid_base64(pose_b64):
+    img = lib.valid_base64(pose_b64)
+    if not img:
         return unit
 
+    unit["processor_res"] = min(max(img.size[0:2]), 512)
     unit["module"] = requests.get_extra_value(request, "pose_preprocessor", default_open_pose_module)
     unit["model"] = requests.get_extra_value(request, "pose_model", default_open_pose_model)
     unit["image"] = pose_b64
