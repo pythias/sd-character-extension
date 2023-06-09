@@ -65,10 +65,9 @@ def update_extras(request, values):
 def clear_temporary_extras(request):
     """
     瘦身，清除临时参数
-    remove key start with "_"
     """
     for key in list(request.extra_generation_params[names.Name].keys()):
-        if key.startswith("_"):
+        if key.startswith("image_"):
             del request.extra_generation_params[names.Name][key]
 
 

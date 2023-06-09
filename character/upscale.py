@@ -16,7 +16,15 @@ def apply_t2i_upscale(request: StableDiffusionProcessingTxt2Img):
     request.enable_hr = True
     request.setup_prompts()
 
-    request.width, request.height = lib.limit_size_max(request.width, request.height, request.width / request.height, max_size)
+    # 默认放大图片的两倍
+    scale_by = requests.get_extra_value(request, "scale_by", 0)
+    if (scale_by > 0 and scale_by < 10):
+        request.hr_scale = scale_by
+    
+    width, height = lib.limit_size_max(request.width * request.hr_scale, request.height * request.hr_scale, request.width / request.height, max_size)
+    request.width = width / request.hr_scale
+    request.height = height / request.hr_scale
+    
     lib.log(f"ENABLE-UPSCALE, scale:{request.hr_scale}, size:{request.width}x{request.height}, denoising:{request.denoising_strength}, scaler:{request.hr_upscaler}")
 
 
