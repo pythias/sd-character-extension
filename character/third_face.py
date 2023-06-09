@@ -138,7 +138,8 @@ def require_face(request):
 
 
 def require_face_repairer(request):
-    return requests.get_extra_value(request, "repair_face", True)
+    return False
+    # return requests.get_extra_value(request, "repair_face", True)
 
 
 def keep_original_image(request):
@@ -149,11 +150,9 @@ def apply_face_repairer(p):
     if not require_face_repairer(p):
         return
     
-    lib.log("skip face editor")
-    
-    # values = requests.get_extra_value(p, 'face_repair_params', {})
-    # values["enabled"] = True
-    # unit = FaceUnit(**values)
-    # requests.update_script_args(p, REPAIRER_NAME, [vars(unit)])
+    values = requests.get_extra_value(p, 'face_repair_params', {})
+    values["enabled"] = True
+    unit = FaceUnit(**values)
+    requests.update_script_args(p, REPAIRER_NAME, [vars(unit)])
 
-    # lib.log(f"ENABLE-FACE-REPAIRER, {vars(unit)}")
+    lib.log(f"ENABLE-FACE-REPAIRER, {vars(unit)}")
