@@ -27,7 +27,7 @@ def image_nsfw_score(base64_image):
             if n2_model is None:
                 started_at = time.time()
                 n2_model = n2.make_open_nsfw_model(weights_path=models_path + "/open_nsfw_weights.h5")
-                log(f"nsfw model loaded in {time.time() - started_at} seconds")
+                log(f"nsfw model loaded in {(time.time() - started_at):.3f} seconds")
 
             pil_image = decode_base64_to_image(base64_image)
             n2_image = n2.preprocess_image(pil_image)
