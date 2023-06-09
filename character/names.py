@@ -4,6 +4,7 @@ ParamExtra = "character_extra"
 ParamFromUI = "from_webui"
 ParamMultiEnabled = "multi_enabled"
 ParamMultiCount = "multi_count"
+ParamMultiSameSeed = "multi_same_seed"
 
 ParamImage = "i2i_image"
 ParamPose = "pose_image"

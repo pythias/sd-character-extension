@@ -167,11 +167,12 @@ def _apply_multi_process(p: StableDiffusionProcessing):
         return
     
     processing.fix_seed(p)
+    same_seed = requests.get_extra_value(p, names.ParamMultiSameSeed, False)
 
     p.prompt = prompts
     p.batch_size = 1
     p.n_iter = len(p.prompt)
-    p.seed = [p.seed + i for i in range(len(p.prompt))]
+    p.seed = [p.seed + (0 if same_seed else i) for i in range(len(p.prompt))]
     # p.subseed = [p.subseed + i for i in range(len(p.prompt))]
     # p.setup_prompts()
     # self.all_negative_prompts = self.batch_size * self.n_iter * [self.negative_prompt]
