@@ -35,4 +35,4 @@ class ApiHijack(api.Api):
 
 api.Api = ApiHijack
 
-
+lib.log("Api loaded")
