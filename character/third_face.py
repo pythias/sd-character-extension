@@ -70,7 +70,7 @@ class FaceUnit:
         save_original_image: bool = False,
         show_intermediate_steps: bool = False,
         apply_scripts_to_faces: bool = False,                    
-        face_size: int = 300,
+        face_size: int = 160,
         use_minimal_area: bool = False,
         ignore_larger_faces: bool = True,
         **_kwargs,
