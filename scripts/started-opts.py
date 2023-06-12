@@ -1,6 +1,6 @@
 import sys
 import os
-from character import lib, third_extra
+from character import lib, third_extra, nsfw
 from modules import shared, script_callbacks
 
 def update_options(_, app):
@@ -19,5 +19,8 @@ def update_options(_, app):
     lib.log("Options has been set")
     
     third_extra.load_extras()
+    
+    nsfw.load_models()
+    lib.load_models()
         
 script_callbacks.on_app_started(update_options)

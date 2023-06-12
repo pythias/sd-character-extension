@@ -1,6 +1,10 @@
-from datetime import datetime
-from enum import Enum
-from colorama import Fore, Style
+import os
+import numpy as np
+import logging
+import re
+import itertools
+import time
+
 from modules import scripts, shared
 from modules.api import api
 from modules.api.api import decode_base64_to_image
@@ -9,13 +13,7 @@ from starlette.exceptions import HTTPException
 
 from character.metrics import hCaption
 
-import os
-import numpy as np
-import logging
-import re
-import itertools
-
-version_flag = "v1.2.11"
+version_flag = "v1.2.12"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")
@@ -30,6 +28,11 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(levelname)s %(asctime)s %(server_name)s %(server_version)s %(request_id)s %(message)s",
 )
+
+def load_models():
+    started_at = time.time()
+    shared.interrogator.load()
+    log(f"interrogator loaded in {time.time() - started_at:.3f} seconds")
 
 def set_request_id(id):
     global request_id
@@ -71,12 +74,6 @@ def get_or_default(obj, key, default):
         
     return obj.get(key, default) if isinstance(obj, dict) else getattr(obj, key, default)
 
-def replace_man_with_men(text):
-    """
-    特殊模型的处理, 某些模型识别man很差, 改成men
-    """
-    return re.sub(r'\bman\b', 'men', text, flags=re.IGNORECASE)
-
 def valid_base64(image_b64):
     if not image_b64 or len(image_b64) < min_base64_image_size:
         return False
@@ -97,15 +94,14 @@ def clip_b64img(image_b64, throw_exception = False):
     if throw_exception and is_empty_caption(caption):
         raise HTTPException(status_code=422, detail="Interrogate fail")
 
-    # 优化tags
-    return replace_man_with_men(caption)
+    return caption
 
 
 def is_empty_caption(caption):
     """
     判断是否为空标签, caption = 基础标签, artists.txt, flavors.txt, mediums.txt, movements.txt
     """
-    return caption == "" or caption == "<error>" or caption[0] == ', '
+    return caption == "" or caption == "<error>" or caption[0] == ','
 
 
 def is_webui():
