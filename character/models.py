@@ -60,35 +60,39 @@ def convert_response(request, response):
         batch_size = requests.get_value(request, "batch_size", 1)
         multi_count = requests.get_multi_count(request)
         source_images = source_images[(batch_size * multi_count):]
-
+    
     crop_face = third_face.require_face(request)
 
     image_urls = []
     safety_images = []
+    index = 0
     for base64_image in source_images:
-        image_url, _ = output.save_image(base64_image)
+        image_url, image_file = output.save_image(base64_image)
         image_urls.append(image_url)
+        index += 1
 
         if requests.is_debug(request):
             started_at = time.perf_counter()
             nsfw_score = image_nsfw_score(base64_image)
             seconds = time.perf_counter() - started_at
-            lib.log(f"nsfw: {nsfw_score}, time: {seconds}")
+            lib.log(f"nsfw: {nsfw_score}, time: {seconds}, at {index}/{len(source_images)}")
 
             started_at = time.perf_counter()
             illegal_word = image_has_illegal_words(base64_image)
             seconds = time.perf_counter() - started_at
-            lib.log(f"word: {illegal_word}, time: {seconds:.3f}")
+            lib.log(f"word: {illegal_word}, time: {seconds:.3f}, at {index}/{len(source_images)}")
 
-            info["nsfw-scores"].append({"score": nsfw_score, "time": seconds})
-            info["nsfw-words"].append({"word": illegal_word, "time": seconds})
+            info["nsfw-scores"].append({"score": nsfw_score, "time": round(seconds, 3)})
+            info["nsfw-words"].append({"word": illegal_word, "time": round(seconds, 3)})
         else:
             nsfw_score = image_nsfw_score(base64_image)
             if nsfw_score > 0.75:
+                lib.log(f"nsfw, score: {nsfw_score}, at {index}/{len(source_images)}, file: {image_file}")
                 cNSFW.inc()
                 continue
 
             if image_has_illegal_words(base64_image):
+                lib.log(f"illegal word, at {index}/{len(source_images)}, file: {image_file}")
                 cIllegal.inc()
                 continue
 

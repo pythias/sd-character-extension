@@ -74,12 +74,6 @@ def get_or_default(obj, key, default):
         
     return obj.get(key, default) if isinstance(obj, dict) else getattr(obj, key, default)
 
-def replace_man_with_men(text):
-    """
-    特殊模型的处理, 某些模型识别man很差, 改成men
-    """
-    return re.sub(r'\bman\b', 'men', text, flags=re.IGNORECASE)
-
 def valid_base64(image_b64):
     if not image_b64 or len(image_b64) < min_base64_image_size:
         return False
@@ -100,15 +94,14 @@ def clip_b64img(image_b64, throw_exception = False):
     if throw_exception and is_empty_caption(caption):
         raise HTTPException(status_code=422, detail="Interrogate fail")
 
-    # 优化tags
-    return replace_man_with_men(caption)
+    return caption
 
 
 def is_empty_caption(caption):
     """
     判断是否为空标签, caption = 基础标签, artists.txt, flavors.txt, mediums.txt, movements.txt
     """
-    return caption == "" or caption == "<error>" or caption[0] == ', '
+    return caption == "" or caption == "<error>" or caption[0] == ','
 
 
 def is_webui():
