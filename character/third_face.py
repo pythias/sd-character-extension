@@ -2,12 +2,17 @@ import cv2
 import base64
 import io
 import numpy as np
+import os
+import sys
 
 from typing import Optional, List
 from modules import scripts, processing
 
 from character import lib, requests
 from character.metrics import hDF
+
+# from modules.paths_internal import extensions_dir
+# sys.path.append(os.path.join(extensions_dir, "sd-face-editor"))
 
 REPAIRER_NAME = "face editor ex"
 CROPPER_NAME = "FaceCropper"
@@ -54,92 +59,14 @@ def crop(image_base64) -> list:
     return cropped_face_base64s
 
 
-class FaceUnit:
-    def __init__(
-        self,
-        enabled: bool = False,
-        face_margin: float = 1.6,
-        confidence: float = 0.97,
-        strength1: float = 0.4,
-        strength2: float = 0.0,
-        max_face_count: int = 20,
-        mask_size: int = 32,
-        mask_blur: int = 16,
-        prompt_for_face: str = '',
-        apply_inside_mask_only: bool = False,
-        save_original_image: bool = False,
-        show_intermediate_steps: bool = False,
-        apply_scripts_to_faces: bool = False,                    
-        face_size: int = 160,
-        use_minimal_area: bool = False,
-        ignore_larger_faces: bool = True,
-        **_kwargs,
-    ):
-        self.enabled = enabled
-        self.face_margin = face_margin
-        self.confidence = confidence
-        self.strength1 = strength1
-        self.strength2 = strength2
-        self.max_face_count = max_face_count
-        self.mask_size = mask_size
-        self.mask_blur = mask_blur
-        self.prompt_for_face = prompt_for_face
-        self.apply_inside_mask_only = apply_inside_mask_only
-        self.save_original_image = save_original_image
-        self.show_intermediate_steps = show_intermediate_steps
-        self.apply_scripts_to_faces = apply_scripts_to_faces
-        self.face_size = face_size
-        self.use_minimal_area = use_minimal_area
-        self.ignore_larger_faces = ignore_larger_faces
-
-    def __eq__(self, other):
-        if not isinstance(other, FaceUnit):
-            return False
-
-        return vars(self) == vars(other)
-
-
-def get_unit(p: processing.StableDiffusionProcessing) -> Optional[FaceUnit]:
-    script_runner = p.scripts
-    script_args = p.script_args
-
-    fr_script = find_face_repairer_script(script_runner)
-    if fr_script is None:
-        return None
-
-    fr_script_args = script_args[fr_script.args_from:fr_script.args_to]
-    if len(fr_script_args) == 0:
-        return None
-
-    if isinstance(fr_script_args[0], FaceUnit):
-        return fr_script_args[0]
-
-    return FaceUnit(*fr_script_args)
-
-
-def find_face_repairer_script(script_runner: scripts.ScriptRunner) -> Optional[scripts.Script]:
-    if script_runner is None:
-        return None
-
-    for script in script_runner.alwayson_scripts:
-        if is_face_repairer_script(script):
-            return script
-
-    return None
-
-
-def is_face_repairer_script(script: scripts.Script) -> bool:
-    return script.title().lower() == REPAIRER_NAME
-
-
 def require_face(request):
     # 老版本，所以在基础request里
     return requests.get_extra_value(request, "crop_face", False)
 
 
 def require_face_repairer(request):
-    return False
-    # return requests.get_extra_value(request, "repair_face", True)
+    # return False
+    return requests.get_extra_value(request, "repair_face", True)
 
 
 def keep_original_image(request):
@@ -150,9 +77,10 @@ def apply_face_repairer(p):
     if not require_face_repairer(p):
         return
     
-    values = requests.get_extra_value(p, 'face_repair_params', {})
-    values["enabled"] = True
-    unit = FaceUnit(**values)
-    requests.update_script_args(p, REPAIRER_NAME, [vars(unit)])
+    values = requests.get_extra_value(p, 'face_repair_params', {
+        "prompt_for_face": "beauty",
+        "enabled": True,
+    })
+    requests.update_script_args(p, REPAIRER_NAME, [values])
 
-    lib.log(f"ENABLE-FACE-REPAIRER, {vars(unit)}")
+    lib.log(f"ENABLE-FACE-REPAIRER, {values}")
