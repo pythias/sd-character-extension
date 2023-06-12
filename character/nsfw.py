@@ -63,7 +63,7 @@ def prompt_has_illegal_words(prompt):
         prompts = prompt
 
     for prompt in prompts:
-        words = re.split(', | ', prompt)
+        words = re.split(',| |:|\(|\)', prompt)
 
         # Defining the keywords
         keywords = ["flag", "banner", "pennant", "flags", "banners", "pennants", "map", "maps"]
