@@ -1,6 +1,10 @@
-from datetime import datetime
-from enum import Enum
-from colorama import Fore, Style
+import os
+import numpy as np
+import logging
+import re
+import itertools
+import time
+
 from modules import scripts, shared
 from modules.api import api
 from modules.api.api import decode_base64_to_image
@@ -8,12 +12,6 @@ from PIL import Image
 from starlette.exceptions import HTTPException
 
 from character.metrics import hCaption
-
-import os
-import numpy as np
-import logging
-import re
-import itertools
 
 version_flag = "v1.2.11"
 character_dir = scripts.basedir()
@@ -30,6 +28,11 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(levelname)s %(asctime)s %(server_name)s %(server_version)s %(request_id)s %(message)s",
 )
+
+def load_models():
+    started_at = time.time()
+    shared.interrogator.load()
+    log(f"interrogator loaded in {time.time() - started_at:.3f} seconds")
 
 def set_request_id(id):
     global request_id

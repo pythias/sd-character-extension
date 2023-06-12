@@ -1,6 +1,5 @@
 import json
 import time
-from turtle import width
 
 from pydantic import BaseModel, Field
 from typing import List
@@ -15,6 +14,7 @@ from modules.api.models import StableDiffusionTxt2ImgProcessingAPI, StableDiffus
 
 negative_default_prompts = "BadDream,FastNegativeEmbedding"
 high_quality_prompts = "8k,high quality,<lora:add_detail:1>"
+    
 
 class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
     # 大部分参数都丢 extra_generation_params 里面（默认值那种，省得定义那么多）
@@ -78,7 +78,7 @@ def convert_response(request, response):
             started_at = time.perf_counter()
             illegal_word = image_has_illegal_words(base64_image)
             seconds = time.perf_counter() - started_at
-            lib.log(f"word: {illegal_word}, time: {seconds}")
+            lib.log(f"word: {illegal_word}, time: {seconds:.3f}")
 
             info["nsfw-scores"].append({"score": nsfw_score, "time": seconds})
             info["nsfw-words"].append({"word": illegal_word, "time": seconds})

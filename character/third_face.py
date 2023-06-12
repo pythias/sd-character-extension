@@ -77,10 +77,11 @@ def apply_face_repairer(p):
     if not require_face_repairer(p):
         return
     
-    values = requests.get_extra_value(p, 'face_repair_params', {
-        "prompt_for_face": "beauty",
-        "enabled": True,
-    })
+    values = requests.get_extra_value(p, 'face_repair_params', {})
+    values["enabled"] = True
+    if "prompt_for_face" not in values:
+        values["prompt_for_face"] = "beauty"
+
     requests.update_script_args(p, REPAIRER_NAME, [values])
 
     lib.log(f"ENABLE-FACE-REPAIRER, {values}")
