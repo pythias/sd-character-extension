@@ -5,7 +5,7 @@ import re
 import itertools
 import time
 
-from modules import scripts, shared
+from modules import scripts, shared, deepbooru
 from modules.api import api
 from modules.api.api import decode_base64_to_image
 from PIL import Image
@@ -13,7 +13,7 @@ from starlette.exceptions import HTTPException
 
 from character.metrics import hCaption
 
-version_flag = "v1.2.12"
+version_flag = "v1.2.13"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")
@@ -33,6 +33,10 @@ def load_models():
     started_at = time.time()
     shared.interrogator.load()
     log(f"interrogator loaded in {time.time() - started_at:.3f} seconds")
+
+    started_at = time.time()
+    deepbooru.model.load()
+    log(f"deepbooru loaded in {time.time() - started_at:.3f} seconds")
 
 def set_request_id(id):
     global request_id
@@ -91,6 +95,32 @@ def clip_b64img(image_b64, throw_exception = False):
         img = image_b64
 
     caption = shared.interrogator.interrogate(img.convert('RGB'))
+    if throw_exception and is_empty_caption(caption):
+        raise HTTPException(status_code=422, detail="Interrogate fail")
+
+    return caption
+
+
+def deepbooru_b64img(image_b64, throw_exception = False):
+    if isinstance(image_b64, str):
+        img = decode_base64_to_image(image_b64)
+    else:
+        img = image_b64
+
+    caption = deepbooru.model.tag(img.convert('RGB'))
+    if throw_exception and is_empty_caption(caption):
+        raise HTTPException(status_code=422, detail="Interrogate fail")
+
+    return caption
+
+
+def wb14_b64img(image_b64, throw_exception = False):
+    if isinstance(image_b64, str):
+        img = decode_base64_to_image(image_b64)
+    else:
+        img = image_b64
+
+    caption = deepbooru.model.tag(img.convert('RGB'))
     if throw_exception and is_empty_caption(caption):
         raise HTTPException(status_code=422, detail="Interrogate fail")
 

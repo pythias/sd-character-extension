@@ -9,7 +9,7 @@ import time
 from modules.api.api import decode_base64_to_image
 
 from character.metrics import hDN
-from character.lib import models_path, log, clip_b64img
+from character.lib import models_path, log, deepbooru_b64img
 
 safety_model_id = "CompVis/stable-diffusion-safety-checker"
 safety_feature_extractor = None
@@ -49,7 +49,7 @@ def image_has_illegal_words(base64_image):
     """
     if captions contains "flag", "banner", "pennant",  "flags", "banners", "pennants" return True
     """
-    caption = clip_b64img(base64_image)
+    caption = deepbooru_b64img(base64_image)
     return prompt_has_illegal_words(caption)
 
 
