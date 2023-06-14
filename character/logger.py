@@ -27,17 +27,13 @@ def create_logger():
     logger = logging.getLogger("Character")
     logger.propagate = False
 
-    # Add handler if we don't have one.
     if not logger.handlers:
         handler = logging.StreamHandler(sys.stdout)
         handler.setFormatter(ColoredFormatter("[%(levelname)s]%(asctime)s - %(server_name)s - %(server_version)s - %(request_id)s - %(message)s"))
         logger.addHandler(handler)
 
-    # Configure logger
-    loglevel_string = getattr(shared.cmd_opts, "loglevel", "INFO")
-    loglevel = getattr(logging, loglevel_string.upper(), None)
+    loglevel = getattr(logging, shared.cmd_opts.character_log_level.upper(), None)
     logger.setLevel(loglevel)
-
     return logger
 
 
