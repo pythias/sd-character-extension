@@ -57,8 +57,8 @@ def convert_response(request, response):
         info["nsfw-scores"] = []
         info["nsfw-words"] = []
 
-    lib.log(f"request.extra: {requests.get_value(request, 'extra_generation_params')}", logging.DEBUG)
-    if requests.has_illegal_words(request):
+    # 注意中途产生的扩展信息只有info中有，request在过程很多都是复制
+    if requests.has_illegal_words(info):
         info["illegal"] = True
         return errors.nsfw()
 
