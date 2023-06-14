@@ -41,9 +41,8 @@ def extra_init(request):
     else:
         lib.log(f"extra is not dict, {type(extra)}")
 
-    # delete extra
-    if hasattr(request, names.ParamExtra):
-        del request.character_extra
+    # 删除自定义的扩展，后续跟这个就无关了，直接用 extra_generation_params
+    delattr(request, names.ParamExtra)
 
     # 对老版本请求的兼容
     # character_image -> cn_image
@@ -79,14 +78,11 @@ def clear_temporary_extras(request):
 
 def get_extra_value(request, key, default):
     """
-    获取自定义参数的值
+    获取自定义参数的值，所有获取都在 requests.init_extra 处理之后
     """
-    character_extra = get_value(request, names.ParamExtra, None)
-    if character_extra is None:
-        extra = get_value(request, "extra_generation_params", {})
-        character_extra = get_value(extra, names.Name, {})
-    
-    return get_value(character_extra, key, default)
+    extra_params = get_value(request, "extra_generation_params", {})
+    my_extra = get_value(extra_params, names.Name, {})
+    return get_value(my_extra, key, default)
 
 
 def update_script_args(p, name, args):

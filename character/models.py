@@ -1,5 +1,6 @@
 import json
 import time
+import logging
 
 from pydantic import BaseModel, Field
 from typing import List
@@ -56,6 +57,7 @@ def convert_response(request, response):
         info["nsfw-scores"] = []
         info["nsfw-words"] = []
 
+    lib.log(f"request.extra: {requests.get_value(request, 'extra_generation_params')}", logging.DEBUG)
     if requests.has_illegal_words(request):
         info["illegal"] = True
         return errors.nsfw()

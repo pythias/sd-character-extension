@@ -1,9 +1,9 @@
 import os
 import numpy as np
-import logging
 import re
 import itertools
 import time
+import logging
 
 from modules import scripts, shared, deepbooru
 from modules.api import api
@@ -12,22 +12,18 @@ from PIL import Image
 from starlette.exceptions import HTTPException
 
 from character.metrics import hCaption
+from character import logger
 
-version_flag = "v1.2.15"
+version_flag = "v1.2.16"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")
 
-request_id = "-"
-
 min_base64_image_size = 1000
 
 # Set up the logger
-logger = logging.getLogger("fastapi")
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(levelname)s %(asctime)s %(server_name)s %(server_version)s %(request_id)s %(message)s",
-)
+request_id = logger.new_id()
+_logger = logger.create_logger()
 
 def load_models():
     started_at = time.time()
@@ -46,7 +42,7 @@ def get_request_id():
     return request_id
 
 def log(message, level = logging.INFO):
-    logger.log(level, message, extra={
+    _logger.log(level, message, extra={
         "server_name": shared.cmd_opts.character_server_name,
         "server_version": version_flag,
         "request_id": request_id
@@ -72,7 +68,7 @@ def encode_np_to_base64(image):
     pil = Image.fromarray(image)
     return api.encode_pil_to_base64(pil)
 
-def get_or_default(obj, key, default):
+def get_or_default(obj, key, default = None):
     if obj is None:
         return default
         

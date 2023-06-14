@@ -1,11 +1,10 @@
-from character import lib, errors
+from character import lib, errors, logger
 from character.errors import *
 
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5
 
-from uuid import uuid4
 from fastapi import FastAPI, Request
 from modules import script_callbacks, shared
 
@@ -33,8 +32,7 @@ def setup_middleware(_: gr.Blocks, app: FastAPI):
 
     @app.middleware("http")
     async def log_middleware(request: Request, call_next):
-        request_id = str(uuid4())
-        request_id = request_id.split('-')[-1]
+        request_id = logger.new_id()
         if request.url.path.startswith("/character/v2/"):
             lib.set_request_id(request_id)
 
