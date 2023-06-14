@@ -216,3 +216,5 @@ def final_prompts_before_processing(p):
             p.prompt[i] = lib.simply_prompts(p.prompt[i] + "," + high_quality_prompts)
 
     p.setup_prompts()
+
+    requests.clear_temporary_extras(p)

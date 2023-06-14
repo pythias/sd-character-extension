@@ -23,22 +23,22 @@ class Script(scripts.Script):
         if requests.from_webui(p):
             return
 
+        upscale.apply_t2i_upscale(p)
         metrics.count_request(p)
         third_face.apply_face_repairer(p)
-        upscale.apply_t2i_upscale(p)
-
+        
         image_b64 = requests.get_cn_image(p)
         if not image_b64 or len(image_b64) < lib.min_base64_image_size:
             return
         
+        # 图片信息的处理
         caption = lib.clip_b64img(image_b64, True)
-        requests.update_extra(p, names.ExtraImageCaption, caption)
         if nsfw.prompt_has_illegal_words(caption):
             # script 退出不影响其他，所以这里就不抛异常了
             requests.set_has_illegal_words(p)
+            models.final_prompts_before_processing(p)
             return
         
+        requests.update_extra(p, names.ExtraImageCaption, caption)
         models.append_prompt(p, caption, True)
-
-        requests.clear_temporary_extras(p)
         models.final_prompts_before_processing(p)

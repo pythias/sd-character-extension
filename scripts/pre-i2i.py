@@ -33,19 +33,16 @@ class Script(scripts.Script):
         
         img = decode_base64_to_image(image_b64)
         upscale.apply_i2i_upscale(p, img)
-
-        caption = lib.clip_b64img(img, True)
-        requests.update_extra(p, names.ExtraImageCaption, caption)
-        if nsfw.prompt_has_illegal_words(caption):
-            requests.set_has_illegal_words(p)
-            return
-
-        models.append_prompt(p, caption, True)
-
         metrics.count_request(p)
         third_face.apply_face_repairer(p)
-        requests.clear_temporary_extras(p)
-        
-        models.final_prompts_before_processing(p)
 
-        
+        # 图片信息的处理
+        caption = lib.clip_b64img(img, True)
+        if nsfw.prompt_has_illegal_words(caption):
+            requests.set_has_illegal_words(p)
+            models.final_prompts_before_processing(p)
+            return
+
+        requests.update_extra(p, names.ExtraImageCaption, caption)
+        models.append_prompt(p, caption, True)
+        models.final_prompts_before_processing(p)
