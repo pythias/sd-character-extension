@@ -13,7 +13,7 @@ from starlette.exceptions import HTTPException
 
 from character.metrics import hCaption
 
-version_flag = "v1.2.13"
+version_flag = "v1.2.14"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")
@@ -136,13 +136,6 @@ def is_empty_caption(caption):
 
 def is_webui():
     return not shared.cmd_opts.nowebui
-
-
-def request_is_t2i(request):
-    if isinstance(request, dict):
-        return "hr_scale" in request
-        
-    return hasattr(request, "hr_scale")
 
 
 def limit_size(w, h, radio, min, max):

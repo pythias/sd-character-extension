@@ -40,7 +40,7 @@ class Script(scripts.Script):
         caption = lib.clip_b64img(img, True)
         requests.update_extra(p, "prompt-caption", caption)
 
-        models.append_prompt(p, caption)
+        models.append_prompt(p, caption, True)
 
         if nsfw.prompt_has_illegal_words(caption):
             errors.raise_nsfw()
@@ -48,5 +48,7 @@ class Script(scripts.Script):
         metrics.count_request(p)
         third_face.apply_face_repairer(p)
         requests.clear_temporary_extras(p)
+        
+        models.final_prompts_before_processing(p)
 
         

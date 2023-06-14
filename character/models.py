@@ -4,6 +4,8 @@ import time
 from pydantic import BaseModel, Field
 from typing import List
 
+from sympy import true
+
 from character import lib, output, requests, errors, names, third_cn, third_face
 from character.metrics import cNSFW, cIllegal, cFace
 from character.nsfw import image_has_illegal_words, image_nsfw_score
@@ -130,15 +132,6 @@ def _prepare_request(request):
     if request.prompt is None:
         request.prompt = ""
 
-    request.negative_prompt = request.negative_prompt + "," + negative_default_prompts
-    request.prompt = request.prompt + "," + high_quality_prompts
-
-    if ";" not in request.prompt:
-        # 多图模式时，不要删除重复
-        request.prompt = lib.simply_prompts(request.prompt)
-
-    request.negative_prompt = lib.simply_prompts(request.negative_prompt)
-
     _remove_character_fields(request)
 
 
@@ -155,6 +148,7 @@ def prepare_request_t2i(request):
     third_cn.apply_args(request)
     _apply_multi_process(request)
 
+
 def _remove_character_fields(request):
     params = vars(request)
     keys = list(params.keys())
@@ -163,6 +157,7 @@ def _remove_character_fields(request):
             continue
         
         delattr(request, key)
+
 
 def _apply_multi_process(p: StableDiffusionProcessing):
     prompts = lib.to_multi_prompts(p.prompt)
@@ -185,11 +180,29 @@ def _apply_multi_process(p: StableDiffusionProcessing):
     lib.log(f"ENABLE-MULTIPLE, count: {len(p.prompt)}, {p.seed}, {p.subseed}")
 
 
-def append_prompt(p, prompt):
+def append_prompt(p, prompt, priority=True):
     if type(p.prompt) == str:
-        p.prompt = p.prompt + "," + prompt
-    elif type(p.prompt) == list:
-        for i in range(len(p.prompt)):
-            p.prompt[i] = p.prompt[i] + "," + prompt
-
+        if priority:
+            p.prompt = prompt + "," + p.prompt
+        else:
+            p.prompt = p.prompt + "," + prompt
+        
+        return
     
+    for i in range(len(p.prompt)):
+        if priority:
+            p.prompt[i] = p.prompt[i] + "," + prompt
+        else:
+            p.prompt[i] = prompt + "," + p.prompt[i]
+
+
+def final_prompts_before_processing(p):
+    p.negative_prompt = p.negative_prompt + "," + negative_default_prompts
+    p.negative_prompt = lib.simply_prompts(p.negative_prompt)
+
+    if type(p.prompt) == str:
+        p.prompt = lib.simply_prompts(p.prompt + "," + high_quality_prompts)
+        return
+    
+    for i in range(len(p.prompt)):
+        p.prompt[i] = lib.simply_prompts(p.prompt[i] + "," + high_quality_prompts)
