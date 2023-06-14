@@ -13,3 +13,6 @@ ParamLineArt = "image_line_art"
 ExtensionMulti = "Character Multi"
 ExtensionT2I = "Character Text2Image"
 ExtensionI2I = "Character Image2Image"
+
+ExtraImageCaption = "image-caption"
+ExtraHasIllegalWords = "has-illegal-words"

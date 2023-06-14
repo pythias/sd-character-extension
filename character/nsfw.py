@@ -63,6 +63,9 @@ def prompt_has_illegal_words(prompt):
         prompts = prompt
 
     for prompt in prompts:
+        if prompt is None or prompt == "":
+            continue
+
         words = re.split(',| |:|\(|\)', prompt)
 
         # Defining the keywords

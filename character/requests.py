@@ -18,6 +18,12 @@ def set_multi_count(request, count):
 def get_multi_count(request):
     return get_extra_value(request, names.ParamMultiCount, 1)
 
+def set_has_illegal_words(request):
+    update_extra(request, names.ExtraHasIllegalWords, True)
+
+def has_illegal_words(request):
+    return get_extra_value(request, names.ExtraHasIllegalWords, False)
+
 def get_cn_image(request):
     return get_extra_value(request, names.ParamLineArt, "")
 

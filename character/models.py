@@ -8,7 +8,7 @@ from sympy import true
 
 from character import lib, output, requests, errors, names, third_cn, third_face
 from character.metrics import cNSFW, cIllegal, cFace
-from character.nsfw import image_has_illegal_words, image_nsfw_score
+from character.nsfw import image_has_illegal_words, image_nsfw_score, prompt_has_illegal_words
 
 from modules import processing
 from modules.processing import StableDiffusionProcessing
@@ -55,6 +55,10 @@ def convert_response(request, response):
     if requests.is_debug(request):
         info["nsfw-scores"] = []
         info["nsfw-words"] = []
+
+    if requests.has_illegal_words(request):
+        info["illegal"] = True
+        return errors.nsfw()
 
     faces = []
     source_images = response.images
@@ -131,6 +135,9 @@ def _prepare_request(request):
 
     if request.prompt is None:
         request.prompt = ""
+
+    if prompt_has_illegal_words(request.prompt):
+        errors.raise_nsfw()
 
     _remove_character_fields(request)
 
