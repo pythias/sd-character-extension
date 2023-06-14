@@ -202,7 +202,8 @@ def final_prompts_before_processing(p):
 
     if type(p.prompt) == str:
         p.prompt = lib.simply_prompts(p.prompt + "," + high_quality_prompts)
-        return
-    
-    for i in range(len(p.prompt)):
-        p.prompt[i] = lib.simply_prompts(p.prompt[i] + "," + high_quality_prompts)
+    else:
+        for i in range(len(p.prompt)):
+            p.prompt[i] = lib.simply_prompts(p.prompt[i] + "," + high_quality_prompts)
+
+    p.setup_prompts()
