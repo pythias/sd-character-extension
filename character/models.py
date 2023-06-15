@@ -68,6 +68,8 @@ def convert_response(request, response):
         batch_size = requests.get_value(request, "batch_size", 1)
         multi_count = requests.get_multi_count(request)
         source_images = source_images[(batch_size * multi_count):]
+
+        lib.log(f"remove original images after face repair, batch: {batch_size}, multi: {multi_count}, size:{len(response.images)} -> {len(source_images)}", logging.DEBUG)
     
     crop_face = third_face.require_face(request)
 
@@ -180,9 +182,6 @@ def _apply_multi_process(p: StableDiffusionProcessing):
     p.batch_size = 1
     p.n_iter = len(p.prompt)
     p.seed = [p.seed + (0 if same_seed else i) for i in range(len(p.prompt))]
-    # p.subseed = [p.subseed + i for i in range(len(p.prompt))]
-    # p.setup_prompts()
-    # self.all_negative_prompts = self.batch_size * self.n_iter * [self.negative_prompt]
 
     requests.set_multi_count(p, len(p.prompt))
 

@@ -6,19 +6,17 @@ from modules.paths_internal import extensions_dir
 sys.path.append(os.path.join(extensions_dir, "sd-webui-controlnet"))
 from scripts import external_code, global_state, controlnet_version
 
-default_control_net_model = "controlnet11Models_lineart"
+default_control_net_model = "lineart"
 default_control_net_module = "lineart_realistic"
-default_open_pose_model = "controlnet11Models_openpose"
+default_open_pose_model = "openpose"
 default_open_pose_module = "openpose"
-default_tile_model = "controlnet11Models_tile"
+default_tile_model = "tile"
 default_tile_module = "tile_resample"
 
 control_net_models = external_code.get_models(update=True)
 control_net_version = controlnet_version.version_flag
 
-lib.log(f"ControlNet Loaded, version: {control_net_version}")
-
-def find_closest_cn_model_name(search: str):
+def _find_closest_cn_model_name(search: str):
     if not search:
         return None
 
@@ -35,6 +33,8 @@ def find_closest_cn_model_name(search: str):
 
     applicable = sorted(applicable, key=lambda name: len(name))
     return global_state.cn_models_names[applicable[0]]
+
+lib.log(f"ControlNet Loaded, version: {control_net_version}, {_find_closest_cn_model_name('lineart')}, {_find_closest_cn_model_name('openpose')}, {_find_closest_cn_model_name('tile')}")
 
 def apply_args(request):
     units = [
@@ -108,7 +108,7 @@ def _get_cn_empty_unit():
 
 def _to_process_unit(unit):
     if unit["enabled"]:
-        unit["model"] = find_closest_cn_model_name(unit["model"])
+        unit["model"] = _find_closest_cn_model_name(unit["model"])
 
     return external_code.ControlNetUnit(**unit)
 
