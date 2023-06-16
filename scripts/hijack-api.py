@@ -1,8 +1,10 @@
+from unittest import case
+
+from torch import mode
 from character import models, errors, lib, third_segments
 from character.metrics import hT2I, hI2I, hSD
 
 from modules.api import api
-from modules.call_queue import queue_lock
 
 from fastapi.responses import JSONResponse
 
@@ -41,16 +43,21 @@ class ApiHijack(api.Api):
 
 
     def character_v2_caption(self, request: models.CaptionRequest):
-        def f(request):
-            caption = lib.clip_b64img(request.image)
+        def f(request: models.CaptionRequest):
+            if request.algorithm == models.CaptionAlgorithm.DEEPBOORU:
+                caption = lib.deepbooru_b64img(request.image)
+            elif request.algorithm == models.CaptionAlgorithm.CLIP or request.algorithm == models.CaptionAlgorithm.BLIP:
+                caption = lib.clip_b64img(request.image)
+            else:
+                caption = lib.wb14_b64img(request.image)
             return models.CaptionResponse(caption=caption)
 
-        return self._queued_call(f, request)
+        return self._api_call(f, request)
 
 
     def character_v2_segment(self, request: models.SegmentRequest):
         def f(request):
-            segments = third_segments.segment_b64img(request.image)
+            segments = third_segments.segment(request.image, request.algorithm)
             return models.SegmentResponse(segments=segments)
 
         return self._queued_call(f, request)
@@ -58,15 +65,24 @@ class ApiHijack(api.Api):
 
     def _generate(self, func, request):
         with hSD.time():
-            response = self._queued_call(func, request)
+            response = self._api_call(func, request)
             if isinstance(response, JSONResponse):
                 return response
             
             return models.convert_response(request, response)
 
 
+    def _api_call(self, func, request):
+        try:
+            return func(request)
+        except errors.ApiException as e:
+            return e.response()
+        except Exception as e:
+            return errors.ApiException.fromException(e).response()
+        
+
     def _queued_call(self, func, request):
-        with queue_lock:
+        with self.queue_lock:
             try:
                 return func(request)
             except errors.ApiException as e:

@@ -6,8 +6,7 @@ from click import prompt
 
 from pydantic import BaseModel, Field
 from typing import List
-
-from sympy import true
+from enum import Enum
 
 from character import lib, output, requests, errors, names, third_cn, third_face
 from character.metrics import cNSFW, cIllegal, cFace
@@ -51,16 +50,31 @@ class V2ImageResponse(BaseModel):
     faces: List[str]
 
 
+class CaptionAlgorithm(Enum):
+    DEEPBOORU = "deepbooru"
+    CLIP = "clip"
+    BLIP = "blip"
+    WB14 = "wb14"
+
+
 class CaptionRequest(BaseModel):
     image: str = Field(default="", title='Image', description='The image in base64 format.')
+    algorithm: CaptionAlgorithm = Field(default=CaptionAlgorithm.DEEPBOORU, title='Algorithm', description='The algorithm to use.')
 
 
 class CaptionResponse(BaseModel):
     caption: str = Field(default="", title='Caption', description='The caption of the image.')
 
 
+class SegmentAlgorithm(Enum):
+    UFADE20K = "ufade20k"
+    OFCOCO = "ofcoco"
+    OFADE20K = "ofade20k"
+
+
 class SegmentRequest(BaseModel):
     image: str = Field(default="", title='Image', description='The image in base64 format.')
+    algorithm: SegmentAlgorithm = Field(default=SegmentAlgorithm.OFADE20K, title='Algorithm', description='The algorithm to use.')
 
 
 class SegmentResponse(BaseModel):
