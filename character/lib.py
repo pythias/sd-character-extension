@@ -41,6 +41,15 @@ def set_request_id(id):
 def get_request_id():
     return request_id
 
+
+def debug(message):
+    log(message, logging.DEBUG)
+
+
+def error(message):
+    log(message, logging.ERROR)
+
+
 def log(message, level = logging.INFO):
     _logger.log(level, message, extra={
         "server_name": shared.cmd_opts.character_server_name,

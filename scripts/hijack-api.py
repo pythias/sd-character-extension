@@ -1,8 +1,8 @@
-from character import models, errors, lib
+from character import models, errors, lib, third_segments
 from character.metrics import hT2I, hI2I, hSD
 
 from modules.api import api
-from modules.call_queue import wrap_queued_call
+from modules.call_queue import queue_lock
 
 from fastapi.responses import JSONResponse
 
@@ -15,6 +15,7 @@ class ApiHijack(api.Api):
         self.add_api_route("/character/v2/repaint", self.character_v2_repaint, tags=["Character"], methods=["POST"], response_model=models.V2ImageResponse)
         self.add_api_route("/character/v2/expand", self.character_v2_expand, tags=["Character"], methods=["POST"], response_model=models.V2ImageResponse)
         self.add_api_route("/character/v2/caption", self.character_v2_caption, tags=["Character"], methods=["POST"], response_model=models.CaptionResponse)
+        self.add_api_route("/character/v2/segment", self.character_v2_segment, tags=["Character"], methods=["POST"], response_model=models.SegmentResponse)
 
         lib.log("API loaded")
 
@@ -32,21 +33,27 @@ class ApiHijack(api.Api):
 
 
     def character_v2_repaint(self, request: models.CharacterV2Txt2ImgRequest):
-        models.prepare_request_t2i(request)
-        return self._generate(self.text2imgapi, request)
+        pass
     
 
     def character_v2_expand(self, request: models.CharacterV2Txt2ImgRequest):
-        models.prepare_request_t2i(request)
-        return self._generate(self.text2imgapi, request)
+        pass
 
 
     def character_v2_caption(self, request: models.CaptionRequest):
-        def caption_api(request):
+        def f(request):
             caption = lib.clip_b64img(request.image)
             return models.CaptionResponse(caption=caption)
-            
-        return self._queued_call(caption_api, request)
+
+        return self._queued_call(f, request)
+
+
+    def character_v2_segment(self, request: models.SegmentRequest):
+        def f(request):
+            segments = third_segments.segment_b64img(request.image)
+            return models.SegmentResponse(segments=segments)
+
+        return self._queued_call(f, request)
 
 
     def _generate(self, func, request):
@@ -59,10 +66,13 @@ class ApiHijack(api.Api):
 
 
     def _queued_call(self, func, request):
-        try:
-            return wrap_queued_call(func(request))
-        except errors.ApiException as e:
-            return e.response()
-
+        with queue_lock:
+            try:
+                return func(request)
+            except errors.ApiException as e:
+                return e.response()
+            except Exception as e:
+                return errors.ApiException.fromException(e).response()
+        
 
 api.Api = ApiHijack

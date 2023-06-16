@@ -20,6 +20,7 @@ hSD = Histogram('character_processing_latency_seconds', 'Stable diffusion proces
 hDF = Histogram('character_face_latency_seconds', 'Detect face latency')
 hDN = Histogram('character_nsfw_latency_seconds', 'Detect nsfw latency')
 hCaption = Histogram('character_caption_latency_seconds', 'Caption latency')
+hSegment = Histogram('character_segment_latency_seconds', 'Segment latency')
 hRepair = Histogram('character_repair_latency_seconds', 'Repair latency')
 
 cImages = Counter('character_images', 'Images generated')

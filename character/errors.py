@@ -34,6 +34,10 @@ class ApiException(HTTPException):
         }
         return JSONResponse(status_code=vars(self).get('status_code', 400), content=jsonable_encoder(err))
 
+    @staticmethod
+    def fromException(e):
+        return ApiException(code_error, str(e))
+
 
 def missing_signature():
     return ApiException(code_missing_signature, "Missing signature").response()

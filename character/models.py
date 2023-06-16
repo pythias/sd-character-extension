@@ -59,6 +59,14 @@ class CaptionResponse(BaseModel):
     caption: str = Field(default="", title='Caption', description='The caption of the image.')
 
 
+class SegmentRequest(BaseModel):
+    image: str = Field(default="", title='Image', description='The image in base64 format.')
+
+
+class SegmentResponse(BaseModel):
+    segments: List[dict] = Field(default=None, title="Segments", description="The segments of the image.")
+
+
 def convert_response(request, response):
     params = response.parameters
     info = json.loads(response.info)
