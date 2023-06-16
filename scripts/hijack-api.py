@@ -56,7 +56,7 @@ class ApiHijack(api.Api):
 
 
     def character_v2_segment(self, request: models.SegmentRequest):
-        def f(request):
+        def f(request: models.SegmentRequest):
             segments = third_segments.segment(request.image, request.algorithm)
             return models.SegmentResponse(segments=segments)
 

@@ -77,8 +77,14 @@ class SegmentRequest(BaseModel):
     algorithm: SegmentAlgorithm = Field(default=SegmentAlgorithm.OFADE20K, title='Algorithm', description='The algorithm to use.')
 
 
+class SegmentItem(BaseModel):
+    label: str = Field(default="", title='Label', description='The label of the segment.')
+    score: float = Field(default=0.0, title='Score', description='The score of the segment.')
+    mask: str = Field(default="", title='Mask', description='The mask of the segment.')
+
+
 class SegmentResponse(BaseModel):
-    segments: List[dict] = Field(default=None, title="Segments", description="The segments of the image.")
+    segments: List[SegmentItem] = Field(default=None, title="Segments", description="The segments of the image.")
 
 
 def convert_response(request, response):
