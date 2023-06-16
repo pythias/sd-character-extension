@@ -1,12 +1,14 @@
 from unittest import case
 
-from torch import mode
-from character import models, errors, lib, third_segments
+from character import models, errors, lib, third_segments, requests
 from character.metrics import hT2I, hI2I, hSD
 
 from modules.api import api
+from modules import shared
 
 from fastapi.responses import JSONResponse
+
+import traceback
 
 class ApiHijack(api.Api):
     def __init__(self, *args, **kwargs):
@@ -76,19 +78,20 @@ class ApiHijack(api.Api):
         try:
             return func(request)
         except errors.ApiException as e:
+            if shared.cmd_opts.character_debug:
+                traceback.print_exc()
             return e.response()
         except Exception as e:
-            return errors.ApiException.fromException(e).response()
+            if shared.cmd_opts.character_debug:
+                traceback.print_exc()
+                return errors.ApiException(errors.code_error, message=vars(e).get('detail', '')).response()
+            else:
+                return errors.ApiException.fromException(e).response()
         
 
     def _queued_call(self, func, request):
         with self.queue_lock:
-            try:
-                return func(request)
-            except errors.ApiException as e:
-                return e.response()
-            except Exception as e:
-                return errors.ApiException.fromException(e).response()
+            return self._api_call(func, request)
         
 
 api.Api = ApiHijack

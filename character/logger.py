@@ -32,8 +32,11 @@ def create_logger():
         handler.setFormatter(ColoredFormatter("[%(levelname)s]%(asctime)s - %(server_name)s - %(server_version)s - %(request_id)s - %(message)s"))
         logger.addHandler(handler)
 
-    loglevel = getattr(logging, shared.cmd_opts.character_log_level.upper(), None)
-    logger.setLevel(loglevel)
+    if shared.cmd_opts.character_debug:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
+
     return logger
 
 
