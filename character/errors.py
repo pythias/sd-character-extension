@@ -18,6 +18,8 @@ code_character_nsfw = 100012
 
 code_character_unknown_algorithm = 100101
 
+code_not_ready_yet = 100102
+
 class ApiException(HTTPException):
     def __init__(
         self,

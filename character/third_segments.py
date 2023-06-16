@@ -1,3 +1,4 @@
+from curses import meta
 from character.metrics import hSegment
 from character import lib, errors, models
 
@@ -14,41 +15,52 @@ import torch
 
 _OFF_WHITE = (1.0, 1.0, 1.0)
 
+
 def segment(image_b64, algorithm):
-    if algorithm == models.SegmentAlgorithm.UFADE20K:
-        return segment_ufade20k(image_b64)
-    elif algorithm == models.SegmentAlgorithm.OFCOCO:
+    if algorithm == models.SegmentAlgorithm.OFCOCO:
         return segment_ofcoco(image_b64)
     elif algorithm == models.SegmentAlgorithm.OFADE20K:
         return segment_ofade20k(image_b64)
     else:
-        raise errors.ApiException(errors.code_character_unknown_algorithm, "Unknown algorithm")
+        return segment_ufade20k(image_b64)
+
 
 @hSegment.time()
 def segment_ufade20k(image_b64):
+    raise errors.ApiException(errors.code_not_ready_yet, "Not ready to open yet")
 
-    return []
 
 @hSegment.time()
 def segment_ofcoco(image_b64):
-    return []
+    global model_oneformer_coco
+    if model_oneformer_coco is None:
+        from annotator.oneformer import OneformerDetector
+        model_oneformer_coco = OneformerDetector(OneformerDetector.configs["coco"])
+    
+    return _run(image_b64, model_oneformer_coco)
+
 
 @hSegment.time()
 def segment_ofade20k(image_b64):
-    img = HWC3(np.asarray(decode_base64_to_image(image_b64)))
-    img, remove_pad = processor.resize_image_with_pad(img, 512)
-
     global model_oneformer_ade20k
     if model_oneformer_ade20k is None:
         from annotator.oneformer import OneformerDetector
         model_oneformer_ade20k = OneformerDetector(OneformerDetector.configs["ade20k"])
     
-    return _run(img, model_oneformer_ade20k.model, model_oneformer_ade20k.metadata, remove_pad)
+    return _run(image_b64, model_oneformer_ade20k)
 
     
+def _run(b64, preprocessor):
+    if preprocessor.model is None:
+        preprocessor.load_model()
 
-def _run(img, predictor, metadata, remove_pad):
+    preprocessor.model.model.to(preprocessor.device)    
+    predictor = preprocessor.model
+    metadata = preprocessor.metadata
     segments = []
+
+    img = HWC3(np.asarray(decode_base64_to_image(b64)))
+    img, remove_pad = processor.resize_image_with_pad(img, 512)
 
     # copy from sd-webui-controlnet/annotator/oneformer/api.py
     predictions = predictor(img[:, :, ::-1], "semantic") 
@@ -77,7 +89,7 @@ def _run(img, predictor, metadata, remove_pad):
             area_threshold=None,
             is_text=False,
         )
-        result = visualizer_map.get_image()
+        result = visualizer_map.output.get_image()
         result = remove_pad(result)
 
         segment = models.SegmentItem(label = text, score = 1.0, mask = lib.encode_to_base64(result))
