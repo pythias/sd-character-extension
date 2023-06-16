@@ -111,16 +111,7 @@ def deepbooru_b64img(image_b64, throw_exception = False):
 
 
 def wb14_b64img(image_b64, throw_exception = False):
-    if isinstance(image_b64, str):
-        img = decode_base64_to_image(image_b64)
-    else:
-        img = image_b64
-
-    caption = deepbooru.model.tag(img.convert('RGB'))
-    if throw_exception and is_empty_caption(caption):
-        raise HTTPException(status_code=422, detail="Interrogate fail")
-
-    return caption
+    pass
 
 
 def is_empty_caption(caption):

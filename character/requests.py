@@ -71,10 +71,11 @@ def clear_temporary_extras(request):
     """
     瘦身，清除临时参数
     """
-    for key in list(request.extra_generation_params[names.Name].keys()):
+    params = request.extra_generation_params[names.Name]
+    for key in list(params.keys()):
         if key.startswith("image_"):
-            del request.extra_generation_params[names.Name][key]
-
+            del params[key]
+    
 
 def get_extra_value(request, key, default):
     """

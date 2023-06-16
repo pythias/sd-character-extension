@@ -1,6 +1,8 @@
+from email.mime import image
 import json
 import time
 import logging
+from click import prompt
 
 from pydantic import BaseModel, Field
 from typing import List
@@ -47,6 +49,14 @@ class V2ImageResponse(BaseModel):
     parameters: dict
     info: dict
     faces: List[str]
+
+
+class CaptionRequest(BaseModel):
+    image: str = Field(default="", title='Image', description='The image in base64 format.')
+
+
+class CaptionResponse(BaseModel):
+    caption: str = Field(default="", title='Caption', description='The caption of the image.')
 
 
 def convert_response(request, response):
