@@ -16,6 +16,10 @@ code_character_was_blank = 100010
 code_character_api_only = 100011
 code_character_nsfw = 100012
 
+code_character_unknown_algorithm = 100101
+
+code_not_ready_yet = 100102
+
 class ApiException(HTTPException):
     def __init__(
         self,
@@ -34,6 +38,10 @@ class ApiException(HTTPException):
         }
         return JSONResponse(status_code=vars(self).get('status_code', 400), content=jsonable_encoder(err))
 
+    @staticmethod
+    def fromException(e):
+        return ApiException(code_error, str(e))
+
 
 def missing_signature():
     return ApiException(code_missing_signature, "Missing signature").response()
@@ -49,3 +57,4 @@ def nsfw():
 
 def raise_nsfw():
     raise ApiException(code_character_nsfw, "nsfw")
+

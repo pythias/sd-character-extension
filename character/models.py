@@ -1,11 +1,12 @@
+from email.mime import image
 import json
 import time
 import logging
+from click import prompt
 
 from pydantic import BaseModel, Field
 from typing import List
-
-from sympy import true
+from enum import Enum
 
 from character import lib, output, requests, errors, names, third_cn, third_face
 from character.metrics import cNSFW, cIllegal, cFace
@@ -20,12 +21,10 @@ high_quality_prompts = "8k,high quality,<lora:add_detail:1>"
     
 
 class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
-    # 大部分参数都丢 extra_generation_params 里面（默认值那种，省得定义那么多）
     steps: int = Field(default=20, title='Steps', description='Number of steps.')
     sampler_name: str = Field(default="Euler a", title='Sampler', description='The sampler to use.')
     hr_upscaler: str = Field(default="Latent", title='HR Upscaler', description='The HR upscaler to use.')
     denoising_strength: float = Field(default=0.5, title='Denoising Strength', description='The strength of the denoising.')
-    character_image: str = Field(default="", title='Character Image', description='The character image in base64 format.')
     character_extra: dict = Field(default={}, title='Character Extra Params', description='Character Extra Params.')
     extra_generation_params: dict = Field(default={}, title='Extra Generation Params', description='Extra Generation Params.')
 
@@ -35,7 +34,6 @@ class CharacterV2Img2ImgRequest(StableDiffusionImg2ImgProcessingAPI):
     sampler_name: str = Field(default="Euler a", title='Sampler', description='The sampler to use.')
     image_cfg_scale: float = Field(default=7.0, title='Image Scale', description='The scale of the image.')
     denoising_strength: float = Field(default=0.5, title='Denoising Strength', description='The strength of the denoising.')
-    character_input_image: str = Field(default="", title='Character Input Image', description='The character input image in base64 format.')
     character_extra: dict = Field(default={}, title='Character Extra Params', description='Character Extra Params.')
     extra_generation_params: dict = Field(default={}, title='Extra Generation Params', description='Extra Generation Params.')
     width: int = Field(default=0, title='Width', description='The width of the image.')
@@ -47,6 +45,43 @@ class V2ImageResponse(BaseModel):
     parameters: dict
     info: dict
     faces: List[str]
+
+
+class CaptionAlgorithm(Enum):
+    DEEPBOORU = "deepbooru"
+    CLIP = "clip"
+    BLIP = "blip"
+    WB14 = "wb14"
+
+
+class CaptionRequest(BaseModel):
+    image: str = Field(default="", title='Image', description='The image in base64 format.')
+    algorithm: CaptionAlgorithm = Field(default=CaptionAlgorithm.DEEPBOORU, title='Algorithm', description='The algorithm to use.')
+
+
+class CaptionResponse(BaseModel):
+    caption: str = Field(default="", title='Caption', description='The caption of the image.')
+
+
+class SegmentAlgorithm(Enum):
+    UFADE20K = "ufade20k"
+    OFCOCO = "ofcoco"
+    OFADE20K = "ofade20k"
+
+
+class SegmentRequest(BaseModel):
+    image: str = Field(default="", title='Image', description='The image in base64 format.')
+    algorithm: SegmentAlgorithm = Field(default=SegmentAlgorithm.OFADE20K, title='Algorithm', description='The algorithm to use.')
+
+
+class SegmentItem(BaseModel):
+    label: str = Field(default="", title='Label', description='The label of the segment.')
+    score: float = Field(default=0.0, title='Score', description='The score of the segment.')
+    mask: str = Field(default="", title='Mask', description='The mask of the segment.')
+
+
+class SegmentResponse(BaseModel):
+    segments: List[SegmentItem] = Field(default=None, title="Segments", description="The segments of the image.")
 
 
 def convert_response(request, response):
@@ -64,15 +99,7 @@ def convert_response(request, response):
 
     faces = []
     source_images = response.images
-    if third_face.require_face_repairer(request) and not third_face.keep_original_image(request):
-        batch_size = requests.get_value(request, "batch_size", 1)
-        multi_count = requests.get_multi_count(request)
-        source_images = source_images[(batch_size * multi_count):]
-
-        lib.log(f"remove original images after face repair, batch: {batch_size}, multi: {multi_count}, size:{len(response.images)} -> {len(source_images)}", logging.DEBUG)
-    
     crop_face = third_face.require_face(request)
-
     image_urls = []
     safety_images = []
     index = 0
@@ -145,20 +172,20 @@ def _prepare_request(request):
 
     _remove_character_fields(request)
 
+    third_cn.apply_args(request)
+    _apply_multi_process(request)
+
 
 def prepare_request_i2i(request):
     _prepare_request(request)
-    third_cn.apply_args(request)
 
     image_b64 = requests.get_i2i_image(request)
     request.init_images = [image_b64]
-    _apply_multi_process(request)
+
 
 def prepare_request_t2i(request):
     _prepare_request(request)
-    third_cn.apply_args(request)
-    _apply_multi_process(request)
-
+    
 
 def _remove_character_fields(request):
     params = vars(request)

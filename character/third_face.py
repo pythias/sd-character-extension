@@ -11,9 +11,6 @@ from modules import scripts, processing
 from character import lib, requests
 from character.metrics import hDF
 
-# from modules.paths_internal import extensions_dir
-# sys.path.append(os.path.join(extensions_dir, "sd-face-editor"))
-
 REPAIRER_NAME = "face editor ex"
 CROPPER_NAME = "FaceCropper"
 
@@ -65,7 +62,6 @@ def require_face(request):
 
 
 def require_face_repairer(request):
-    # return False
     return requests.get_extra_value(request, "repair_face", True)
 
 
@@ -79,6 +75,7 @@ def apply_face_repairer(p):
     
     values = requests.get_extra_value(p, 'face_repair_params', {})
     values["enabled"] = True
+    values["show_original_image"] = False
     if "prompt_for_face" not in values:
         values["prompt_for_face"] = "beauty"
 

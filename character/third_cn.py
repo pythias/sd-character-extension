@@ -1,7 +1,7 @@
 import os
 import sys
 
-from character import lib, requests
+from character import lib, requests, names
 from modules.paths_internal import extensions_dir
 sys.path.append(os.path.join(extensions_dir, "sd-webui-controlnet"))
 from scripts import external_code, global_state, controlnet_version
@@ -37,43 +37,32 @@ def _find_closest_cn_model_name(search: str):
 lib.log(f"ControlNet Loaded, version: {control_net_version}, {_find_closest_cn_model_name('lineart')}, {_find_closest_cn_model_name('openpose')}, {_find_closest_cn_model_name('tile')}")
 
 def apply_args(request):
-    units = [
-        _get_cn_image_unit(request),
-        _get_cn_pose_unit(request),
-        _get_cn_empty_unit(),
-        _get_cn_empty_unit(),
-        _get_cn_empty_unit()
-    ]
+    units = []
+    units.append(_get_cn_image_unit(request, 0, default_control_net_module, default_control_net_model))
+    units.append(_get_cn_image_unit(request, 1))
+    units.append(_get_cn_image_unit(request, 2))
+    units.append(_get_cn_image_unit(request, 3))
+    units.append(_get_cn_image_unit(request, 4))
 
     requests.update_script_args(request, "ControlNet", [_to_process_unit(unit) for unit in units])
 
-def _get_cn_image_unit(request):
+def _get_cn_image_unit(request, i, default_module = "", default_model = ""):
     unit = _get_cn_empty_unit()
-    image_b64 = requests.get_cn_image(request)
+    image_b64 = requests.get_extra_value(request, f"image_cn_{i}", default_module)
+    processor = requests.get_extra_value(request, f"processor_cn_{i}", default_model)
+    model = requests.get_extra_value(request, f"model_cn_{i}", "")
     img = lib.valid_base64(image_b64)
-    if not img:
+    if not img and not model:
+        # 部分处理器可以不用image
         return unit
 
     # processor_res
-    unit["processor_res"] = min(max(img.size[0:2]), 512)
-    unit["module"] = requests.get_extra_value(request, "cn_preprocessor", default_control_net_module)
-    unit["model"] = requests.get_extra_value(request, "cn_model", default_control_net_model)
+    if img:
+        unit["processor_res"] = min(max(img.size[0:2]), 512)
+
+    unit["module"] = processor
+    unit["model"] = model
     unit["image"] = image_b64
-    unit["enabled"] = True
-    return unit
-
-
-def _get_cn_pose_unit(request):
-    unit = _get_cn_empty_unit()
-    pose_b64 = requests.get_pose_image(request)
-    img = lib.valid_base64(pose_b64)
-    if not img:
-        return unit
-
-    unit["processor_res"] = min(max(img.size[0:2]), 512)
-    unit["module"] = requests.get_extra_value(request, "pose_preprocessor", default_open_pose_module)
-    unit["model"] = requests.get_extra_value(request, "pose_model", default_open_pose_model)
-    unit["image"] = pose_b64
     unit["enabled"] = True
     return unit
 

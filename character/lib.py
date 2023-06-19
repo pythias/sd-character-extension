@@ -14,7 +14,7 @@ from starlette.exceptions import HTTPException
 from character.metrics import hCaption
 from character import logger
 
-version_flag = "v1.2.17"
+version_flag = "v1.3.0"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")
@@ -40,6 +40,15 @@ def set_request_id(id):
 
 def get_request_id():
     return request_id
+
+
+def debug(message):
+    log(message, logging.DEBUG)
+
+
+def error(message):
+    log(message, logging.ERROR)
+
 
 def log(message, level = logging.INFO):
     _logger.log(level, message, extra={
@@ -111,16 +120,7 @@ def deepbooru_b64img(image_b64, throw_exception = False):
 
 
 def wb14_b64img(image_b64, throw_exception = False):
-    if isinstance(image_b64, str):
-        img = decode_base64_to_image(image_b64)
-    else:
-        img = image_b64
-
-    caption = deepbooru.model.tag(img.convert('RGB'))
-    if throw_exception and is_empty_caption(caption):
-        raise HTTPException(status_code=422, detail="Interrogate fail")
-
-    return caption
+    return ""
 
 
 def is_empty_caption(caption):
