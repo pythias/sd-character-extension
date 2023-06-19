@@ -27,8 +27,9 @@ class Script(scripts.Script):
         metrics.count_request(p)
         third_face.apply_face_repairer(p)
         
-        image_b64 = requests.get_cn_image(p)
+        image_b64 = requests.get_extra_value(p, names.ParamControlNet0, "")
         if not image_b64 or len(image_b64) < lib.min_base64_image_size:
+            models.final_prompts_before_processing(p)
             return
         
         # 图片信息的处理

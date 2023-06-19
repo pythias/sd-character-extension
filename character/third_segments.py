@@ -89,7 +89,7 @@ def _run(b64, preprocessor):
             edge_color=_OFF_WHITE,
             text=text,
             alpha=0.8,
-            area_threshold=None,
+            area_threshold=10,
             is_text=False,
         )
         result = visualizer_map.output.get_image()

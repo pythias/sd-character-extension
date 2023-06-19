@@ -21,12 +21,10 @@ high_quality_prompts = "8k,high quality,<lora:add_detail:1>"
     
 
 class CharacterV2Txt2ImgRequest(StableDiffusionTxt2ImgProcessingAPI):
-    # 大部分参数都丢 extra_generation_params 里面（默认值那种，省得定义那么多）
     steps: int = Field(default=20, title='Steps', description='Number of steps.')
     sampler_name: str = Field(default="Euler a", title='Sampler', description='The sampler to use.')
     hr_upscaler: str = Field(default="Latent", title='HR Upscaler', description='The HR upscaler to use.')
     denoising_strength: float = Field(default=0.5, title='Denoising Strength', description='The strength of the denoising.')
-    character_image: str = Field(default="", title='Character Image', description='The character image in base64 format.')
     character_extra: dict = Field(default={}, title='Character Extra Params', description='Character Extra Params.')
     extra_generation_params: dict = Field(default={}, title='Extra Generation Params', description='Extra Generation Params.')
 
@@ -36,7 +34,6 @@ class CharacterV2Img2ImgRequest(StableDiffusionImg2ImgProcessingAPI):
     sampler_name: str = Field(default="Euler a", title='Sampler', description='The sampler to use.')
     image_cfg_scale: float = Field(default=7.0, title='Image Scale', description='The scale of the image.')
     denoising_strength: float = Field(default=0.5, title='Denoising Strength', description='The strength of the denoising.')
-    character_input_image: str = Field(default="", title='Character Input Image', description='The character input image in base64 format.')
     character_extra: dict = Field(default={}, title='Character Extra Params', description='Character Extra Params.')
     extra_generation_params: dict = Field(default={}, title='Extra Generation Params', description='Extra Generation Params.')
     width: int = Field(default=0, title='Width', description='The width of the image.')
@@ -175,20 +172,20 @@ def _prepare_request(request):
 
     _remove_character_fields(request)
 
+    third_cn.apply_args(request)
+    _apply_multi_process(request)
+
 
 def prepare_request_i2i(request):
     _prepare_request(request)
-    third_cn.apply_args(request)
 
     image_b64 = requests.get_i2i_image(request)
     request.init_images = [image_b64]
-    _apply_multi_process(request)
+
 
 def prepare_request_t2i(request):
     _prepare_request(request)
-    third_cn.apply_args(request)
-    _apply_multi_process(request)
-
+    
 
 def _remove_character_fields(request):
     params = vars(request)

@@ -15,20 +15,11 @@ def multi_enabled(request):
 def set_multi_count(request, count):
     update_extra(request, names.ParamMultiCount, count)
 
-def get_multi_count(request):
-    return get_extra_value(request, names.ParamMultiCount, 1)
-
 def set_has_illegal_words(request):
     update_extra(request, names.ExtraHasIllegalWords, True)
 
 def has_illegal_words(request):
     return get_extra_value(request, names.ExtraHasIllegalWords, False)
-
-def get_cn_image(request):
-    return get_extra_value(request, names.ParamLineArt, "")
-
-def get_pose_image(request):
-    return get_extra_value(request, names.ParamPose, "")
 
 def get_i2i_image(request):
     return get_extra_value(request, names.ParamImage, "")
@@ -46,18 +37,7 @@ def extra_init(request):
 
     # 删除自定义的扩展，后续跟这个就无关了，直接用 extra_generation_params
     delattr(request, names.ParamExtra)
-
-    # 对老版本请求的兼容
-    # character_image -> cn_image
-    # character_input_image -> i2i_image
-    cn_image_base64 = get_value(request, "character_image", "")
-    if cn_image_base64 != "":
-        update_extra(request, names.ParamLineArt, cn_image_base64)
     
-    i2i_image_base64 = get_value(request, "character_input_image", "")
-    if i2i_image_base64 != "":
-        update_extra(request, names.ParamImage, i2i_image_base64)
-
     set_request_from_api(request)
 
 

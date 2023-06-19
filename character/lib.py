@@ -14,7 +14,7 @@ from starlette.exceptions import HTTPException
 from character.metrics import hCaption
 from character import logger
 
-version_flag = "v1.2.17"
+version_flag = "v1.3.0"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")

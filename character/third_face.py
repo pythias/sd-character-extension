@@ -62,7 +62,6 @@ def require_face(request):
 
 
 def require_face_repairer(request):
-    # return False
     return requests.get_extra_value(request, "repair_face", True)
 
 
