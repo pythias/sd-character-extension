@@ -120,7 +120,7 @@ def deepbooru_b64img(image_b64, throw_exception = False):
 
 
 def wb14_b64img(image_b64, throw_exception = False):
-    pass
+    return ""
 
 
 def is_empty_caption(caption):

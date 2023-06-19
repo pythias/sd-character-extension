@@ -33,6 +33,9 @@ def get_pose_image(request):
 def get_i2i_image(request):
     return get_extra_value(request, names.ParamImage, "")
 
+def is_tryon(request):
+    return get_extra_value(request, names.ParamTryOnModel, False)
+
 def extra_init(request):
     request.extra_generation_params.setdefault(names.Name, {})
     extra = get_value(request, names.ParamExtra, {})
@@ -115,3 +118,23 @@ def _update_script_args(p, name, args):
             break
 
 get_value = lib.get_or_default
+
+def update_scripts_order(p, script, index):
+    if p.scripts is None and not hasattr(p.scripts, "alwayson_scripts"):
+        return
+    
+    if index >= len(p.scripts.alwayson_scripts) or index < -len(p.scripts.alwayson_scripts):
+        return
+
+    if p.scripts.alwayson_scripts[index] == script.title():
+        return
+    
+    for i, e in enumerate(p.scripts.alwayson_scripts):
+        if e.title() != script.title():
+            continue
+
+        p.scripts.alwayson_scripts.pop(i)
+        if index == -1:
+            p.scripts.alwayson_scripts.append(script)
+        else:
+            p.scripts.alwayson_scripts.insert(index + 1, script)

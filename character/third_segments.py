@@ -5,7 +5,7 @@ from character import lib, errors, models
 from modules.api.api import decode_base64_to_image
 
 from scripts import processor
-from scripts.processor import model_oneformer_ade20k
+from scripts.processor import model_oneformer_ade20k, model_oneformer_coco
 
 from annotator.util import HWC3
 from annotator.oneformer.oneformer.demo.visualizer import Visualizer, ColorMode
@@ -62,7 +62,6 @@ def _run(b64, preprocessor):
     img = HWC3(np.asarray(decode_base64_to_image(b64)))
     img, remove_pad = processor.resize_image_with_pad(img, 512)
 
-    # copy from sd-webui-controlnet/annotator/oneformer/api.py
     predictions = predictor(img[:, :, ::-1], "semantic") 
     sem_seg = predictions["sem_seg"].argmax(dim=0).cpu()
     if isinstance(sem_seg, torch.Tensor):
@@ -70,6 +69,10 @@ def _run(b64, preprocessor):
     labels, areas = np.unique(sem_seg, return_counts=True)
     sorted_idxs = np.argsort(-areas).tolist()
     labels = labels[sorted_idxs]
+
+    # 目前 coco 和 ade20k 的label列表都还不够详细到衣服，无法实现换装的效果。
+    # 方案2：可以通过脸抠出来保留，人扣出来重新绘制，两次ControlNet的方式。
+    
     for label in filter(lambda l: l < len(metadata.stuff_classes), labels):
         try:
             mask_color = [x / 255 for x in metadata.stuff_colors[label]]

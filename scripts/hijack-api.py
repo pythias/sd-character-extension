@@ -20,6 +20,7 @@ class ApiHijack(api.Api):
         self.add_api_route("/character/v2/expand", self.character_v2_expand, tags=["Character"], methods=["POST"], response_model=models.V2ImageResponse)
         self.add_api_route("/character/v2/caption", self.character_v2_caption, tags=["Character"], methods=["POST"], response_model=models.CaptionResponse)
         self.add_api_route("/character/v2/segment", self.character_v2_segment, tags=["Character"], methods=["POST"], response_model=models.SegmentResponse)
+        self.add_api_route("/character/v2/tryon", self.character_v2_tryon, tags=["Character"], methods=["POST"], response_model=models.V2ImageResponse)
 
         lib.log("API loaded")
 
@@ -37,11 +38,18 @@ class ApiHijack(api.Api):
 
 
     def character_v2_repaint(self, request: models.CharacterV2Txt2ImgRequest):
-        pass
+        models.prepare_request_t2i(request)
+        return self._generate(self.text2imgapi, request)
     
 
     def character_v2_expand(self, request: models.CharacterV2Txt2ImgRequest):
-        pass
+        models.prepare_request_t2i(request)
+        return self._generate(self.text2imgapi, request)
+    
+
+    def character_v2_tryon(self, request: models.CharacterV2Txt2ImgRequest):
+        models.prepare_request_t2i(request)
+        return self._generate(self.text2imgapi, request)
 
 
     def character_v2_caption(self, request: models.CaptionRequest):
