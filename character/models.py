@@ -157,7 +157,7 @@ def convert_response(request, response):
         return V2ImageResponse(images=safety_images, parameters=params, info=info, faces=faces)
 
 
-def _log_request(request):
+def log_request(request):
     request_copy = deepcopy(request)
     data = vars(request_copy)
     data = lib.truncate_large_fields(data)
@@ -165,8 +165,7 @@ def _log_request(request):
 
 
 def _prepare_request(request):
-    _log_request(request)
-
+    log_request(request)
     requests.extra_init(request)
     
     if request.negative_prompt is None:
