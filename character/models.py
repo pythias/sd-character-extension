@@ -1,9 +1,7 @@
-from email.mime import image
 import json
 import time
-import logging
-from click import prompt
 
+from copy import deepcopy
 from pydantic import BaseModel, Field
 from typing import List
 from enum import Enum
@@ -85,7 +83,6 @@ class SegmentResponse(BaseModel):
 
 
 def convert_response(request, response):
-    params = response.parameters
     info = json.loads(response.info)
 
     if requests.is_debug(request):
@@ -144,7 +141,9 @@ def convert_response(request, response):
     if len(safety_images) == 0:
         return errors.nsfw()
 
-    if not requests.is_debug(request):
+    if requests.is_debug(request):
+        params = response.parameters
+    else:
         params = {}
 
     if output.required_save(request):
@@ -158,7 +157,16 @@ def convert_response(request, response):
         return V2ImageResponse(images=safety_images, parameters=params, info=info, faces=faces)
 
 
+def _log_request(request):
+    request_copy = deepcopy(request)
+    data = vars(request_copy)
+    data = lib.truncate_large_fields(data)
+    lib.log(f"request, data: {data}")
+
+
 def _prepare_request(request):
+    _log_request(request)
+
     requests.extra_init(request)
     
     if request.negative_prompt is None:

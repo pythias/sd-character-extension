@@ -14,7 +14,7 @@ from starlette.exceptions import HTTPException
 from character.metrics import hCaption
 from character import logger
 
-version_flag = "v1.3.0"
+version_flag = "v1.3.1"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")
@@ -213,3 +213,13 @@ def to_multi_prompts(prompt: str):
     
     # join the individual tuples in the cartesian product with ','
     return [','.join(tup) for tup in product]
+
+
+def truncate_large_fields(data: dict, max_size: int = 100, replacement: str = '...[truncated]') -> dict:
+    for key, value in data.items():
+        if isinstance(value, dict):
+            data[key] = truncate_large_fields(value, max_size, replacement)
+        elif isinstance(value, str) and len(value) > max_size:
+            data[key] = value[:max_size] + replacement
+    return data
+
