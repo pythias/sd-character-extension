@@ -17,8 +17,11 @@ class Script(scripts.Script):
     def ui(self, is_img2img):
         return [gr.Label(visible=False)]
     
-    def process(self, p, *args):
+    def before_process_batch(self, p, *args, **kwargs):
         self.started_at = time.perf_counter()
+        requests.update_scripts_order(p, self, -1)
+
+    def process(self, p, *args):
         requests.update_extras(p, {
             "name": shared.cmd_opts.character_server_name,
             "version": lib.version_flag,
@@ -33,4 +36,8 @@ class Script(scripts.Script):
             processed.infotexts[i] = f"{info}, Elapsed: {elapsed:.3f}"
 
         for i in range(len(processed.images)):
-            processed.images[i].info["parameters"] = f"{processed.images[i].info['parameters']}, Elapsed: {elapsed:.3f}"
+            if i < len(processed.infotexts):
+                info =  processed.infotexts[i]
+            else:
+                info = f"{processed.images[i].info['parameters']}, Elapsed: {elapsed:.3f}"
+            processed.images[i].info["parameters"] = info

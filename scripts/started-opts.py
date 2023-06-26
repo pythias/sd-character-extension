@@ -13,6 +13,7 @@ def update_options(_, app):
         'interrogate_clip_min_length': 24,
         'interrogate_clip_max_length': 48,
         'interrogate_return_ranks': True,
+        'face_editor_script_index': -3,
     }
 
     shared.opts.data.update(updated_options)

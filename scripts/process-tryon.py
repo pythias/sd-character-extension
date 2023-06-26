@@ -21,7 +21,7 @@ class TryOnScript(scripts.Script):
         if self.__is_running:
             return
         
-        requests.update_scripts_order(p, self, -1)
+        requests.update_scripts_order(p, self, -2)
 
     def postprocess(self, o, res, *args):
         if self.__is_running:
