@@ -221,5 +221,10 @@ def truncate_large_fields(data: dict, max_size: int = 2000, truncated_size = 20,
             data[key] = truncate_large_fields(value, max_size, truncated_size, replacement)
         elif isinstance(value, str) and len(value) > max_size:
             data[key] = value[:truncated_size] + replacement
+        elif isinstance(value, list):
+            data[key] = [truncate_large_fields(item, max_size, truncated_size, replacement) for item in value]
+        else:
+            data[key] = "[unhandled type]"
+
     return data
 

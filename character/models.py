@@ -162,9 +162,12 @@ def convert_response(request, response):
 
 
 def _log_response(response: V2ImageResponse):
-    data = vars(response)
+    response_copy = deepcopy(response)
+    # del response_copy.info
+    # del response_copy.parameters
+    data = vars(response_copy)
     data = lib.truncate_large_fields(data)
-    lib.log(f"response, image: {len(response.images)}, face: {len(response.faces)}, data: {data}")
+    lib.log(f"response, count: {len(response_copy.images)}/{len(response_copy.faces)}, data: {data}")
 
 
 def _log_request(request):
