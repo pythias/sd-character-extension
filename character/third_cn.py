@@ -47,15 +47,22 @@ def _get_cn_image_unit(request, i):
         default_model = None
         default_preprocessor = None
 
-    model = requests.get_extra_value(request, f"model_cn_{i}", default_model)
-    model = _find_closest_cn_model_name(model)
-    if not model:
-        # 如果找不到处理的模型，则不处理
-        return _get_cn_disabled_unit()
+    preprocessor = requests.get_extra_value(request, f"processor_cn_{i}", default_preprocessor)
 
-    # 核心参数处理
+    # todo 其他场景的处理
+    if preprocessor in ["reference_adain", "reference_adain+attn", "reference_only"]:
+        # preprocessor 为 reference_adain, reference_adain+attn, reference_only 时，model为None
+        model = None
+    else:
+        model = requests.get_extra_value(request, f"model_cn_{i}", default_model)
+        model = _find_closest_cn_model_name(model)
+        if not model:
+            # 如果找不到处理的模型，则不处理
+            return _get_cn_disabled_unit()
+
+    # 核心参数
     unit = _get_cn_empty_unit()
-    unit["module"] = requests.get_extra_value(request, f"processor_cn_{i}", default_preprocessor)
+    unit["module"] = preprocessor
     unit["model"] = model
     unit["image"] = image_b64
 
@@ -69,7 +76,7 @@ def _get_cn_image_unit(request, i):
     # 其他参数
     _fill_unit_with_extra(unit, request, i)
 
-    # todo 特殊场景的处理，比如inpainting的mask
+    
     return unit
 
 
