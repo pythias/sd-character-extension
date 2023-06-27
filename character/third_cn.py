@@ -39,7 +39,7 @@ def apply_args(request):
 
 def _get_cn_image_unit(request, i):
     image_b64 = requests.get_extra_value(request, f"image_cn_{i}", None)
-    if not image_b64:
+    if image_b64:
         # 当传递了图像参数时，默认使用lineart处理
         default_model = "lineart"
         default_preprocessor = "lineart_realistic"
