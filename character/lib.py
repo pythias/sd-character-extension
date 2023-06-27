@@ -215,16 +215,12 @@ def to_multi_prompts(prompt: str):
     return [','.join(tup) for tup in product]
 
 
-def truncate_large_fields(data: dict, max_size: int = 2000, truncated_size = 20, replacement: str = '...[truncated]') -> dict:
-    for key, value in data.items():
-        if isinstance(value, dict):
-            data[key] = truncate_large_fields(value, max_size, truncated_size, replacement)
-        elif isinstance(value, str) and len(value) > max_size:
-            data[key] = value[:truncated_size] + replacement
-        elif isinstance(value, list):
-            data[key] = [truncate_large_fields(item, max_size, truncated_size, replacement) for item in value]
-        else:
-            data[key] = "[unhandled type]"
-
-    return data
-
+def truncate_large_value(data, max_size: int = 2000, truncated_size = 20, replacement: str = '...[truncated]'):
+    if isinstance(data, dict):
+        return {key: truncate_large_value(value, max_size, truncated_size, replacement) for key, value in data.items()}
+    elif isinstance(data, str) and len(data) > max_size:
+        return data[:truncated_size] + replacement
+    elif isinstance(data, list):
+        return [truncate_large_value(item, max_size, truncated_size, replacement) for item in data]
+    else:
+        return data

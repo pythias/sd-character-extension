@@ -166,14 +166,14 @@ def _log_response(response: V2ImageResponse):
     # del response_copy.info
     # del response_copy.parameters
     data = vars(response_copy)
-    data = lib.truncate_large_fields(data)
+    data = lib.truncate_large_value(data)
     lib.log(f"response, count: {len(response_copy.images)}/{len(response_copy.faces)}, data: {data}")
 
 
 def _log_request(request):
     request_copy = deepcopy(request)
     data = vars(request_copy)
-    data = lib.truncate_large_fields(data)
+    data = lib.truncate_large_value(data)
     lib.log(f"request, data: {data}")
 
 
