@@ -10,9 +10,10 @@ from character import lib, output, requests, errors, names, third_cn, third_face
 from character.metrics import cNSFW, cIllegal, cFace
 from character.nsfw import image_has_illegal_words, image_nsfw_score, prompt_has_illegal_words
 
-from modules import processing
+from modules import processing, shared
 from modules.processing import StableDiffusionProcessing
 from modules.api.models import StableDiffusionTxt2ImgProcessingAPI, StableDiffusionImg2ImgProcessingAPI
+from modules.sd_models import checkpoints_list
 
 negative_default_prompts = "BadDream,FastNegativeEmbedding"
 high_quality_prompts = "8k,high quality,<lora:add_detail:1>"
@@ -264,3 +265,16 @@ def final_prompts_before_processing(p):
     p.setup_prompts()
 
     requests.clear_temporary_extras(p)
+
+
+def load_models():
+    started_at = time.time()
+    shared.refresh_checkpoints()
+    for name in list(checkpoints_list.keys()):
+        checkpoint = checkpoints_list[name]
+        if checkpoint.sha256 is None:
+            lib.error(f"Hashing {name}")
+            sd_model_hash = checkpoint.calculate_shorthash()
+            lib.log(f"Hashed {name} to {sd_model_hash}")
+
+    lib.log(f"Checkpoints has been refreshed in {(time.time() - started_at):.3f} seconds")

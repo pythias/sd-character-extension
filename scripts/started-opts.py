@@ -1,8 +1,9 @@
 import sys
 import os
 import time
-from character import lib, third_extra, nsfw
+from character import lib, third_extra, nsfw, models
 from modules import shared, script_callbacks
+
 
 def update_options(_, app):
     updated_options = {
@@ -20,12 +21,9 @@ def update_options(_, app):
     shared.opts.data.update(updated_options)
     lib.log("Options has been set")
     
-    started_at = time.time()
-    shared.refresh_checkpoints()
-    lib.log(f"Checkpoints has been refreshed in {(time.time() - started_at):.3f} seconds")
-
     third_extra.load_extras()
     nsfw.load_models()
     lib.load_models()
+    models.load_models()
         
 script_callbacks.on_app_started(update_options)
