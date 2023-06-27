@@ -94,15 +94,14 @@ def convert_response(request, response):
         info["illegal"] = True
         return errors.nsfw()
 
-    faces = []
+    require_face = third_face.require_face(request)
+    require_url = output.required_save(request)
     source_images = response.images
-    crop_face = third_face.require_face(request)
-    image_urls = []
+
+    faces = []
     safety_images = []
     index = 0
     for base64_image in source_images:
-        image_url, image_file = output.save_image(base64_image)
-        image_urls.append(image_url)
         index += 1
 
         if requests.is_debug(request):
@@ -121,22 +120,33 @@ def convert_response(request, response):
         else:
             nsfw_score = image_nsfw_score(base64_image)
             if nsfw_score > 0.75:
-                lib.log(f"nsfw, score: {nsfw_score}, at {index}/{len(source_images)}, file: {image_file}")
+                lib.log(f"nsfw, score: {nsfw_score}, at {index}/{len(source_images)}")
                 cNSFW.inc()
                 continue
 
             if image_has_illegal_words(base64_image):
-                lib.log(f"illegal word, at {index}/{len(source_images)}, file: {image_file}")
+                lib.log(f"illegal word, at {index}/{len(source_images)}")
                 cIllegal.inc()
                 continue
 
-        safety_images.append(base64_image)
+        # 图片
+        if require_url:
+            image_url, _ = output.save_image(base64_image)
+            safety_images.append(image_url)
+        else:
+            safety_images.append(base64_image)
 
-        if crop_face:
-            # todo 脸部裁切，在高清修复脸部时有数据
+        # 头像 todo 脸部裁切，在高清修复脸部时有数据
+        if require_face:
             image_faces = third_face.crop(base64_image)
             cFace.inc(len(image_faces))
-            faces.extend(image_faces)
+
+            if require_url:
+                for b64 in image_faces:
+                    image_url, _ = output.save_image(b64)
+                    faces.append(image_url)
+            else:
+                faces.extend(image_faces)
 
     if len(safety_images) == 0:
         return errors.nsfw()
@@ -146,18 +156,18 @@ def convert_response(request, response):
     else:
         params = {}
 
-    if output.required_save(request):
-        face_urls = []
-        for b64 in faces:
-            image_url, _ = output.save_image(b64)
-            face_urls.append(image_url)
-
-        return V2ImageResponse(images=image_urls, parameters=params, info=info, faces=face_urls)
-    else:
-        return V2ImageResponse(images=safety_images, parameters=params, info=info, faces=faces)
+    v2_response = V2ImageResponse(images=safety_images, parameters=params, info=info, faces=faces)
+    _log_response(v2_response)
+    return v2_response
 
 
-def log_request(request):
+def _log_response(response: V2ImageResponse):
+    data = vars(response)
+    data = lib.truncate_large_fields(data)
+    lib.log(f"response, image: {len(response.images)}, face: {len(response.faces)}, data: {data}")
+
+
+def _log_request(request):
     request_copy = deepcopy(request)
     data = vars(request_copy)
     data = lib.truncate_large_fields(data)
@@ -165,7 +175,7 @@ def log_request(request):
 
 
 def _prepare_request(request):
-    log_request(request)
+    _log_request(request)
     requests.extra_init(request)
     
     if request.negative_prompt is None:
