@@ -1,7 +1,7 @@
 import gradio as gr
 import time
 
-from character import requests, lib
+from character import input, lib
 from modules import shared, scripts
 from modules.processing import Processed, program_version
 
@@ -19,10 +19,10 @@ class Script(scripts.Script):
     
     def before_process_batch(self, p, *args, **kwargs):
         self.started_at = time.perf_counter()
-        requests.update_scripts_order(p, self, -1)
+        input.update_scripts_order(p, self, -1)
 
     def process(self, p, *args):
-        requests.update_extras(p, {
+        input.update_extras(p, {
             "name": shared.cmd_opts.character_server_name,
             "version": lib.version_flag,
             "program_version": program_version(),

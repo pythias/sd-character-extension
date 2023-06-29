@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from typing import List
 from enum import Enum
 
-from character import lib, output, requests, errors, names, third_cn, third_face
+from character import input, lib, errors, names, third_cn, third_face
 from character.metrics import cNSFW, cIllegal, cFace
 from character.nsfw import image_has_illegal_words, image_nsfw_score, prompt_has_illegal_words
 
@@ -86,17 +86,17 @@ class SegmentResponse(BaseModel):
 def convert_response(request, response):
     info = json.loads(response.info)
 
-    if requests.is_debug(request):
+    if input.is_debug(request):
         info["nsfw-scores"] = []
         info["nsfw-words"] = []
 
     # 注意中途产生的扩展信息只有info中有，request在过程很多都是复制
-    if requests.has_illegal_words(info):
+    if input.has_illegal_words(info):
         info["illegal"] = True
         return errors.nsfw()
 
     require_face = third_face.require_face(request)
-    require_url = output.required_save(request)
+    require_url = input.required_save(request)
     source_images = response.images
 
     faces = []
@@ -105,7 +105,7 @@ def convert_response(request, response):
     for base64_image in source_images:
         index += 1
 
-        if requests.is_debug(request):
+        if input.is_debug(request):
             started_at = time.perf_counter()
             nsfw_score = image_nsfw_score(base64_image)
             seconds = time.perf_counter() - started_at
@@ -132,7 +132,7 @@ def convert_response(request, response):
 
         # 图片
         if require_url:
-            image_url, _ = output.save_image(base64_image)
+            image_url, _ = lib.save_image(base64_image)
             safety_images.append(image_url)
         else:
             safety_images.append(base64_image)
@@ -144,7 +144,7 @@ def convert_response(request, response):
 
             if require_url:
                 for b64 in image_faces:
-                    image_url, _ = output.save_image(b64)
+                    image_url, _ = lib.save_image(b64)
                     faces.append(image_url)
             else:
                 faces.extend(image_faces)
@@ -152,12 +152,12 @@ def convert_response(request, response):
     if len(safety_images) == 0:
         return errors.nsfw()
 
-    if requests.is_debug(request):
-        params = response.parameters
+    if input.is_debug(request):
+        parameters = response.parameters
     else:
-        params = {}
+        parameters = {}
 
-    v2_response = V2ImageResponse(images=safety_images, parameters=params, info=info, faces=faces)
+    v2_response = V2ImageResponse(images=safety_images, parameters=parameters, info=info, faces=faces)
     _log_response(v2_response)
     return v2_response
 
@@ -180,7 +180,7 @@ def _log_request(request):
 
 def _prepare_request(request):
     _log_request(request)
-    requests.extra_init(request)
+    input.extra_init(request)
     
     if request.negative_prompt is None:
         request.negative_prompt = ""
@@ -200,7 +200,7 @@ def _prepare_request(request):
 def prepare_request_i2i(request):
     _prepare_request(request)
 
-    image_b64 = requests.get_i2i_image(request)
+    image_b64 = input.get_i2i_image(request)
     request.init_images = [image_b64]
 
 
@@ -209,8 +209,8 @@ def prepare_request_t2i(request):
     
 
 def _remove_character_fields(request):
-    params = vars(request)
-    keys = list(params.keys())
+    parameters = vars(request)
+    keys = list(parameters.keys())
     for key in keys:
         if not key.startswith("character_"):
             continue
@@ -224,14 +224,14 @@ def _apply_multi_process(p: StableDiffusionProcessing):
         return
     
     processing.fix_seed(p)
-    same_seed = requests.get_extra_value(p, names.ParamMultiSameSeed, False)
+    same_seed = input.get_extra_value(p, names.ParamMultiSameSeed, False)
 
     p.prompt = prompts
     p.batch_size = 1
     p.n_iter = len(p.prompt)
     p.seed = [p.seed + (0 if same_seed else i) for i in range(len(p.prompt))]
 
-    requests.set_multi_count(p, len(p.prompt))
+    input.set_multi_count(p, len(p.prompt))
 
     lib.log(f"ENABLE-MULTIPLE, count: {len(p.prompt)}, {p.seed}, {p.subseed}")
 
@@ -252,6 +252,19 @@ def append_prompt(p, prompt, priority=True):
             p.prompt[i] = prompt + "," + p.prompt[i]
 
 
+def append_image_caption(p, img):
+    if input.ignore_caption(p):
+        return
+    
+    caption = lib.clip_b64img(img, True)
+    if prompt_has_illegal_words(caption):
+        input.set_has_illegal_words(p)
+        return
+
+    input.update_extra(p, names.ExtraImageCaption, caption)
+    append_prompt(p, caption, True)
+
+
 def final_prompts_before_processing(p):
     p.negative_prompt = p.negative_prompt + "," + negative_default_prompts
     p.negative_prompt = lib.simply_prompts(p.negative_prompt)
@@ -264,7 +277,7 @@ def final_prompts_before_processing(p):
 
     p.setup_prompts()
 
-    requests.clear_temporary_extras(p)
+    input.clear_temporary_extras(p)
 
 
 def load_models():

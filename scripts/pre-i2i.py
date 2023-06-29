@@ -1,7 +1,7 @@
 import gradio as gr
 from httpx import request
 
-from character import requests, lib, upscale, third_face, metrics, nsfw, errors, names, models
+from character import input, lib, upscale, third_face, metrics, nsfw, errors, names, models
 from modules import scripts
 from modules.processing import StableDiffusionProcessing
 from modules.api.api import decode_base64_to_image
@@ -24,10 +24,10 @@ class Script(scripts.Script):
         return [gr.Label(visible=False)]
     
     def process(self, p, *args):
-        if requests.from_webui(p):
+        if input.from_webui(p):
             return
                 
-        image_b64 = requests.get_i2i_image(p)
+        image_b64 = input.get_i2i_image(p)
         if not image_b64 or len(image_b64) < lib.min_base64_image_size:
             raise HTTPException(status_code=422, detail="Input image not found")
         
@@ -35,14 +35,5 @@ class Script(scripts.Script):
         upscale.apply_i2i_upscale(p, img)
         metrics.count_request(p)
         third_face.apply_face_repairer(p)
-
-        # 图片信息的处理
-        caption = lib.clip_b64img(img, True)
-        if nsfw.prompt_has_illegal_words(caption):
-            requests.set_has_illegal_words(p)
-            models.final_prompts_before_processing(p)
-            return
-
-        requests.update_extra(p, names.ExtraImageCaption, caption)
-        models.append_prompt(p, caption, True)
+        models.append_image_caption(p, img)
         models.final_prompts_before_processing(p)

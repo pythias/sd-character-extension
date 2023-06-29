@@ -1,6 +1,6 @@
 import gradio as gr
 
-from character import requests, lib, names
+from character import input, lib, names
 from modules import scripts
 
 class TryOnScript(scripts.Script):
@@ -21,7 +21,7 @@ class TryOnScript(scripts.Script):
         if self.__is_running:
             return
         
-        requests.update_scripts_order(p, self, -2)
+        input.update_scripts_order(p, self, -2)
 
     def postprocess(self, o, res, *args):
         if self.__is_running:
