@@ -276,10 +276,10 @@ def download_to_base64(value):
     if value == "" or value == None or value == "None":
         return ""
 
-    if value.startswith("http"):
-        url = value
-    else:
+    if not value.startswith("http"):
         return value
+    
+    url = value
 
     download_filename = md5(url.encode('utf-8')).hexdigest() + '.cache'
     [_, file_fullpath] = _get_output_path(download_filename, True)
