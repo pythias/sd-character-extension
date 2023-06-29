@@ -8,11 +8,10 @@ import sys
 from typing import Optional, List
 from modules import scripts, processing
 
-from character import lib, requests
+from character import input, lib
 from character.metrics import hDF
 
 REPAIRER_NAME = "face editor ex"
-CROPPER_NAME = "FaceCropper"
 
 
 @hDF.time()
@@ -58,27 +57,27 @@ def crop(image_base64) -> list:
 
 def require_face(request):
     # 老版本，所以在基础request里
-    return requests.get_extra_value(request, "crop_face", False)
+    return input.get_extra_value(request, "crop_face", False)
 
 
 def require_face_repairer(request):
-    return requests.get_extra_value(request, "repair_face", True)
+    return input.get_extra_value(request, "repair_face", True)
 
 
 def keep_original_image(request):
-    return requests.get_extra_value(request, "keep_original", False)
+    return input.get_extra_value(request, "keep_original", False)
 
 
 def apply_face_repairer(p):
     if not require_face_repairer(p):
         return
     
-    values = requests.get_extra_value(p, 'face_repair_params', {})
+    values = input.get_extra_value(p, 'face_repair_params', {})
     values["enabled"] = True
     values["show_original_image"] = False
     if "prompt_for_face" not in values:
         values["prompt_for_face"] = "beauty"
 
-    requests.update_script_args(p, REPAIRER_NAME, [values])
+    input.update_script_args(p, REPAIRER_NAME, [values])
 
     lib.log(f"ENABLE-FACE-REPAIRER, {values}")

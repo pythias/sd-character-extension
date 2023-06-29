@@ -1,11 +1,11 @@
-from character import lib, requests
+from character import input, lib
 from modules.processing import StableDiffusionProcessingTxt2Img, StableDiffusionProcessingImg2Img
 
 max_size = 1536
 min_size = 256
 
 def require_upscale(request):
-    return requests.get_extra_value(request, "require_upscale", True)
+    return input.get_extra_value(request, "require_upscale", True)
 
 
 def apply_t2i_upscale(request: StableDiffusionProcessingTxt2Img):
@@ -17,7 +17,7 @@ def apply_t2i_upscale(request: StableDiffusionProcessingTxt2Img):
     request.setup_prompts()
 
     # 默认放大图片的两倍
-    scale_by = requests.get_extra_value(request, "scale_by", 0)
+    scale_by = input.get_extra_value(request, "scale_by", 0)
     if (scale_by > 0 and scale_by < 10):
         request.hr_scale = scale_by
     
@@ -45,7 +45,7 @@ def apply_i2i_upscale(request: StableDiffusionProcessingImg2Img, img):
         image_radio = image_width / image_height
 
         # 默认放大图片的两倍
-        scale_by = requests.get_extra_value(request, "scale_by", 2)
+        scale_by = input.get_extra_value(request, "scale_by", 2)
         target_width = image_width * scale_by
         target_height = image_height * scale_by
         request.width, request.height = lib.limit_size(target_width, target_height, image_radio, min_size, max_size)

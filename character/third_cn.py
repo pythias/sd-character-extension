@@ -1,7 +1,7 @@
 import os
 import sys
 
-from character import lib, requests, names
+from character import input, lib, names
 from modules.paths_internal import extensions_dir
 sys.path.append(os.path.join(extensions_dir, "sd-webui-controlnet"))
 from scripts import external_code, global_state, controlnet_version
@@ -27,19 +27,19 @@ def _find_closest_cn_model_name(search):
     applicable = sorted(applicable, key=lambda name: len(name))
     return global_state.cn_models_names[applicable[0]]
 
-lib.log(f"ControlNet {control_net_version} loaded, models: {len(control_net_models)}, lineart: {_find_closest_cn_model_name('lineart')}")
-
 def apply_args(request):
     # 因为有些场景需要做些参数调整，简化使用方的参数传递，所以封装一下
     units = []
     for i in range(0, 5):
         units.append(_get_cn_image_unit(request, i))
 
-    requests.update_script_args(request, "ControlNet", [_to_process_unit(unit) for unit in units])
+    input.update_script_args(request, "ControlNet", [_to_process_unit(unit) for unit in units])
 
 def _get_cn_image_unit(request, i):
-    image_b64 = requests.get_extra_value(request, f"image_cn_{i}", None)
+    image_b64 = input.get_extra_value(request, f"image_cn_{i}", None)
     if image_b64:
+        image_b64 = lib.download_to_base64(image_b64)
+
         # 当传递了图像参数时，默认使用lineart处理
         default_model = "lineart"
         default_preprocessor = "lineart_realistic"
@@ -47,14 +47,14 @@ def _get_cn_image_unit(request, i):
         default_model = None
         default_preprocessor = None
 
-    preprocessor = requests.get_extra_value(request, f"processor_cn_{i}", default_preprocessor)
+    preprocessor = input.get_extra_value(request, f"processor_cn_{i}", default_preprocessor)
 
     # todo 其他场景的处理
     if preprocessor in ["reference_adain", "reference_adain+attn", "reference_only"]:
         # preprocessor 为 reference_adain, reference_adain+attn, reference_only 时，model为None
         model = None
     else:
-        model = requests.get_extra_value(request, f"model_cn_{i}", default_model)
+        model = input.get_extra_value(request, f"model_cn_{i}", default_model)
         model = _find_closest_cn_model_name(model)
         if not model:
             # 如果找不到处理的模型，则不处理
@@ -67,7 +67,7 @@ def _get_cn_image_unit(request, i):
     unit["image"] = image_b64
 
     # 参数: processor_res, 以传递的参数为主, 但是如果没有传递参数, 则使用默认值/或者图像的尺寸
-    processor_res = requests.get_extra_value(request, f"processor_res_cn_{i}", None)
+    processor_res = input.get_extra_value(request, f"processor_res_cn_{i}", None)
     if processor_res is None:
         img = lib.valid_base64(image_b64)
         if img:
@@ -76,7 +76,6 @@ def _get_cn_image_unit(request, i):
     # 其他参数
     _fill_unit_with_extra(unit, request, i)
 
-    
     return unit
 
 
@@ -89,7 +88,7 @@ def _get_cn_disabled_unit():
 def _fill_unit_with_extra(unit, request, index):
     names = ["weight", "resize_mode", "low_vram", "threshold_a", "threshold_b", "guidance_start", "guidance_end", "pixel_perfect", "control_mode"]
     for name in names:
-        value = requests.get_extra_value(request, f"{name}_cn_{index}", None)
+        value = input.get_extra_value(request, f"{name}_cn_{index}", None)
         if value is not None:
             unit[name] = value
 
@@ -130,3 +129,4 @@ def _get_cn_empty_unit():
 def _to_process_unit(unit):
     return external_code.ControlNetUnit(**unit)
 
+lib.log(f"ControlNet {control_net_version} loaded, models: {len(control_net_models)}, lineart: {_find_closest_cn_model_name('lineart')}")

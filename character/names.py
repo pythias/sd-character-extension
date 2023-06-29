@@ -9,6 +9,9 @@ ParamImage = "image_i2i"
 ParamTryOnCloth = "image_tryon_cloth"
 ParamTryOnModel = "image_tryon_model"
 ParamControlNet0 = "image_cn_0"
+ParamIgnoreCaption = "ignore_caption"
+
+ParamFormat = "response_format"
 
 ExtensionMulti = "Character Multi"
 ExtensionT2I = "Character Text2Image"

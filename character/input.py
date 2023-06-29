@@ -21,8 +21,20 @@ def set_has_illegal_words(request):
 def has_illegal_words(request):
     return get_extra_value(request, names.ExtraHasIllegalWords, False)
 
+def ignore_caption(request):
+    return get_extra_value(request, names.ParamIgnoreCaption, False)
+
+def required_save(request):
+    response_format = get_extra_value(request, names.ParamFormat, 'b64')
+    return response_format == 'url'
+
 def get_i2i_image(request):
-    return get_extra_value(request, names.ParamImage, "")
+    value = get_extra_value(request, names.ParamImage, "")
+    return lib.download_to_base64(value)
+
+def get_t2i_image(request):
+    value = get_extra_value(request, names.ParamControlNet0, "")
+    return lib.download_to_base64(value)
 
 def is_tryon(request):
     return get_extra_value(request, names.ParamTryOnModel, False)
@@ -54,15 +66,15 @@ def clear_temporary_extras(request):
     """
     瘦身，清除临时参数
     """
-    params = request.extra_generation_params[names.Name]
-    for key in list(params.keys()):
+    parameters = request.extra_generation_params[names.Name]
+    for key in list(parameters.keys()):
         if key.startswith("image_"):
-            del params[key]
+            del parameters[key]
     
 
 def get_extra_value(request, key, default):
     """
-    获取自定义参数的值，所有获取都在 requests.init_extra 处理之后
+    获取自定义参数的值，所有获取都在 params.init_extra 处理之后
     """
     extra_params = get_value(request, "extra_generation_params", {})
     my_extra = get_value(extra_params, names.Name, {})

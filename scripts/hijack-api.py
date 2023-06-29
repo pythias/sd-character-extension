@@ -1,6 +1,6 @@
 from unittest import case
 
-from character import models, errors, lib, third_segments, requests
+from character import input, models, errors, lib, third_segments
 from character.metrics import hT2I, hI2I, hSD
 
 from modules.api import api
