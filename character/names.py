@@ -10,6 +10,7 @@ ParamTryOnCloth = "image_tryon_cloth"
 ParamTryOnModel = "image_tryon_model"
 ParamControlNet0 = "image_cn_0"
 ParamIgnoreCaption = "ignore_caption"
+ParamTaskId = "task_id"
 
 ParamFormat = "response_format"
 

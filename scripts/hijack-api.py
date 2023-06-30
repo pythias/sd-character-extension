@@ -1,10 +1,10 @@
 from unittest import case
 
-from character import input, models, errors, lib, third_segments
+from character import input, models, errors, lib, third_segments, names
 from character.metrics import hT2I, hI2I, hSD
 
 from modules.api import api
-from modules import shared
+from modules import shared, progress
 
 from fastapi.responses import JSONResponse
 
@@ -75,7 +75,17 @@ class ApiHijack(api.Api):
 
     def _generate(self, func, request):
         with hSD.time():
-            response = self._api_call(func, request)
+            task_id = input.get_extra_value(request, names.ParamTaskId, None)
+            if task_id is not None:
+                progress.add_task_to_queue(task_id)
+
+            progress.start_task(task_id)
+
+            try:
+                response = self._api_call(func, request)
+            finally:
+                progress.finish_task(task_id)
+
             if isinstance(response, JSONResponse):
                 return response
             
