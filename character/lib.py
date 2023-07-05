@@ -4,6 +4,7 @@ import logging
 import numpy as np
 import os
 import requests
+import sys
 import time
 import uuid
 
@@ -301,6 +302,17 @@ def download_to_base64(value):
     except Exception as e:
         log("download_file error: %s" % e)
         return ""
+    
 
-
-
+def load_extension(name):
+    from modules.paths_internal import extensions_dir
+    extension_path = os.path.join(extensions_dir, name)
+    if os.path.isdir(extension_path):
+        # Add the path to sys.path so that we can import the module
+        if extension_path not in sys.path:
+            sys.path.append(os.path.join(extensions_dir, name))
+            log(f"Loading extension: {name}")
+        else:
+            log(f"Extension already loaded: {name}")
+    else:
+        log(f"Extension not found: {name}")

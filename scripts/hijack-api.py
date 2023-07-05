@@ -44,22 +44,22 @@ class ApiHijack(api.Api):
         return self._generate(self.img2imgapi, request)
 
 
-    def character_v2_repaint_segments(self, request: models.CharacterV2Txt2ImgRequest):
+    def character_v2_repaint_segments(self, request: models.CharacterV2Img2ImgRequest):
         third_segments.prepare_for_keeps(request)
         return self._generate(self.img2imgapi, request)
 
 
-    def character_v2_repaint_background(self, request: models.CharacterV2Txt2ImgRequest):
+    def character_v2_repaint_background(self, request: models.CharacterV2Img2ImgRequest):
         third_segments.prepare_for_background(request)
         return self._generate(self.img2imgapi, request)
     
 
-    def character_v2_expand(self, request: models.CharacterV2Txt2ImgRequest):
+    def character_v2_expand(self, request: models.CharacterV2Img2ImgRequest):
         models.prepare_for_i2i(request)
         return self._generate(self.img2imgapi, request)
     
 
-    def character_v2_tryon(self, request: models.CharacterV2Txt2ImgRequest):
+    def character_v2_tryon(self, request: models.CharacterV2Img2ImgRequest):
         models.prepare_for_i2i(request)
         return self._generate(self.img2imgapi, request)
 

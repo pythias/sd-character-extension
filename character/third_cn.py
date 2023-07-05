@@ -2,8 +2,9 @@ import os
 import sys
 
 from character import input, lib
-from modules.paths_internal import extensions_dir
-sys.path.append(os.path.join(extensions_dir, "sd-webui-controlnet"))
+
+lib.load_extension("sd-webui-controlnet")
+
 from scripts import external_code, global_state, controlnet_version
 
 control_net_models = external_code.get_models(update=True)
@@ -128,6 +129,8 @@ def _get_cn_empty_unit():
 
 def _to_process_unit(unit):
     return external_code.ControlNetUnit(**unit)
+
+
 
 
 lib.log(f"ControlNet {control_net_version} loaded, models: {len(control_net_models)}, lineart: {_find_closest_cn_model_name('lineart')}")

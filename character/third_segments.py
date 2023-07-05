@@ -3,14 +3,14 @@ from character.metrics import hSegment
 
 from modules.api.api import decode_base64_to_image
 
-from scripts import processor
-from scripts.processor import model_oneformer_ade20k, model_oneformer_coco
-
 from annotator.util import HWC3
 from annotator.oneformer.oneformer.demo.visualizer import Visualizer, ColorMode
 
 import numpy as np
 import torch
+
+lib.load_extension("sd-webui-controlnet")
+from scripts.processor import model_oneformer_ade20k, model_oneformer_coco, resize_image_with_pad
 
 _OFF_WHITE = (1.0, 1.0, 1.0)
 
@@ -59,7 +59,7 @@ def _run(b64, preprocessor):
     segments = []
 
     img = HWC3(np.asarray(decode_base64_to_image(b64)))
-    img, remove_pad = processor.resize_image_with_pad(img, 512)
+    img, remove_pad = resize_image_with_pad(img, 512)
 
     predictions = predictor(img[:, :, ::-1], "semantic") 
     sem_seg = predictions["sem_seg"].argmax(dim=0).cpu()
