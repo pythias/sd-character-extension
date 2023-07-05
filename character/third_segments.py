@@ -1,16 +1,15 @@
-from character import lib, errors, models, names
+import numpy as np
+import torch
+
+from character import lib, errors, models, names, input
 from character.metrics import hSegment
 
 from modules.api.api import decode_base64_to_image
 
-from annotator.util import HWC3
-from annotator.oneformer.oneformer.demo.visualizer import Visualizer, ColorMode
-
-import numpy as np
-import torch
-
 lib.load_extension("sd-webui-controlnet")
 from scripts.processor import model_oneformer_ade20k, model_oneformer_coco, resize_image_with_pad
+from annotator.util import HWC3
+from annotator.oneformer.oneformer.demo.visualizer import Visualizer, ColorMode
 
 _OFF_WHITE = (1.0, 1.0, 1.0)
 
@@ -93,7 +92,8 @@ def _run(b64, preprocessor):
         segment_mask = visualizer_map.output.get_image()
         segment_mask = remove_pad(segment_mask)
 
-        segment_image = np.where(binary_mask[..., None], img, 255)
+        segment_image = np.where(binary_mask[..., None], img, 0)
+        # segment_image = np.where(binary_mask[..., None], img, 255)
 
         segment = models.SegmentItem(label = text, score = 1.0, mask = lib.encode_to_base64(segment_mask), color = lib.encode_to_base64(segment_image))
         segments.append(segment)
@@ -104,18 +104,20 @@ def _run(b64, preprocessor):
 def prepare_for_keeps(request):
     models.prepare_request(request)
 
-    # 物品替换
-    segment_image = input.get_extra_value(request, names.ParamSegmentImage, None)
+    segment_image = input.get_extra_value(request, names.ParamImage, None)
     if segment_image is None:
+        lib.log("segment_image is None")
         return
     
     segment_keeps = input.get_extra_value(request, names.ParamSegmentKeeps, None)
     if segment_keeps is None:
+        lib.log("segment_keeps is None")
         return
     
     segment_algorithm = input.get_extra_value(request, 'segment_algorithm', models.SegmentAlgorithm.OFADE20K)
     segments = segment(segment_image, segment_algorithm)
     if not segments:
+        lib.log("segments is None")
         return
 
     # models.SegmentItem
@@ -129,7 +131,13 @@ def prepare_for_keeps(request):
     if not found:
         return
     
-    merged = np.maximum.reduce(found)
+    if len(found) == 1:
+        merged = found[0]
+    else:
+        merged = np.maximum.reduce(found)
+
+    input.update_extra(request, names.ParamIgnoreCaption, True)
+
     request.init_images = [merged]
     request.mask = merged
 
