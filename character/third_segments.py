@@ -1,6 +1,5 @@
-from curses import meta
+from character import lib, errors, models, names
 from character.metrics import hSegment
-from character import lib, errors, models
 
 from modules.api.api import decode_base64_to_image
 
@@ -89,13 +88,52 @@ def _run(b64, preprocessor):
             edge_color=_OFF_WHITE,
             text=text,
             alpha=0.8,
-            area_threshold=10,
             is_text=False,
         )
-        result = visualizer_map.output.get_image()
-        result = remove_pad(result)
+        segment_mask = visualizer_map.output.get_image()
+        segment_mask = remove_pad(segment_mask)
 
-        segment = models.SegmentItem(label = text, score = 1.0, mask = lib.encode_to_base64(result))
+        segment_image = np.where(binary_mask[..., None], img, 255)
+
+        segment = models.SegmentItem(label = text, score = 1.0, mask = lib.encode_to_base64(segment_mask), color = lib.encode_to_base64(segment_image))
         segments.append(segment)
 
     return segments
+
+
+def prepare_for_keeps(request):
+    models.prepare_request(request)
+
+    # 物品替换
+    segment_image = input.get_extra_value(request, names.ParamSegmentImage, None)
+    if segment_image is None:
+        return
+    
+    segment_keeps = input.get_extra_value(request, names.ParamSegmentKeeps, None)
+    if segment_keeps is None:
+        return
+    
+    segment_algorithm = input.get_extra_value(request, 'segment_algorithm', models.SegmentAlgorithm.OFADE20K)
+    segments = segment(segment_image, segment_algorithm)
+    if not segments:
+        return
+
+    # models.SegmentItem
+    found = []
+    for s in segments:
+        if s.label not in segment_keeps:
+            continue
+
+        found.append(s.color)
+
+    if not found:
+        return
+    
+    merged = np.maximum.reduce(found)
+    request.init_images = [merged]
+    request.mask = merged
+
+
+def prepare_for_background(request):
+    models.prepare_request(request)
+    

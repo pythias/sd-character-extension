@@ -1,7 +1,7 @@
 import os
 import sys
 
-from character import input, lib, names
+from character import input, lib
 from modules.paths_internal import extensions_dir
 sys.path.append(os.path.join(extensions_dir, "sd-webui-controlnet"))
 from scripts import external_code, global_state, controlnet_version
@@ -86,8 +86,8 @@ def _get_cn_disabled_unit():
 
 
 def _fill_unit_with_extra(unit, request, index):
-    names = ["weight", "resize_mode", "low_vram", "threshold_a", "threshold_b", "guidance_start", "guidance_end", "pixel_perfect", "control_mode"]
-    for name in names:
+    unit_keys = ["weight", "resize_mode", "low_vram", "threshold_a", "threshold_b", "guidance_start", "guidance_end", "pixel_perfect", "control_mode"]
+    for name in unit_keys:
         value = input.get_extra_value(request, f"{name}_cn_{index}", None)
         if value is not None:
             unit[name] = value
@@ -128,5 +128,6 @@ def _get_cn_empty_unit():
 
 def _to_process_unit(unit):
     return external_code.ControlNetUnit(**unit)
+
 
 lib.log(f"ControlNet {control_net_version} loaded, models: {len(control_net_models)}, lineart: {_find_closest_cn_model_name('lineart')}")

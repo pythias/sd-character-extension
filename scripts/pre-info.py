@@ -19,9 +19,8 @@ class Script(scripts.Script):
     
     def before_process_batch(self, p, *args, **kwargs):
         self.started_at = time.perf_counter()
-        input.update_scripts_order(p, self, -1)
-
-    def process(self, p, *args):
+        
+    def before_process(self, p, *args):
         input.update_extras(p, {
             "name": shared.cmd_opts.character_server_name,
             "version": lib.version_flag,
@@ -29,6 +28,8 @@ class Script(scripts.Script):
             "request_at": time.strftime('%Y-%m-%d %H:%M:%S %Z', time.localtime()),
             "request_id": lib.get_request_id(),
         })
+
+        input.update_scripts_order(p, self, -1)
 
     def postprocess(self, p, processed: Processed, *args):
         elapsed = time.perf_counter() - self.started_at

@@ -16,8 +16,8 @@ class TryOnScript(scripts.Script):
 
     def ui(self, is_img2img):
         return [gr.Label(visible=False)]
-
-    def before_process_batch(self, p, *args, **kwargs):
+    
+    def before_process(self, p, *args):
         if self.__is_running:
             return
         
@@ -25,6 +25,7 @@ class TryOnScript(scripts.Script):
 
     def postprocess(self, o, res, *args):
         if self.__is_running:
+            lib.log("try-on already started")
             return
         
         try:

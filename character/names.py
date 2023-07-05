@@ -11,6 +11,13 @@ ParamTryOnModel = "image_tryon_model"
 ParamControlNet0 = "image_cn_0"
 ParamIgnoreCaption = "ignore_caption"
 
+# 物品识别和重绘
+ParamSegmentImage = "image_segment"
+ParamSegmentKeeps = "segment_keeps"
+
+# 重绘背景
+ParamForegroundImage = "image_foreground"
+
 ParamFormat = "response_format"
 
 ExtensionMulti = "Character Multi"

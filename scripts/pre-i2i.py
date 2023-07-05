@@ -23,7 +23,7 @@ class Script(scripts.Script):
     def ui(self, is_img2img):
         return [gr.Label(visible=False)]
     
-    def process(self, p, *args):
+    def before_process(self, p, *args):
         if input.from_webui(p):
             return
                 
