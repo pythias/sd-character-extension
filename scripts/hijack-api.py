@@ -1,6 +1,6 @@
 from unittest import case
 
-from character import input, models, errors, lib, third_segments
+from character import input, models, errors, lib, third_segments, third_cn
 from character.metrics import hT2I, hI2I, hSD
 
 from modules.api import api
@@ -16,7 +16,8 @@ class ApiHijack(api.Api):
 
         self.add_api_route("/character/v2/txt2img", self.character_v2_txt2img, tags=["Character"], methods=["POST"], response_model=models.V2ImageResponse)
         self.add_api_route("/character/v2/img2img", self.character_v2_img2img, tags=["Character"], methods=["POST"], response_model=models.V2ImageResponse)
-        self.add_api_route("/character/v2/repaint", self.character_v2_repaint, tags=["Character"], methods=["POST"], response_model=models.V2ImageResponse)
+        self.add_api_route("/character/v2/repaint_segments", self.character_v2_repaint_segments, tags=["Character"], methods=["POST"], response_model=models.V2ImageResponse)
+        self.add_api_route("/character/v2/repaint_background", self.character_v2_repaint_background, tags=["Character"], methods=["POST"], response_model=models.V2ImageResponse)
         self.add_api_route("/character/v2/expand", self.character_v2_expand, tags=["Character"], methods=["POST"], response_model=models.V2ImageResponse)
         self.add_api_route("/character/v2/caption", self.character_v2_caption, tags=["Character"], methods=["POST"], response_model=models.CaptionResponse)
         self.add_api_route("/character/v2/segment", self.character_v2_segment, tags=["Character"], methods=["POST"], response_model=models.SegmentResponse)
@@ -27,29 +28,40 @@ class ApiHijack(api.Api):
     @hT2I.time()
     def character_v2_txt2img(self, request: models.CharacterV2Txt2ImgRequest):
         # 由于需要控制其他script的参数，所以必须在接口层而不是 script 的生命周期中处理（顺序控制需要修改WebUI的代码）
-        models.prepare_request_t2i(request)
+        models.prepare_for_t2i(request)
+
+        # 为避免循环引用，把third_cn放出来
+        # 由于无法确定ControlNet生命是否会有变更，所以每次请求都在入口层做参数初始化
+        # 带来的问题就是有些GPU的过程可能会在没有锁的情况下执行，但是再加一层锁会有死锁的问题
+        third_cn.apply_args(request)
         return self._generate(self.text2imgapi, request)
 
 
     @hI2I.time()
     def character_v2_img2img(self, request: models.CharacterV2Img2ImgRequest):
-        models.prepare_request_i2i(request)
+        models.prepare_for_i2i(request)
+        third_cn.apply_args(request)
         return self._generate(self.img2imgapi, request)
 
 
-    def character_v2_repaint(self, request: models.CharacterV2Txt2ImgRequest):
-        models.prepare_request_t2i(request)
-        return self._generate(self.text2imgapi, request)
+    def character_v2_repaint_segments(self, request: models.CharacterV2Img2ImgRequest):
+        third_segments.prepare_for_segments(request)
+        return self._generate(self.img2imgapi, request)
+
+
+    def character_v2_repaint_background(self, request: models.CharacterV2Img2ImgRequest):
+        third_segments.prepare_for_background(request)
+        return self._generate(self.img2imgapi, request)
     
 
-    def character_v2_expand(self, request: models.CharacterV2Txt2ImgRequest):
-        models.prepare_request_t2i(request)
-        return self._generate(self.text2imgapi, request)
+    def character_v2_expand(self, request: models.CharacterV2Img2ImgRequest):
+        models.prepare_for_i2i(request)
+        return self._generate(self.img2imgapi, request)
     
 
-    def character_v2_tryon(self, request: models.CharacterV2Txt2ImgRequest):
-        models.prepare_request_t2i(request)
-        return self._generate(self.text2imgapi, request)
+    def character_v2_tryon(self, request: models.CharacterV2Img2ImgRequest):
+        models.prepare_for_i2i(request)
+        return self._generate(self.img2imgapi, request)
 
 
     def character_v2_caption(self, request: models.CaptionRequest):
@@ -67,8 +79,8 @@ class ApiHijack(api.Api):
 
     def character_v2_segment(self, request: models.SegmentRequest):
         def f(request: models.SegmentRequest):
-            segments = third_segments.segment(request.image, request.algorithm)
-            return models.SegmentResponse(segments=segments)
+            segments = third_segments.segment(request.image, request.algorithm, mask_color=[1, 1, 1])
+            return models.SegmentResponse(segments=third_segments.to_items(segments))
 
         return self._queued_call(f, request)
 

@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from typing import List
 from enum import Enum
 
-from character import input, lib, errors, names, third_cn, third_face
+from character import input, lib, errors, names, third_face
 from character.metrics import cNSFW, cIllegal, cFace
 from character.nsfw import image_has_illegal_words, image_nsfw_score, prompt_has_illegal_words
 
@@ -76,7 +76,7 @@ class SegmentRequest(BaseModel):
 class SegmentItem(BaseModel):
     label: str = Field(default="", title='Label', description='The label of the segment.')
     score: float = Field(default=0.0, title='Score', description='The score of the segment.')
-    mask: str = Field(default="", title='Mask', description='The mask of the segment.')
+    color: str = Field(default="", title='Color', description='The color of the segment.')
 
 
 class SegmentResponse(BaseModel):
@@ -95,7 +95,7 @@ def convert_response(request, response):
         info["illegal"] = True
         return errors.nsfw()
 
-    require_face = third_face.require_face(request)
+    crop_avatar = input.required_face(request)
     require_url = input.required_save(request)
     source_images = response.images
 
@@ -137,8 +137,7 @@ def convert_response(request, response):
         else:
             safety_images.append(base64_image)
 
-        # 头像 todo 脸部裁切，在高清修复脸部时有数据
-        if require_face:
+        if crop_avatar:
             image_faces = third_face.crop(base64_image)
             cFace.inc(len(image_faces))
 
@@ -178,7 +177,7 @@ def _log_request(request):
     lib.log(f"request, data: {data}")
 
 
-def _prepare_request(request):
+def prepare_request(request):
     _log_request(request)
     input.extra_init(request)
     
@@ -192,20 +191,18 @@ def _prepare_request(request):
         errors.raise_nsfw()
 
     _remove_character_fields(request)
-
-    third_cn.apply_args(request)
     _apply_multi_process(request)
 
 
-def prepare_request_i2i(request):
-    _prepare_request(request)
+def prepare_for_i2i(request):
+    prepare_request(request)
 
     image_b64 = input.get_i2i_image(request)
     request.init_images = [image_b64]
 
 
-def prepare_request_t2i(request):
-    _prepare_request(request)
+def prepare_for_t2i(request):
+    prepare_request(request)
     
 
 def _remove_character_fields(request):

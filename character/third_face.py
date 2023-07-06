@@ -2,16 +2,11 @@ import cv2
 import base64
 import io
 import numpy as np
-import os
-import sys
-
-from typing import Optional, List
-from modules import scripts, processing
 
 from character import input, lib
 from character.metrics import hDF
 
-REPAIRER_NAME = "face editor ex"
+THIRD_EXTENSION_NAME = "face editor ex"
 
 
 @hDF.time()
@@ -55,29 +50,21 @@ def crop(image_base64) -> list:
     return cropped_face_base64s
 
 
-def require_face(request):
-    # 老版本，所以在基础request里
-    return input.get_extra_value(request, "crop_face", False)
-
-
-def require_face_repairer(request):
+def _require_face_repairer(request):
     return input.get_extra_value(request, "repair_face", True)
 
 
-def keep_original_image(request):
-    return input.get_extra_value(request, "keep_original", False)
-
-
 def apply_face_repairer(p):
-    if not require_face_repairer(p):
+    if not _require_face_repairer(p):
         return
     
     values = input.get_extra_value(p, 'face_repair_params', {})
     values["enabled"] = True
     values["show_original_image"] = False
     if "prompt_for_face" not in values:
+        # todo 脸部的prompt处理
         values["prompt_for_face"] = "beauty"
 
-    input.update_script_args(p, REPAIRER_NAME, [values])
+    input.update_script_args(p, THIRD_EXTENSION_NAME, [values])
 
     lib.log(f"ENABLE-FACE-REPAIRER, {values}")

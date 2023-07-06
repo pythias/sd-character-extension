@@ -9,10 +9,8 @@ from modules.api.api import decode_base64_to_image
 from starlette.exceptions import HTTPException
 
 class Script(scripts.Script):
-    prompts_from_image = {}
-
     def title(self):
-        return names.ExtensionI2I
+        return names.ExNameI2I
 
     def show(self, is_img2img):
         if is_img2img:
@@ -23,10 +21,10 @@ class Script(scripts.Script):
     def ui(self, is_img2img):
         return [gr.Label(visible=False)]
     
-    def process(self, p, *args):
+    def before_process(self, p, *args):
         if input.from_webui(p):
             return
-                
+        
         image_b64 = input.get_i2i_image(p)
         if not image_b64 or len(image_b64) < lib.min_base64_image_size:
             raise HTTPException(status_code=422, detail="Input image not found")

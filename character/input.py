@@ -130,3 +130,6 @@ def update_scripts_order(p, script, index):
             p.scripts.alwayson_scripts.append(script)
         else:
             p.scripts.alwayson_scripts.insert(index + 1, script)
+
+def required_face(request):
+    return get_extra_value(request, "crop_face", False)

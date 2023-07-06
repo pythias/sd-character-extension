@@ -4,8 +4,10 @@ import logging
 import numpy as np
 import os
 import requests
+import sys
 import time
 import uuid
+import cv2
 
 from hashlib import md5
 
@@ -18,7 +20,7 @@ from starlette.exceptions import HTTPException
 from character.metrics import hCaption
 from character import logger
 
-version_flag = "v1.4.0"
+version_flag = "v1.4.2"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")
@@ -72,6 +74,9 @@ def encode_to_base64(image):
         return image
     elif type(image) is Image.Image:
         return api.encode_pil_to_base64(image)
+    # elif type(image) is cv2.Mat:
+    #     _, img_buff = cv2.imencode('.png', image)
+    #     return base64.b64encode(img_buff).decode('utf-8')
     elif type(image) is np.ndarray:
         return encode_np_to_base64(image)
     else:
@@ -301,6 +306,17 @@ def download_to_base64(value):
     except Exception as e:
         log("download_file error: %s" % e)
         return ""
+    
 
-
-
+def load_extension(name):
+    from modules.paths_internal import extensions_dir
+    extension_path = os.path.join(extensions_dir, name)
+    if os.path.isdir(extension_path):
+        # Add the path to sys.path so that we can import the module
+        if extension_path not in sys.path:
+            sys.path.append(os.path.join(extensions_dir, name))
+            log(f"Loading extension: {name}")
+        else:
+            log(f"Extension already loaded: {name}")
+    else:
+        log(f"Extension not found: {name}")
