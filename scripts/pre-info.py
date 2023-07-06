@@ -1,7 +1,7 @@
 import gradio as gr
 import time
 
-from character import input, lib
+from character import input, lib, names
 from modules import shared, scripts
 from modules.processing import Processed, program_version
 
@@ -9,7 +9,7 @@ class Script(scripts.Script):
     started_at = 0.0
 
     def title(self):
-        return "Character Info"
+        return names.ExNameInfo
 
     def show(self, is_img2img):
         return scripts.AlwaysVisible
@@ -29,7 +29,7 @@ class Script(scripts.Script):
             "request_id": lib.get_request_id(),
         })
 
-        input.update_scripts_order(p, self, -1)
+        input.update_scripts_order(p, self, names.ExIndexInfo)
 
     def postprocess(self, p, processed: Processed, *args):
         elapsed = time.perf_counter() - self.started_at

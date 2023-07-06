@@ -131,6 +131,4 @@ def _to_process_unit(unit):
     return external_code.ControlNetUnit(**unit)
 
 
-
-
 lib.log(f"ControlNet {control_net_version} loaded, models: {len(control_net_models)}, lineart: {_find_closest_cn_model_name('lineart')}")

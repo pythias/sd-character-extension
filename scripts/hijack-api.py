@@ -45,7 +45,7 @@ class ApiHijack(api.Api):
 
 
     def character_v2_repaint_segments(self, request: models.CharacterV2Img2ImgRequest):
-        third_segments.prepare_for_keeps(request)
+        third_segments.prepare_for_segments(request)
         return self._generate(self.img2imgapi, request)
 
 
@@ -79,8 +79,8 @@ class ApiHijack(api.Api):
 
     def character_v2_segment(self, request: models.SegmentRequest):
         def f(request: models.SegmentRequest):
-            segments = third_segments.segment(request.image, request.algorithm)
-            return models.SegmentResponse(segments=segments)
+            segments = third_segments.segment(request.image, request.algorithm, mask_color=[1, 1, 1])
+            return models.SegmentResponse(segments=third_segments.to_items(segments))
 
         return self._queued_call(f, request)
 

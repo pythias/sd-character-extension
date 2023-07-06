@@ -9,7 +9,7 @@ class TryOnScript(scripts.Script):
         self.__is_running = False
 
     def title(self):
-        return names.ExtensionTryOn
+        return names.ExNameTryOn
 
     def show(self, is_img2img):
         return scripts.AlwaysVisible

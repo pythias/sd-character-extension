@@ -7,6 +7,7 @@ import requests
 import sys
 import time
 import uuid
+import cv2
 
 from hashlib import md5
 
@@ -73,6 +74,9 @@ def encode_to_base64(image):
         return image
     elif type(image) is Image.Image:
         return api.encode_pil_to_base64(image)
+    # elif type(image) is cv2.Mat:
+    #     _, img_buff = cv2.imencode('.png', image)
+    #     return base64.b64encode(img_buff).decode('utf-8')
     elif type(image) is np.ndarray:
         return encode_np_to_base64(image)
     else:

@@ -5,10 +5,8 @@ from modules import scripts
 from modules.processing import StableDiffusionProcessing
 
 class Script(scripts.Script):
-    prompts_from_image = {}
-
     def title(self):
-        return names.ExtensionT2I
+        return names.ExNameT2I
 
     def show(self, is_img2img):
         if is_img2img:

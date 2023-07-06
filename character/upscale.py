@@ -31,9 +31,6 @@ def apply_t2i_upscale(request: StableDiffusionProcessingTxt2Img):
 
 
 def apply_i2i_upscale(request: StableDiffusionProcessingImg2Img, img):
-    if not require_upscale(request):
-        return
-    
     image_width, image_height = img.size[0:2]
     
     if request.width > 0 and request.height > 0:
@@ -44,8 +41,12 @@ def apply_i2i_upscale(request: StableDiffusionProcessingImg2Img, img):
         # 没有指定width和height, 以图片的大小为准
         image_radio = image_width / image_height
 
-        # 默认放大图片的两倍
-        scale_by = input.get_extra_value(request, "scale_by", 2)
+        if not require_upscale(request):
+            scale_by = 1
+        else:
+            # 默认放大图片的两倍
+            scale_by = input.get_extra_value(request, "scale_by", 2)
+            
         target_width = image_width * scale_by
         target_height = image_height * scale_by
         request.width, request.height = lib.limit_size(target_width, target_height, image_radio, min_size, max_size)

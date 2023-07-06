@@ -76,7 +76,6 @@ class SegmentRequest(BaseModel):
 class SegmentItem(BaseModel):
     label: str = Field(default="", title='Label', description='The label of the segment.')
     score: float = Field(default=0.0, title='Score', description='The score of the segment.')
-    mask: str = Field(default="", title='Mask', description='The mask of the segment.')
     color: str = Field(default="", title='Color', description='The color of the segment.')
 
 

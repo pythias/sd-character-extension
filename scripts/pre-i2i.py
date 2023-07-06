@@ -9,10 +9,8 @@ from modules.api.api import decode_base64_to_image
 from starlette.exceptions import HTTPException
 
 class Script(scripts.Script):
-    prompts_from_image = {}
-
     def title(self):
-        return names.ExtensionI2I
+        return names.ExNameI2I
 
     def show(self, is_img2img):
         if is_img2img:
