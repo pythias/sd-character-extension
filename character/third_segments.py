@@ -124,10 +124,12 @@ def prepare_for_segments(request):
         return
     
     segment_labels = input.get_extra_value(request, names.ParamSegmentLabels, None)
-    segment_erase = input.get_extra_value(request, names.ParamSegmentErase, False)
     if segment_labels is None:
         lib.log("segment_labels is None")
         return
+    
+    segment_erase = input.get_extra_value(request, names.ParamSegmentErase, False)
+    segment_erase = (segment_erase == "true" or segment_erase == True or segment_erase == 1 or segment_erase == "1")
     
     segment_algorithm = input.get_extra_value(request, 'segment_algorithm', models.SegmentAlgorithm.OFADE20K)
     segments = segment(segment_image, segment_algorithm, mask_color=[0, 0, 0])
@@ -152,6 +154,13 @@ def prepare_for_segments(request):
     else:
         mask_merged = np.maximum.reduce(segment_masks)
 
+    if segment_erase:
+        enlarge_size = 32
+    else:
+        enlarge_size = 0
+
+    mask_merged = cv2.erode(mask_merged, np.ones((enlarge_size, enlarge_size), np.uint8), iterations=1)
+
     # 缩放蒙版至原图大小
     img = lib.valid_base64(segment_image)
     height, width = img.size[0], img.size[1]
@@ -160,11 +169,15 @@ def prepare_for_segments(request):
     _, mask_buffer = cv2.imencode('.png', mask_resized)
     mask_base64 = base64.b64encode(mask_buffer).decode('utf-8')
 
+    # 反过来，和WebUI一致
+    # mask_base64 = encode_pil_to_base64(ImageOps.invert(Image.fromarray(mask_resized))).decode('utf-8')
+
     request.init_images = [segment_image]
     request.mask = mask_base64
     request.inpainting_mask_invert = segment_erase
-    request.inpainting_fill = 1
-    
+    request.inpainting_fill = 0 # 蒙版模式 'fill', 'original', 'latent noise', 'latent nothing'
+    request.inpaint_full_res = 0 # 0: 全局重绘，1: 蒙版重绘
+
     if input.is_debug(request):
         input.update_extra(request, "debug-segment-size", (height, width))
         input.update_extra(request, "debug-segment-input", segment_image)
