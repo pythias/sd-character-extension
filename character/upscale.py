@@ -44,8 +44,7 @@ def apply_i2i_upscale(request: StableDiffusionProcessingImg2Img, img):
         if not require_upscale(request):
             scale_by = 1
         else:
-            # 默认放大图片的两倍
-            scale_by = input.get_extra_value(request, "scale_by", 2)
+            scale_by = input.get_extra_value(request, "scale_by", 1.3)
             
         target_width = image_width * scale_by
         target_height = image_height * scale_by
