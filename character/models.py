@@ -121,12 +121,16 @@ def convert_response(request, response):
         else:
             nsfw_score = image_nsfw_score(base64_image)
             if nsfw_score > 0.75:
-                lib.log(f"nsfw, score: {nsfw_score}, at {index}/{len(source_images)}")
+                _, img_filepath = lib.save_image(base64_image)
+
+                lib.log(f"nsfw, score: {nsfw_score}, at {index}/{len(source_images)}, image: {img_filepath}")
                 cNSFW.inc()
                 continue
 
             if image_has_illegal_words(base64_image):
-                lib.log(f"illegal word, at {index}/{len(source_images)}")
+                _, img_filepath = lib.save_image(base64_image)
+
+                lib.log(f"illegal word, at {index}/{len(source_images)}, image: {img_filepath}")
                 cIllegal.inc()
                 continue
 
