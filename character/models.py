@@ -276,9 +276,10 @@ def append_image_caption(p, img):
         input.set_has_illegal_words(p)
         return
     
-    age = third_age.get_age(img)
-    if age > 0:
-        caption = f"{age} yo," + caption
+    if input.get_extra_value(p, "ignore-age", False):
+        age = third_age.get_age(img)
+        if age > 0:
+            caption = f"{age} yo," + caption
 
     input.update_extra(p, names.ExtraImageCaption, caption)
     append_prompt(p, caption, True)
