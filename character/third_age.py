@@ -53,14 +53,16 @@ class AgeClassifier:
         # Predicted Classes
         max = probabilities.argmax(1)
         id = int(max[0].int())
-        range = self.model.config.id2label[id]
-        age = int(range.split('-')[0])
+
+        if id not in self.model.config.id2label:
+            age = 80
+        else:
+            range = self.model.config.id2label[id]
+            age = int(range.split('-')[0])
 
         # Adjust age
-        if age < 60 and age > 20:
+        if age < 60 and age >= 20:
             age = int(age * 0.75)
-
-        lib.log(f"AgeClassifier probabilities: {probabilities}, max: {max}, age: {age}")
     
         self.stop()
 
