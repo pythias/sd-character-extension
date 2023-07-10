@@ -1,30 +1,70 @@
+import os
+
 from character import lib
-from modules import devices
+from modules import devices, paths
+from modules.api import api
 
 from transformers import ViTFeatureExtractor, ViTForImageClassification
 
 class AgeClassifier:
     def __init__(self):
-        self.device = devices.get_device_for("ageclassifier")
-        self.model = ViTForImageClassification.from_pretrained('nateraw/vit-age-classifier', cache_dir=lib.models_path)
-        self.transforms = ViTFeatureExtractor.from_pretrained('nateraw/vit-age-classifier', cache_dir=lib.models_path)
+        self.model = None
+        self.transforms = None
 
-    def unload_model(self):
+    def load(self):
         if self.model is not None:
-            self.model.cpu()
+            return
+        
+        model_path = os.path.join(paths.models_path, 'vit-age-classifier')
+        self.model = ViTForImageClassification.from_pretrained(model_path)
+        self.transforms = ViTFeatureExtractor.from_pretrained(model_path)
+        self.model.to(devices.cpu)
+
+        lib.log(f"AgeClassifier model loaded, from: {model_path}")
+
+
+    def start(self):
+        self.load()
+        self.model.to(devices.device)
+
+
+    def stop(self):
+        self.model.to(devices.cpu)
+        devices.torch_gc()
+
 
     def __call__(self, img):
-        self.model.to(self.device)
+        self.start()
+
+        if isinstance(img, str):
+            img = api.decode_base64_to_image(img)
+
+        img = img.convert('RGB')
 
         # Transform our image and pass it through the model
         inputs = self.transforms(img, return_tensors='pt')
+        inputs.to(devices.device)
+
         output = self.model(**inputs)
 
         # Predicted Class probabilities
-        proba = output.logits.softmax(1)
+        probabilities = output.logits.softmax(1)
 
         # Predicted Classes
-        return proba.argmax(1)
+        max = probabilities.argmax(1)
+        id = int(max[0].int())
+        range = self.model.config.id2label[id]
+        age = int(range.split('-')[0])
+
+        # Adjust age
+        if age < 60 and age > 20:
+            age = int(age * 0.75)
+
+        lib.log(f"AgeClassifier probabilities: {probabilities}, max: {max}, age: {age}")
+    
+        self.stop()
+
+        return age
 
 
 model_age_classifier = None
@@ -35,4 +75,10 @@ def get_age(img):
     if model_age_classifier is None:
         model_age_classifier = AgeClassifier()
     
-    return model_age_classifier(img)
+    age = -1
+    try:
+        age = model_age_classifier(img)
+    except Exception as e:
+        lib.error(f"AgeClassifier error: {e}")
+
+    return age

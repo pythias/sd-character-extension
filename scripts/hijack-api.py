@@ -1,6 +1,4 @@
-from unittest import case
-
-from character import input, models, errors, lib, third_segments, third_cn
+from character import input, models, errors, lib, third_segments, third_cn, third_age
 from character.metrics import hT2I, hI2I, hSD
 
 from modules.api import api
@@ -22,6 +20,7 @@ class ApiHijack(api.Api):
         self.add_api_route("/character/v2/caption", self.character_v2_caption, tags=["Character"], methods=["POST"], response_model=models.CaptionResponse)
         self.add_api_route("/character/v2/segment", self.character_v2_segment, tags=["Character"], methods=["POST"], response_model=models.SegmentResponse)
         self.add_api_route("/character/v2/tryon", self.character_v2_tryon, tags=["Character"], methods=["POST"], response_model=models.V2ImageResponse)
+        self.add_api_route("/character/v2/age", self.character_v2_age, tags=["Character"], methods=["POST"], response_model=models.AgeResponse)
 
         lib.log("API loaded")
 
@@ -84,6 +83,14 @@ class ApiHijack(api.Api):
 
         return self._queued_call(f, request)
 
+
+    def character_v2_age(self, request: models.AgeRequest):
+        def f(request: models.AgeRequest):
+            age = third_age.get_age(request.image)
+            return models.AgeResponse(age=age)
+
+        return self._api_call(f, request)
+    
 
     def _generate(self, func, request):
         with hSD.time():

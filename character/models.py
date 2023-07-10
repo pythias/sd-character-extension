@@ -83,6 +83,20 @@ class SegmentResponse(BaseModel):
     segments: List[SegmentItem] = Field(default=None, title="Segments", description="The segments of the image.")
 
 
+class AgeModel(Enum):
+    NateRaw = "nateraw"
+    HG = "hg2001"
+
+
+class AgeRequest(BaseModel):
+    image: str = Field(default="", title='Image', description='The image in base64 format.')
+    model: AgeModel = Field(default=AgeModel.NateRaw, title='Model', description='The model to use.')
+
+
+class AgeResponse(BaseModel):
+    age: int = Field(default=0, title='Age', description='The age of the image.')
+
+
 def convert_response(request, response):
     info = json.loads(response.info)
 
@@ -256,14 +270,15 @@ def append_prompt(p, prompt, priority=True):
 def append_image_caption(p, img):
     if input.ignore_caption(p):
         return
-    
-    age = third_age.get_age(img)
-    lib.log(f"age: {age}")
-    
+        
     caption = lib.clip_b64img(img, True)
     if prompt_has_illegal_words(caption):
         input.set_has_illegal_words(p)
         return
+    
+    age = third_age.get_age(img)
+    if age > 0:
+        caption = f"{age} yo," + caption
 
     input.update_extra(p, names.ExtraImageCaption, caption)
     append_prompt(p, caption, True)
