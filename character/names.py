@@ -1,3 +1,6 @@
+from ast import Param
+
+
 Name = "Character"
 
 ParamExtra = "character_extra"
@@ -16,6 +19,9 @@ ParamSegmentLabels = "segment_labels"
 ParamSegmentErase = "segment_erase"
 
 ParamFormat = "response_format"
+
+# 年龄
+ParamIgnoreAge = "ignore_age"
 
 # 扩展参数名字
 ExtraImageCaption = "image-caption"
