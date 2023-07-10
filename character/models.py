@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from typing import List
 from enum import Enum
 
-from character import input, lib, errors, names, third_face
+from character import input, lib, errors, names, third_face, third_age
 from character.metrics import cNSFW, cIllegal, cFace
 from character.nsfw import image_has_illegal_words, image_nsfw_score, prompt_has_illegal_words
 
@@ -256,6 +256,9 @@ def append_prompt(p, prompt, priority=True):
 def append_image_caption(p, img):
     if input.ignore_caption(p):
         return
+    
+    age = third_age.get_age(img)
+    lib.log(f"age: {age}")
     
     caption = lib.clip_b64img(img, True)
     if prompt_has_illegal_words(caption):
