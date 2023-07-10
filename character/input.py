@@ -1,7 +1,8 @@
 from character import lib, names
+from modules import shared
 
 def is_debug(request):
-    return get_extra_value(request, "debug", False)
+    return get_extra_value(request, "debug", False) or shared.cmd_opts.character_debug
 
 def from_webui(request):
     return get_extra_value(request, names.ParamFromUI, True)

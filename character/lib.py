@@ -7,7 +7,6 @@ import requests
 import sys
 import time
 import uuid
-import cv2
 
 from hashlib import md5
 
@@ -20,7 +19,7 @@ from starlette.exceptions import HTTPException
 from character.metrics import hCaption
 from character import logger
 
-version_flag = "v1.4.5"
+version_flag = "v1.4.6"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")

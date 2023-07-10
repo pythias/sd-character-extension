@@ -105,11 +105,11 @@ class ApiHijack(api.Api):
         try:
             return func(request)
         except errors.ApiException as e:
-            if shared.cmd_opts.character_debug:
+            if input.is_debug(request):
                 traceback.print_exc()
             return e.response()
         except Exception as e:
-            if shared.cmd_opts.character_debug:
+            if input.is_debug(request):
                 traceback.print_exc()
                 return errors.ApiException(errors.code_error, message=vars(e).get('detail', '')).response()
             else:
