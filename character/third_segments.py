@@ -61,6 +61,8 @@ def _run(b64, preprocessor, mask_color, background_color):
     metadata = preprocessor.metadata
     segments = []
 
+    b64 = lib.download_to_base64(b64)
+
     img = HWC3(np.asarray(decode_base64_to_image(b64)))
     img, remove_pad = resize_image_with_pad(img, 512)
 
@@ -119,10 +121,11 @@ def prepare_for_segments(request):
     models.prepare_request(request)
 
     segment_image = input.get_extra_value(request, names.ParamImage, None)
+    segment_image = lib.download_to_base64(segment_image)
     if segment_image is None:
         lib.log("segment_image is None")
         return
-    
+        
     segment_labels = input.get_extra_value(request, names.ParamSegmentLabels, None)
     if segment_labels is None:
         lib.log("segment_labels is None")
