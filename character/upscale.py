@@ -46,7 +46,8 @@ def apply_i2i_upscale(request: StableDiffusionProcessingImg2Img, img):
         else:
             scale_by = input.get_extra_value(request, "scale_by", 1.3)
             
-        target_width = image_width * scale_by
-        target_height = image_height * scale_by
+        target_width = int(image_width * scale_by)
+        target_height = int(image_height * scale_by)
+
         request.width, request.height = lib.limit_size(target_width, target_height, image_radio, min_size, max_size)
         lib.log(f"ENABLE-UPSCALE, in-size:{image_width}x{image_height}, out-size:{request.width}x{request.height}, denoising:{request.denoising_strength}, cfg:{request.image_cfg_scale}")

@@ -37,6 +37,7 @@ class AgeClassifier:
         self.start()
 
         if isinstance(img, str):
+            img = lib.download_to_base64(img)
             img = api.decode_base64_to_image(img)
 
         img = img.convert('RGB')
