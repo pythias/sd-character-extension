@@ -276,7 +276,7 @@ def append_image_caption(p, img):
         input.set_has_illegal_words(p)
         return
     
-    if input.get_extra_value(p, names.ParamIgnoreAge, False):
+    if not input.get_extra_value(p, names.ParamIgnoreAge, False):
         age = third_age.get_age(img)
         if age > 0:
             caption = f"{age} yo," + caption
