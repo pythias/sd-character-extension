@@ -241,10 +241,10 @@ def _get_output_path(file_name, is_cache = False):
         file_relative_path = os.path.join("outputs", shared.cmd_opts.character_short_name, time.strftime("%Y%m%d"))
 
     file_dir = os.path.join(shared.cmd_opts.character_output_dir, file_relative_path)
-    if not os.path.exists(file_dir):
-        os.makedirs(file_dir)
-
     file_fullpath = os.path.join(file_dir, file_name)
+    if not os.path.exists(os.path.dirname(file_fullpath)):
+        os.makedirs(os.path.dirname(file_fullpath))
+
     return [file_relative_path, file_fullpath]
 
 
@@ -253,7 +253,7 @@ def _save_file(file_fullpath, file_bytes):
         return f.write(file_bytes) == len(file_bytes)
     
 
-def save_image(b64):
+def save_image(b64, img_filename = ""):
     """
     save base64 image to disk, return url
     """
@@ -261,7 +261,9 @@ def save_image(b64):
         if b64.startswith("data:image/"):
             b64 = b64.split(";")[1].split(",")[1]
         
-        img_filename = str(uuid.uuid4()) + '.png'
+        if img_filename == "":
+            img_filename = str(uuid.uuid4()) + '.png'
+
         [imd_relative_path, img_filepath] = _get_output_path(img_filename)
 
         img_bytes = base64.b64decode(b64)
@@ -273,7 +275,7 @@ def save_image(b64):
         log("save_image error: %s" % e)
     
     return [b64, ""]
-    
+
 
 def download_to_base64(value):
     # empty value
@@ -319,3 +321,15 @@ def load_extension(name):
             log(f"Extension already loaded: {name}")
     else:
         log(f"Extension not found: {name}")
+
+
+def ffmpeg_to_video(dir, width = 512, height = 512):
+    relative_path = dir.split("outputs")[1]
+    video_name = dir.split("/")[-1] + '.mp4'
+    url = os.path.join(shared.cmd_opts.character_host, relative_path, video_name)
+
+    video_path = os.path.join(dir, video_name)
+    cmd = f"ffmpeg -framerate 1 -pattern_type glob -i %d.png -s:v {width}x{height} -vcodec libx264 {video_path}"
+    os.system(cmd)
+
+    return url

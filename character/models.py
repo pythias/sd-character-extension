@@ -1,5 +1,6 @@
 import json
 import time
+import uuid
 
 from copy import deepcopy
 from pydantic import BaseModel, Field
@@ -95,6 +96,40 @@ class AgeRequest(BaseModel):
 
 class AgeResponse(BaseModel):
     age: int = Field(default=0, title='Age', description='The age of the image.')
+
+
+class I2VResponse(BaseModel):
+    video: str = Field(default="", title='Video', description='The video of the image.')
+    parameters: dict
+    info: dict
+
+
+def to_video(request, response):
+    info = json.loads(response.info)
+
+    if input.has_illegal_words(info):
+        return errors.nsfw()
+
+    video = str(uuid.uuid4())
+    index = 0
+    source_images = response.images
+    for base64_image in source_images:
+        nsfw_score = image_nsfw_score(base64_image)
+        if nsfw_score > 0.75:
+            lib.error(f"nsfw score {nsfw_score} is too high, skip")
+            continue
+
+        lib.save_image(base64_image, f"{video}/{index}.png")
+        index += 1
+    
+    url = lib.ffmpeg_to_video(video, request.width, request.height)
+
+    if input.is_debug(request):
+        parameters = response.parameters
+    else:
+        parameters = {}
+
+    return I2VResponse(video=url, parameters=parameters, info=info)
 
 
 def convert_response(request, response):
@@ -222,6 +257,16 @@ def prepare_for_i2i(request):
 def prepare_for_t2i(request):
     prepare_request(request)
     
+
+def prepare_for_i2v(request):
+    sights = names.random_sights()
+    request.prompt = ";".join(sights)
+
+    prepare_request(request)
+
+    image_b64 = input.get_i2i_image(request)
+    request.init_images = [image_b64]
+
 
 def _remove_character_fields(request):
     parameters = vars(request)

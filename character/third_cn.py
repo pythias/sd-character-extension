@@ -57,6 +57,7 @@ def _get_cn_image_unit(request, i):
     else:
         model = input.get_extra_value(request, f"model_cn_{i}", default_model)
         model = _find_closest_cn_model_name(model)
+        lib.log(f"model_cn_{i}: {model}")
         if not model:
             # 如果找不到处理的模型，则不处理
             return _get_cn_disabled_unit()
