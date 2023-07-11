@@ -329,7 +329,7 @@ def ffmpeg_to_video(dir, width = 512, height = 512):
     url = os.path.join(shared.cmd_opts.character_host, relative_path, video_name)
 
     video_path = os.path.join(dir, video_name)
-    cmd = f"ffmpeg -framerate 1 -pattern_type glob -i %d.png -s:v {width}x{height} -vcodec libx264 {video_path}"
+    cmd = f"ffmpeg -y -r 4 -pattern_type glob -i \"{dir}/*.png\" -pix_fmt yuv420p -crf 24 -s:v {width}x{height} -vcodec libx264 {video_path}"
     os.system(cmd)
 
     return url

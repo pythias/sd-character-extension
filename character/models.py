@@ -267,6 +267,11 @@ def prepare_for_i2v(request):
     image_b64 = input.get_i2i_image(request)
     request.init_images = [image_b64]
 
+    # 关闭人脸修复，ControlNet
+    input.update_extra(request, names.ParamRepairFace, False)
+    input.update_extra(request, "model_cn_0", "none")
+    input.update_extra(request, "processor_cn_0", "none")
+
 
 def _remove_character_fields(request):
     parameters = vars(request)
