@@ -106,7 +106,7 @@ sights = {
     "Old Library": "Musty parchment smell, towering bookshelves, dust motes in sunbeams, hidden scrolls, whispering echoes, secret doorways, ancient tomes, creaking wooden floors, cozy reading corners, hushed reverence",
     "Olympus": "Majestic palaces, immortals feasting, golden ambrosia, mythic creatures, view of the cosmos, divine gardens, whispering muses, awe-inspiring peaks, sacred ground, godly affairs",
     "Pirate Cove": "Hidden harbor, wooden dock, smuggled treasure, bonfire stories, secluded beach, scurrying crabs, rum-filled barrels, piratical hideout, tropical foliage, restless sea",
-    "Pirate Ship": "Creaking timbers, snapping sails, bustling deck, treasure maps, boisterous crew, salty sea air, vast horizon, fierce sea battles, swaying hammocks, calls of 'ahoy'",
+    "Pirate Ship": "Creaking timbers, snapping sails, bustling deck, treasure, boisterous crew, salty sea air, vast horizon, fierce sea battles, swaying hammocks, calls of 'ahoy'",
     "Post-apocalyptic City": "Crumbling buildings, overgrown streets, survivors' graffiti, haunting silence, scarce resources, remnants of past glory, hopeful survivors, rusting vehicles, harsh survival, signs of renewal",
     "Prairie": "Expansive views, rich fauna and flora, spring wildflowers, sound of wind, free herd of horses, autumnal gold, dawn and dusk, migrating birds, tranquil pastoral songs, endless journeys",
     "Pyramid Interior": "Mysterious hieroglyphs, flickering torchlight, ominous echoes, sacred burial chamber, gold treasures, hidden traps, winding corridors, ancient secrets, spiritual aura, stifling air",
