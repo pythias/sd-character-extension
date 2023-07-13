@@ -2,7 +2,7 @@ from character import input, lib
 
 from modules.processing import StableDiffusionProcessingTxt2Img, StableDiffusionProcessingImg2Img
 from modules.scripts import PostprocessImageArgs
-from modules import postprocessing, scripts
+from modules import postprocessing
 from modules.api import api
 
 max_size = 1536
@@ -49,9 +49,8 @@ def run(p, pp: PostprocessImageArgs):
         "extras_upscaler_2": "None",
     }
 
-    # scripts.scripts_postproc.run(pp, args)
-
     lib.log(f"run upscale, scale_by:{scale_by}, image-size:{pp.image.size[0]}x{pp.image.size[1]}")
 
     result = postprocessing.run_extras(extras_mode=0, image_folder="", input_dir="", output_dir="", save_output=False, **upscale_dict)
-    pp.image = api.encode_pil_to_base64(result[0][0])
+    if len(result) > 0:
+        pp.image = result[0]

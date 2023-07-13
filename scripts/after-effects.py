@@ -4,7 +4,7 @@ from character import input, names, lib, upscale
 
 from modules import scripts
 from modules.scripts import PostprocessImageArgs
-from modules import postprocessing
+from modules import postprocessing, scripts_postprocessing
 from modules.api import api
 
 class Script(scripts.Script):
@@ -28,4 +28,3 @@ class Script(scripts.Script):
 
     def postprocess_image(self, p, pp: PostprocessImageArgs, *args):
         upscale.run(p, pp)
-        
