@@ -1,53 +1,56 @@
 from character import input, lib
+
 from modules.processing import StableDiffusionProcessingTxt2Img, StableDiffusionProcessingImg2Img
+from modules.scripts import PostprocessImageArgs
+from modules import postprocessing
+from modules.api import api
 
 max_size = 1536
-min_size = 256
+min_size = 128
 
-def require_upscale(request):
-    return input.get_extra_value(request, "require_upscale", True)
+def format_size_t2i(request: StableDiffusionProcessingTxt2Img):
+    scale_by = float(input.get_extra_value(request, "scale_by", 0))
+    request.width, request.height = lib.limit_size(request.width, request.height, request.width / request.height, min_size, max_size)
 
+    lib.log(f"t2i-size, scale_by:{scale_by}, request-size:{request.width}x{request.height}")
 
-def apply_t2i_upscale(request: StableDiffusionProcessingTxt2Img):
-    if not require_upscale(request):
-        return
+def format_size_i2i(request: StableDiffusionProcessingImg2Img):
+    scale_by = float(input.get_extra_value(request, "scale_by", 0))
 
-    # p.setup_prompts() 在 process 之后，所以需要处理一下高清时的参数
-    request.enable_hr = True
-    request.setup_prompts()
-
-    # 默认放大图片的两倍
-    scale_by = input.get_extra_value(request, "scale_by", 0)
-    if (scale_by > 0 and scale_by < 10):
-        request.hr_scale = scale_by
-    
-    width, height = lib.limit_size(request.width, request.height, request.width / request.height, min_size, max_size)
-
-    # 回到放大前的尺寸
-    request.width = int(width / request.hr_scale)
-    request.height = int(height / request.hr_scale)
-
-    lib.log(f"ENABLE-UPSCALE, scale:{request.hr_scale}, in:{request.width}x{request.height}, target:{width}x{height}, denoising:{request.denoising_strength}, scaler:{request.hr_upscaler}")
-
-
-def apply_i2i_upscale(request: StableDiffusionProcessingImg2Img, img):
-    image_width, image_height = img.size[0:2]
+    img = api.decode_base64_to_image(request.init_images[0])
     
     if request.width > 0 and request.height > 0:
-        # 必须同时指定width和height
         request.width, request.height = lib.limit_size(request.width, request.height, request.width / request.height, min_size, max_size)
-        lib.log(f"ENABLE-UPSCALE, in-size:{image_width}x{image_height}, set-size:{request.width}x{request.height}, denoising:{request.denoising_strength}, cfg:{request.image_cfg_scale}")
     else:
-        # 没有指定width和height, 以图片的大小为准
-        image_radio = image_width / image_height
+        image_width, image_height = img.size[0:2]
+        request.width, request.height = lib.limit_size(image_width, image_height, image_width / image_height, min_size, max_size)
 
-        if not require_upscale(request):
-            scale_by = 1
-        else:
-            scale_by = input.get_extra_value(request, "scale_by", 1.3)
-            
-        target_width = int(image_width * scale_by)
-        target_height = int(image_height * scale_by)
+    lib.log(f"i2i-size, scale_by:{scale_by}, image-size:{img.size[0]}x{img.size[1]}, wants-size:{request.width}x{request.height}")
 
-        request.width, request.height = lib.limit_size(target_width, target_height, image_radio, min_size, max_size)
-        lib.log(f"ENABLE-UPSCALE, in-size:{image_width}x{image_height}, out-size:{request.width}x{request.height}, denoising:{request.denoising_strength}, cfg:{request.image_cfg_scale}")
+def run(p, pp: PostprocessImageArgs):
+    scale_by = float(input.get_extra_value(p, "scale_by", 0))
+    if scale_by <= 0:
+        return
+    
+    upscale_dict = {
+        "resize_mode": 0,
+        "show_extras_results": False,
+        "gfpgan_visibility": 0,
+        "codeformer_visibility": 0,
+        "codeformer_weight": 0,
+        "upscaling_resize": scale_by,
+        "upscaling_resize_w": 0,
+        "upscaling_resize_h": 0,
+        "upscaling_crop": False,
+        "extras_upscaler_2_visibility": 0,
+        "upscale_first": False,
+        "image": pp.image,
+        "extras_upscaler_1": "4x-UltraSharp",
+        "extras_upscaler_2": "None",
+    }
+
+    lib.log(f"run upscale, scale_by:{scale_by}, image-size:{pp.image.size[0]}x{pp.image.size[1]}")
+
+    result = postprocessing.run_extras(extras_mode=0, image_folder="", input_dir="", output_dir="", save_output=False, **upscale_dict)
+    if len(result) > 0:
+        pp.image = result[0][0]

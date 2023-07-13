@@ -7,6 +7,8 @@ import requests
 import sys
 import time
 import uuid
+import glob
+import re
 
 from hashlib import md5
 
@@ -16,10 +18,10 @@ from modules.api.api import decode_base64_to_image
 from PIL import Image
 from starlette.exceptions import HTTPException
 
-from character.metrics import hCaption
+from character.metrics import hCaption, hVideo
 from character import logger
 
-version_flag = "v1.4.8"
+version_flag = "v1.5.0"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")
@@ -234,18 +236,14 @@ def truncate_large_value(data, max_size: int = 2000, truncated_size = 20, replac
         return data
 
 
-def _get_output_path(file_name, is_cache = False):
-    if is_cache:
-        file_relative_path = os.path.join("outputs", shared.cmd_opts.character_short_name, 'cache')
-    else:
-        file_relative_path = os.path.join("outputs", shared.cmd_opts.character_short_name, time.strftime("%Y%m%d"))
+def _get_output_path(name):
+    url_relative_path = os.path.join("outputs", shared.cmd_opts.character_short_name, name)
+    url_full = os.path.join(shared.cmd_opts.character_host, url_relative_path)
+    file_fullpath = os.path.join(shared.cmd_opts.character_output_dir, url_relative_path)
+    if not os.path.exists(os.path.dirname(file_fullpath)):
+        os.makedirs(os.path.dirname(file_fullpath))
 
-    file_dir = os.path.join(shared.cmd_opts.character_output_dir, file_relative_path)
-    if not os.path.exists(file_dir):
-        os.makedirs(file_dir)
-
-    file_fullpath = os.path.join(file_dir, file_name)
-    return [file_relative_path, file_fullpath]
+    return [url_full, file_fullpath]
 
 
 def _save_file(file_fullpath, file_bytes):
@@ -253,27 +251,26 @@ def _save_file(file_fullpath, file_bytes):
         return f.write(file_bytes) == len(file_bytes)
     
 
-def save_image(b64):
+def save_image(b64, img_filename = ""):
     """
     save base64 image to disk, return url
     """
     try:
+        if img_filename == "":
+            img_filename = os.path.join(time.strftime("%Y%m%d"),  str(uuid.uuid4()) + '.png')
+
+        [img_url, img_path] = _get_output_path(img_filename)
+        
         if b64.startswith("data:image/"):
             b64 = b64.split(";")[1].split(",")[1]
-        
-        img_filename = str(uuid.uuid4()) + '.png'
-        [imd_relative_path, img_filepath] = _get_output_path(img_filename)
-
         img_bytes = base64.b64decode(b64)
-        if len(img_bytes) > 0 and _save_file(img_filepath, img_bytes):
-            return [os.path.join(shared.cmd_opts.character_host, imd_relative_path, img_filename), img_filepath]
-        else:
-            log("save_image error: save file failed")
+        if len(img_bytes) > 0 and _save_file(img_path, img_bytes):
+            return [img_url, img_path]
     except Exception as e:
         log("save_image error: %s" % e)
     
     return [b64, ""]
-    
+
 
 def download_to_base64(value):
     # empty value
@@ -285,8 +282,8 @@ def download_to_base64(value):
     
     url = value
 
-    download_filename = md5(url.encode('utf-8')).hexdigest() + '.cache'
-    [_, file_fullpath] = _get_output_path(download_filename, True)
+    download_filename = os.path.join("cache", md5(url.encode('utf-8')).hexdigest() + '.cache')
+    [_, file_fullpath] = _get_output_path(download_filename)
     
     if os.path.exists(file_fullpath):
         with open(file_fullpath, 'rb') as f:
@@ -319,3 +316,47 @@ def load_extension(name):
             log(f"Extension already loaded: {name}")
     else:
         log(f"Extension not found: {name}")
+
+def _count_files(file_pattern, regex_pattern):
+    files = glob.glob(file_pattern)
+    matched_files = [file for file in files if re.match(regex_pattern, os.path.basename(file))]
+    return len(matched_files)
+
+def _get_logo_video(width, height):
+    logo_file = os.path.join("cache", f"hello-weibo-{width}x{height}.mp4")
+    [_, file_fullpath] = _get_output_path(logo_file)
+
+    if not os.path.exists(file_fullpath):
+        cmd = f"ffmpeg -y -t 1 -s {width}x{height} -f rawvideo -pix_fmt rgb24 -r 24 -i /dev/zero -vf \"drawtext=text='MiaoMiao':fontcolor=white:fontsize=24:x=(w-text_w)/2:y=(h-text_h)/2\" \"{file_fullpath}\""
+        os.system(cmd)
+        log(f"create logo video: {file_fullpath}, cmd: {cmd}")
+                                  
+    return file_fullpath
+
+@hVideo.time()
+def ffmpeg_to_video(video_path, width = 512, height = 512):
+    [video_url, video_full_path] = _get_output_path(video_path + '.mp4')
+
+    # remove .mp4 video_full_path
+    video_full_dir = video_full_path[:-4]
+    video_images = os.path.join(video_full_dir, "v-%03d.png")
+    video_original_file = os.path.join(video_full_dir, "tmp.mp4")
+
+    # 计算视频长度
+    fps = 4
+    image_count = _count_files(os.path.join(video_full_dir, "*.png"), r"v-\d{3}.png")
+    video_length = int(image_count / fps)
+    
+    # 添加淡入淡出效果, 添加背景音乐
+    started_at = time.time()
+    cmd_original = f"ffmpeg -y -r {fps} -i \"{video_images}\" -vf \"fade=in:st=0:d=2, fade=out:st={video_length - 2}:d=2\" -pix_fmt yuv420p -crf 24 -s:v {width}x{height} -vcodec libx264 {video_original_file}"
+    os.system(cmd_original)
+
+    # 添加logo
+    logo_video = _get_logo_video(width, height)
+    cmd_with_logo = f"ffmpeg -y -i {video_original_file} -i {logo_video} -filter_complex \"[0:v][1:v] concat=n=2:v=1:a=0\" {video_full_path}"
+    os.system(cmd_with_logo)
+    
+    log(f"to-video, images: {image_count}, fps: {fps}, length: {video_length}, ffmpeg in {time.time() - started_at:.3f}s, cmd: '{cmd_original}', combine: '{cmd_with_logo}'")
+
+    return video_url

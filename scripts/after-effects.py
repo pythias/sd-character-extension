@@ -1,19 +1,17 @@
 import gradio as gr
 
-from character import input, names
+from character import input, names, lib, upscale
+
 from modules import scripts
 from modules.scripts import PostprocessImageArgs
+from modules import postprocessing, scripts_postprocessing
+from modules.api import api
 
 class Script(scripts.Script):
-    processes = []
-
     def title(self):
         return names.ExNameEffects
 
     def show(self, is_img2img):
-        if is_img2img:
-            return False
-        
         return scripts.AlwaysVisible
 
     def ui(self, is_img2img):
@@ -25,9 +23,5 @@ class Script(scripts.Script):
 
         input.update_scripts_order(p, self, names.ExIndexEffects)
 
-        # 根据参数确定后续处理的流程
-        self.processes = []
-
     def postprocess_image(self, p, pp: PostprocessImageArgs, *args):
-        # 包括重绘、放大等操作
-        pass
+        upscale.run(p, pp)

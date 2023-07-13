@@ -21,6 +21,7 @@ class ApiHijack(api.Api):
         self.add_api_route("/character/v2/segment", self.character_v2_segment, tags=["Character"], methods=["POST"], response_model=models.SegmentResponse)
         self.add_api_route("/character/v2/tryon", self.character_v2_tryon, tags=["Character"], methods=["POST"], response_model=models.V2ImageResponse)
         self.add_api_route("/character/v2/age", self.character_v2_age, tags=["Character"], methods=["POST"], response_model=models.AgeResponse)
+        self.add_api_route("/character/v2/i2v", self.character_v2_video, tags=["Character"], methods=["POST"], response_model=models.I2VResponse)
 
         lib.log("API loaded")
 
@@ -91,6 +92,15 @@ class ApiHijack(api.Api):
 
         return self._api_call(f, request)
     
+
+    def character_v2_video(self, request: models.CharacterV2Img2ImgRequest):
+        models.prepare_for_i2v(request)
+        response = self._api_call(self.img2imgapi, request)
+        if isinstance(response, JSONResponse):
+            return response
+
+        return models.to_video(request, response)
+
 
     def _generate(self, func, request):
         with hSD.time():

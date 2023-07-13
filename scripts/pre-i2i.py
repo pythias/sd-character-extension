@@ -30,7 +30,7 @@ class Script(scripts.Script):
             raise HTTPException(status_code=422, detail="Input image not found")
         
         img = decode_base64_to_image(image_b64)
-        upscale.apply_i2i_upscale(p, img)
+        
         metrics.count_request(p)
         third_face.apply_face_repairer(p)
         models.append_image_caption(p, img)

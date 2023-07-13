@@ -3,7 +3,7 @@ import base64
 import io
 import numpy as np
 
-from character import input, lib
+from character import input, lib, names
 from character.metrics import hDF
 
 THIRD_EXTENSION_NAME = "face editor ex"
@@ -51,7 +51,7 @@ def crop(image_base64) -> list:
 
 
 def _require_face_repairer(request):
-    return input.get_extra_value(request, "repair_face", True)
+    return input.get_extra_value(request, names.ParamRepairFace, True)
 
 
 def apply_face_repairer(p):

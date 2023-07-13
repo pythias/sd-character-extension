@@ -1,12 +1,14 @@
 import json
 import time
+import uuid
+import random
 
 from copy import deepcopy
 from pydantic import BaseModel, Field
 from typing import List
 from enum import Enum
 
-from character import input, lib, errors, names, third_face, third_age
+from character import input, lib, errors, names, third_face, third_age, upscale
 from character.metrics import cNSFW, cIllegal, cFace
 from character.nsfw import image_has_illegal_words, image_nsfw_score, prompt_has_illegal_words
 
@@ -95,6 +97,50 @@ class AgeRequest(BaseModel):
 
 class AgeResponse(BaseModel):
     age: int = Field(default=0, title='Age', description='The age of the image.')
+
+
+class I2VResponse(BaseModel):
+    video: str = Field(default="", title='Video', description='The video of the image.')
+    parameters: dict
+    info: dict
+
+
+def to_video(request, response):
+    info = json.loads(response.info)
+
+    if input.has_illegal_words(info):
+        return errors.nsfw()
+
+    source_images = response.images
+    safe_images = []
+
+    for base64_image in source_images:
+        nsfw_score = image_nsfw_score(base64_image)
+        if nsfw_score > 0.75:
+            lib.error(f"nsfw score {nsfw_score} is too high, skip")
+            continue
+
+        safe_images.append(base64_image)
+
+    video_path = time.strftime("%Y%m%d") + "/" + str(uuid.uuid4())
+    index = 0
+
+    # double and shuffle safe_images
+    safe_images = safe_images + safe_images
+    random.shuffle(safe_images)
+
+    for base64_image in safe_images:
+        lib.save_image(base64_image, f"{video_path}/v-{index:03d}.png")
+        index += 1
+    
+    url = lib.ffmpeg_to_video(video_path, request.width, request.height)
+
+    if input.is_debug(request):
+        parameters = response.parameters
+    else:
+        parameters = {}
+
+    return I2VResponse(video=url, parameters=parameters, info=info)
 
 
 def convert_response(request, response):
@@ -214,14 +260,33 @@ def prepare_request(request):
 
 def prepare_for_i2i(request):
     prepare_request(request)
-
+    
     image_b64 = input.get_i2i_image(request)
     request.init_images = [image_b64]
+    upscale.format_size_i2i(request)
 
 
 def prepare_for_t2i(request):
     prepare_request(request)
+    upscale.format_size_t2i(request)
     
+
+def prepare_for_i2v(request):
+    # todo 保存中间20，25，30步的采样结果，图片数量和变化都不错
+    sights = names.random_sights(24)
+    request.prompt = ";".join(sights)
+
+    prepare_request(request)
+
+    image_b64 = input.get_i2i_image(request)
+    request.init_images = [image_b64]
+    upscale.format_size_i2i(request)
+
+    # 关闭人脸修复，ControlNet
+    input.update_extra(request, names.ParamRepairFace, False)
+    input.update_extra(request, "model_cn_0", "none")
+    input.update_extra(request, "processor_cn_0", "none")
+
 
 def _remove_character_fields(request):
     parameters = vars(request)
