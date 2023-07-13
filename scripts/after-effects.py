@@ -12,9 +12,6 @@ class Script(scripts.Script):
         return names.ExNameEffects
 
     def show(self, is_img2img):
-        if is_img2img:
-            return False
-        
         return scripts.AlwaysVisible
 
     def ui(self, is_img2img):

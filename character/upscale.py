@@ -53,4 +53,4 @@ def run(p, pp: PostprocessImageArgs):
 
     result = postprocessing.run_extras(extras_mode=0, image_folder="", input_dir="", output_dir="", save_output=False, **upscale_dict)
     if len(result) > 0:
-        pp.image = result[0]
+        pp.image = result[0][0]

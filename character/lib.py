@@ -356,6 +356,7 @@ def ffmpeg_to_video(video_path, width = 512, height = 512):
     logo_video = _get_logo_video(width, height)
     cmd_with_logo = f"ffmpeg -y -i {video_original_file} -i {logo_video} -filter_complex \"[0:v][1:v] concat=n=2:v=1:a=0\" {video_full_path}"
     os.system(cmd_with_logo)
-    log(f"to-video, images: {image_count}, fps: {fps}, length: {video_length}, ffmpeg in {time.time() - started_at:.3f}s, cmd: {cmd_original}, combine: {cmd_with_logo}")
+    
+    log(f"to-video, images: {image_count}, fps: {fps}, length: {video_length}, ffmpeg in {time.time() - started_at:.3f}s, cmd: '{cmd_original}', combine: '{cmd_with_logo}'")
 
     return video_url

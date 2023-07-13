@@ -272,6 +272,7 @@ def prepare_for_t2i(request):
     
 
 def prepare_for_i2v(request):
+    # todo 保存中间20，25，30步的采样结果，图片数量和变化都不错
     sights = names.random_sights(24)
     request.prompt = ";".join(sights)
 
