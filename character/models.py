@@ -1,6 +1,7 @@
 import json
 import time
 import uuid
+import random
 
 from copy import deepcopy
 from pydantic import BaseModel, Field
@@ -110,19 +111,29 @@ def to_video(request, response):
     if input.has_illegal_words(info):
         return errors.nsfw()
 
-    video = str(uuid.uuid4())
-    index = 0
     source_images = response.images
+    safe_images = []
+
     for base64_image in source_images:
         nsfw_score = image_nsfw_score(base64_image)
         if nsfw_score > 0.75:
             lib.error(f"nsfw score {nsfw_score} is too high, skip")
             continue
 
-        lib.save_image(base64_image, f"{video}/{index}.png")
+        safe_images.append(base64_image)
+
+    video_path = time.strftime("%Y%m%d") + "/" + str(uuid.uuid4())
+    index = 0
+
+    # double and shuffle safe_images
+    safe_images = safe_images + safe_images + safe_images
+    random.shuffle(safe_images)
+
+    for base64_image in safe_images:
+        lib.save_image(base64_image, f"{video_path}/v-{index:03d}.png")
         index += 1
     
-    url = lib.ffmpeg_to_video(video, request.width, request.height)
+    url = lib.ffmpeg_to_video(video_path, request.width, request.height)
 
     if input.is_debug(request):
         parameters = response.parameters
@@ -259,7 +270,7 @@ def prepare_for_t2i(request):
     
 
 def prepare_for_i2v(request):
-    sights = names.random_sights()
+    sights = names.random_sights(33)
     request.prompt = ";".join(sights)
 
     prepare_request(request)

@@ -234,18 +234,14 @@ def truncate_large_value(data, max_size: int = 2000, truncated_size = 20, replac
         return data
 
 
-def _get_output_path(file_name, is_cache = False):
-    if is_cache:
-        file_relative_path = os.path.join("outputs", shared.cmd_opts.character_short_name, 'cache')
-    else:
-        file_relative_path = os.path.join("outputs", shared.cmd_opts.character_short_name, time.strftime("%Y%m%d"))
-
-    file_dir = os.path.join(shared.cmd_opts.character_output_dir, file_relative_path)
-    file_fullpath = os.path.join(file_dir, file_name)
+def _get_output_path(name):
+    url_relative_path = os.path.join("outputs", shared.cmd_opts.character_short_name, name)
+    url_full = os.path.join(shared.cmd_opts.character_host, url_relative_path)
+    file_fullpath = os.path.join(shared.cmd_opts.character_output_dir, url_relative_path)
     if not os.path.exists(os.path.dirname(file_fullpath)):
         os.makedirs(os.path.dirname(file_fullpath))
 
-    return [file_relative_path, file_fullpath]
+    return [url_full, file_fullpath]
 
 
 def _save_file(file_fullpath, file_bytes):
@@ -258,19 +254,16 @@ def save_image(b64, img_filename = ""):
     save base64 image to disk, return url
     """
     try:
+        if img_filename == "":
+            img_filename = os.path.join(time.strftime("%Y%m%d"),  str(uuid.uuid4()) + '.png')
+
+        [img_url, img_path] = _get_output_path(img_filename)
+        
         if b64.startswith("data:image/"):
             b64 = b64.split(";")[1].split(",")[1]
-        
-        if img_filename == "":
-            img_filename = str(uuid.uuid4()) + '.png'
-
-        [imd_relative_path, img_filepath] = _get_output_path(img_filename)
-
         img_bytes = base64.b64decode(b64)
-        if len(img_bytes) > 0 and _save_file(img_filepath, img_bytes):
-            return [os.path.join(shared.cmd_opts.character_host, imd_relative_path, img_filename), img_filepath]
-        else:
-            log("save_image error: save file failed")
+        if len(img_bytes) > 0 and _save_file(img_path, img_bytes):
+            return [img_url, img_path]
     except Exception as e:
         log("save_image error: %s" % e)
     
@@ -287,8 +280,8 @@ def download_to_base64(value):
     
     url = value
 
-    download_filename = md5(url.encode('utf-8')).hexdigest() + '.cache'
-    [_, file_fullpath] = _get_output_path(download_filename, True)
+    download_filename = os.path.join("cache", md5(url.encode('utf-8')).hexdigest() + '.cache')
+    [_, file_fullpath] = _get_output_path(download_filename)
     
     if os.path.exists(file_fullpath):
         with open(file_fullpath, 'rb') as f:
@@ -323,13 +316,10 @@ def load_extension(name):
         log(f"Extension not found: {name}")
 
 
-def ffmpeg_to_video(dir, width = 512, height = 512):
-    relative_path = dir.split("outputs")[1]
-    video_name = dir.split("/")[-1] + '.mp4'
-    url = os.path.join(shared.cmd_opts.character_host, relative_path, video_name)
+def ffmpeg_to_video(video_path, width = 512, height = 512):
+    [video_url, video_path] = _get_output_path(video_path + '.mp4')
 
-    video_path = os.path.join(dir, video_name)
-    cmd = f"ffmpeg -y -r 4 -pattern_type glob -i \"{dir}/*.png\" -pix_fmt yuv420p -crf 24 -s:v {width}x{height} -vcodec libx264 {video_path}"
+    cmd = f"ffmpeg -y -r 6 -pattern_type glob -i \"{video_path}/v-%d.png\" -pix_fmt yuv420p -crf 24 -s:v {width}x{height} -vcodec libx264 {video_path}"
     os.system(cmd)
 
-    return url
+    return video_url
