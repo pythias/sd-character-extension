@@ -27,8 +27,8 @@ def format_size_i2i(request: StableDiffusionProcessingImg2Img):
 
     lib.log(f"i2i-size, scale_by:{scale_by}, image-size:{img.size[0]}x{img.size[1]}, wants-size:{request.width}x{request.height}")
 
-def run(pp: PostprocessImageArgs):
-    scale_by = float(input.get_extra_value(request, "scale_by", 0))
+def run(p, pp: PostprocessImageArgs):
+    scale_by = float(input.get_extra_value(p, "scale_by", 0))
     if scale_by <= 0:
         return
 
@@ -38,6 +38,8 @@ def run(pp: PostprocessImageArgs):
         "upscaler_1": "4x-UltraSharp",
         "image": pp.image,
     }
+
+    lib.log(f"run upscale, scale_by:{scale_by}, image-size:{pp.image.size[0]}x{pp.image.size[1]}")
 
     result = postprocessing.run_extras(extras_mode=0, image_folder="", input_dir="", output_dir="", save_output=False, **upscale_dict)
     pp.image = api.encode_pil_to_base64(result[0][0])

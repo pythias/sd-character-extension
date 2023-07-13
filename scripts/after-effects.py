@@ -27,5 +27,5 @@ class Script(scripts.Script):
         input.update_scripts_order(p, self, names.ExIndexEffects)
 
     def postprocess_image(self, p, pp: PostprocessImageArgs, *args):
-        upscale.run(pp)
+        upscale.run(p, pp)
         
