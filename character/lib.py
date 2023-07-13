@@ -317,8 +317,8 @@ def load_extension(name):
     else:
         log(f"Extension not found: {name}")
 
-def _count_files(path_name, regex_pattern):
-    files = glob.glob(path_name)
+def _count_files(file_pattern, regex_pattern):
+    files = glob.glob(file_pattern)
     matched_files = [file for file in files if re.match(regex_pattern, os.path.basename(file))]
     return len(matched_files)
 
@@ -337,24 +337,24 @@ def _get_logo_video(width, height):
 def ffmpeg_to_video(video_path, width = 512, height = 512):
     [video_url, video_full_path] = _get_output_path(video_path + '.mp4')
 
+    # remove .mp4 video_full_path
+    video_full_dir = video_full_path[:-4]
+    video_images = os.path.join(video_full_dir, "v-%03d.png")
+    video_original_file = os.path.join(video_full_dir, "tmp.mp4")
+
     # 计算视频长度
     fps = 4
-    image_count = _count_files(os.path.join(video_full_path, "*.png"), r"v-\d{3}.png")
+    image_count = _count_files(os.path.join(video_full_dir, "*.png"), r"v-\d{3}.png")
     video_length = int(image_count / fps)
-
-    # remove .mp4 video_full_path
-    video_full_path = video_full_path[:-4]
-    video_images = os.path.join(video_full_path, "v-%03d.png")
-    video_tmp = os.path.join(video_full_path, "tmp.mp4")
     
     # 添加淡入淡出效果, 添加背景音乐
     started_at = time.time()
-    cmd_original = f"ffmpeg -y -r {fps} -i \"{video_images}\" -vf \"fade=in:st=0:d=2, fade=out:st={video_length - 2}:d=2\" -pix_fmt yuv420p -crf 24 -s:v {width}x{height} -vcodec libx264 {video_tmp}"
+    cmd_original = f"ffmpeg -y -r {fps} -i \"{video_images}\" -vf \"fade=in:st=0:d=2, fade=out:st={video_length - 2}:d=2\" -pix_fmt yuv420p -crf 24 -s:v {width}x{height} -vcodec libx264 {video_original_file}"
     os.system(cmd_original)
 
     # 添加logo
     logo_video = _get_logo_video(width, height)
-    cmd_with_logo = f"ffmpeg -y -i {video_tmp} -i {logo_video} -filter_complex \"[0:v][1:v] concat=n=2:v=1:a=0\" {video_full_path}"
+    cmd_with_logo = f"ffmpeg -y -i {video_original_file} -i {logo_video} -filter_complex \"[0:v][1:v] concat=n=2:v=1:a=0\" {video_full_path}"
     os.system(cmd_with_logo)
     log(f"to-video, images: {image_count}, fps: {fps}, length: {video_length}, ffmpeg in {time.time() - started_at:.3f}s, cmd: {cmd_original}, combine: {cmd_with_logo}")
 

@@ -126,7 +126,7 @@ def to_video(request, response):
     index = 0
 
     # double and shuffle safe_images
-    safe_images = safe_images + safe_images + safe_images
+    safe_images = safe_images + safe_images
     random.shuffle(safe_images)
 
     for base64_image in safe_images:
