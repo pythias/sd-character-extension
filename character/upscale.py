@@ -2,52 +2,28 @@ from character import input, lib
 from modules.processing import StableDiffusionProcessingTxt2Img, StableDiffusionProcessingImg2Img
 
 max_size = 1536
-min_size = 256
-
-def require_upscale(request):
-    return input.get_extra_value(request, "require_upscale", True)
-
+min_size = 128
 
 def apply_t2i_upscale(request: StableDiffusionProcessingTxt2Img):
-    if not require_upscale(request):
-        return
-
-    # p.setup_prompts() 在 process 之后，所以需要处理一下高清时的参数
-    request.enable_hr = True
-    request.setup_prompts()
-
-    # 默认放大图片的两倍
-    scale_by = input.get_extra_value(request, "scale_by", 0)
-    if (scale_by > 0 and scale_by < 10):
-        request.hr_scale = scale_by
-    
+    scale_by = float(input.get_extra_value(request, "scale_by", 0))
     width, height = lib.limit_size(request.width, request.height, request.width / request.height, min_size, max_size)
+    request.width = width
+    request.height = height
 
-    # 回到放大前的尺寸
-    request.width = int(width / request.hr_scale)
-    request.height = int(height / request.hr_scale)
-
-    lib.log(f"ENABLE-UPSCALE, scale:{request.hr_scale}, in:{request.width}x{request.height}, target:{width}x{height}, denoising:{request.denoising_strength}, scaler:{request.hr_upscaler}")
+    lib.log(f"ENABLE-UPSCALE, scale_by:{scale_by}, request-size:{request.width}x{request.height}")
 
 
 def apply_i2i_upscale(request: StableDiffusionProcessingImg2Img, img):
+    scale_by = float(input.get_extra_value(request, "scale_by", 0))
+
     image_width, image_height = img.size[0:2]
     
     if request.width > 0 and request.height > 0:
         # 必须同时指定width和height
         request.width, request.height = lib.limit_size(request.width, request.height, request.width / request.height, min_size, max_size)
-        lib.log(f"ENABLE-UPSCALE, in-size:{image_width}x{image_height}, set-size:{request.width}x{request.height}, denoising:{request.denoising_strength}, cfg:{request.image_cfg_scale}")
+        lib.log(f"ENABLE-UPSCALE, scale_by:{scale_by}, image-size:{image_width}x{image_height}, request-size:{request.width}x{request.height}")
     else:
         # 没有指定width和height, 以图片的大小为准
         image_radio = image_width / image_height
-
-        if not require_upscale(request):
-            scale_by = 1
-        else:
-            scale_by = input.get_extra_value(request, "scale_by", 1.3)
-            
-        target_width = int(image_width * scale_by)
-        target_height = int(image_height * scale_by)
-
-        request.width, request.height = lib.limit_size(target_width, target_height, image_radio, min_size, max_size)
-        lib.log(f"ENABLE-UPSCALE, in-size:{image_width}x{image_height}, out-size:{request.width}x{request.height}, denoising:{request.denoising_strength}, cfg:{request.image_cfg_scale}")
+        request.width, request.height = lib.limit_size(image_width, image_height, image_radio, min_size, max_size)
+        lib.log(f"ENABLE-UPSCALE, scale_by:{scale_by}, image-size:{image_width}x{image_height}")

@@ -3,6 +3,7 @@ import itertools
 import logging
 import numpy as np
 import os
+from pyrsistent import v
 import requests
 import sys
 import time
@@ -20,7 +21,7 @@ from starlette.exceptions import HTTPException
 from character.metrics import hCaption, hVideo
 from character import logger
 
-version_flag = "v1.4.8"
+version_flag = "v1.5.0"
 character_dir = scripts.basedir()
 keys_path = os.path.join(character_dir, "configs/keys")
 models_path = os.path.join(character_dir, "configs/models")
@@ -321,21 +322,27 @@ def load_extension(name):
 def ffmpeg_to_video(video_path, width = 512, height = 512):
     [video_url, video_full_path] = _get_output_path(video_path + '.mp4')
 
+    # remove .mp4 video_full_path
+    video_full_path = video_full_path[:-4]
+    video_images = os.path.join(video_full_path, "v-%03d.png")
+    video_tmp = os.path.join(video_full_path, "tmp.mp4")
+    logo_video = f" ~/autodl-tmp/var/cache/hello-weibo-{width}x{height}.mp4"
+
     # 计算视频长度
     fps = 4
-    image_count = len(glob.glob(video_path + "/v-%03.png"))
+    image_count = len(glob.glob(video_images))
     video_length = int(image_count / fps)
 
     # 添加淡入效果, 添加淡出效果, 添加背景音乐, 添加logo
     
     started_at = time.time()
-    cmd = f"ffmpeg -y -r {fps} -i \"{video_path}/v-%03d.png\" -vf \"fade=in:st=0:d=2, fade=out:st={video_length - 2}:d=2\" -pix_fmt yuv420p -crf 24 -s:v {width}x{height} -vcodec libx264 {video_path}-tmp.mp4"
+    cmd = f"ffmpeg -y -r {fps} -i \"{video_images}\" -vf \"fade=in:st=0:d=2, fade=out:st={video_length - 2}:d=2\" -pix_fmt yuv420p -crf 24 -s:v {width}x{height} -vcodec libx264 {video_tmp}"
     os.system(cmd)
-    log(f"to-video: {time.time() - started_at}")
+    log(f"to-video, images: {image_count}, fps: {fps}, length: {video_length}, ffmpeg in {time.time() - started_at:.3f}s, cmd: {cmd}")
     
     started_at = time.time()
-    cmd = f"ffmpeg -y -i {video_path}-tmp.mp4 -i ~/autodl-tmp/var/cache/hello-weibo-{width}x{height}.mp4 -filter_complex \"[0:v][1:v] concat=n=2:v=1:a=0\" {video_full_path}.mp4"
+    cmd = f"ffmpeg -y -i {video_tmp} -i {logo_video} -filter_complex \"[0:v][1:v] concat=n=2:v=1:a=0\" {video_full_path}"
     os.system(cmd)
-    log(f"add-logo: {time.time() - started_at}")
+    log(f"add-logo in {time.time() - started_at:.3f}s, cmd: {cmd}")
 
     return video_url
