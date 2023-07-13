@@ -21,7 +21,6 @@ class Script(scripts.Script):
         if input.from_webui(p):
             return
 
-        upscale.apply_t2i_upscale(p)
         metrics.count_request(p)
         third_face.apply_face_repairer(p)
 

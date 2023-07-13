@@ -1,29 +1,43 @@
 from character import input, lib
+
 from modules.processing import StableDiffusionProcessingTxt2Img, StableDiffusionProcessingImg2Img
+from modules.scripts import PostprocessImageArgs
+from modules import postprocessing
+from modules.api import api
 
 max_size = 1536
 min_size = 128
 
-def apply_t2i_upscale(request: StableDiffusionProcessingTxt2Img):
+def format_size_t2i(request: StableDiffusionProcessingTxt2Img):
     scale_by = float(input.get_extra_value(request, "scale_by", 0))
-    width, height = lib.limit_size(request.width, request.height, request.width / request.height, min_size, max_size)
-    request.width = width
-    request.height = height
+    request.width, request.height = lib.limit_size(request.width, request.height, request.width / request.height, min_size, max_size)
 
-    lib.log(f"ENABLE-UPSCALE, scale_by:{scale_by}, request-size:{request.width}x{request.height}")
+    lib.log(f"t2i-size, scale_by:{scale_by}, request-size:{request.width}x{request.height}")
 
-
-def apply_i2i_upscale(request: StableDiffusionProcessingImg2Img, img):
+def format_size_i2i(request: StableDiffusionProcessingImg2Img):
     scale_by = float(input.get_extra_value(request, "scale_by", 0))
 
-    image_width, image_height = img.size[0:2]
+    img = api.decode_base64_to_image(request.init_images[0])
     
     if request.width > 0 and request.height > 0:
-        # 必须同时指定width和height
         request.width, request.height = lib.limit_size(request.width, request.height, request.width / request.height, min_size, max_size)
-        lib.log(f"ENABLE-UPSCALE, scale_by:{scale_by}, image-size:{image_width}x{image_height}, request-size:{request.width}x{request.height}")
     else:
-        # 没有指定width和height, 以图片的大小为准
-        image_radio = image_width / image_height
-        request.width, request.height = lib.limit_size(image_width, image_height, image_radio, min_size, max_size)
-        lib.log(f"ENABLE-UPSCALE, scale_by:{scale_by}, image-size:{image_width}x{image_height}")
+        image_width, image_height = img.size[0:2]
+        request.width, request.height = lib.limit_size(image_width, image_height, image_width / image_height, min_size, max_size)
+
+    lib.log(f"i2i-size, scale_by:{scale_by}, image-size:{img.size[0]}x{img.size[1]}, wants-size:{request.width}x{request.height}")
+
+def run(pp: PostprocessImageArgs):
+    scale_by = float(input.get_extra_value(request, "scale_by", 0))
+    if scale_by <= 0:
+        return
+
+    upscale_dict = {
+        "upscale_mode": 0,
+        "upscaling_resize": scale_by,
+        "upscaler_1": "4x-UltraSharp",
+        "image": pp.image,
+    }
+
+    result = postprocessing.run_extras(extras_mode=0, image_folder="", input_dir="", output_dir="", save_output=False, **upscale_dict)
+    pp.image = api.encode_pil_to_base64(result[0][0])

@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from typing import List
 from enum import Enum
 
-from character import input, lib, errors, names, third_face, third_age
+from character import input, lib, errors, names, third_face, third_age, upscale
 from character.metrics import cNSFW, cIllegal, cFace
 from character.nsfw import image_has_illegal_words, image_nsfw_score, prompt_has_illegal_words
 
@@ -260,13 +260,15 @@ def prepare_request(request):
 
 def prepare_for_i2i(request):
     prepare_request(request)
-
+    
     image_b64 = input.get_i2i_image(request)
     request.init_images = [image_b64]
+    upscale.format_size_i2i(request)
 
 
 def prepare_for_t2i(request):
     prepare_request(request)
+    upscale.format_size_t2i(request)
     
 
 def prepare_for_i2v(request):
@@ -277,6 +279,7 @@ def prepare_for_i2v(request):
 
     image_b64 = input.get_i2i_image(request)
     request.init_images = [image_b64]
+    upscale.format_size_i2i(request)
 
     # 关闭人脸修复，ControlNet
     input.update_extra(request, names.ParamRepairFace, False)
