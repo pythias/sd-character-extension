@@ -7,6 +7,7 @@ import requests
 import sys
 import time
 import uuid
+import glob
 
 from hashlib import md5
 
@@ -16,7 +17,7 @@ from modules.api.api import decode_base64_to_image
 from PIL import Image
 from starlette.exceptions import HTTPException
 
-from character.metrics import hCaption
+from character.metrics import hCaption, hVideo
 from character import logger
 
 version_flag = "v1.4.8"
@@ -316,10 +317,25 @@ def load_extension(name):
         log(f"Extension not found: {name}")
 
 
+@hVideo.time()
 def ffmpeg_to_video(video_path, width = 512, height = 512):
-    [video_url, video_path] = _get_output_path(video_path + '.mp4')
+    [video_url, video_full_path] = _get_output_path(video_path + '.mp4')
 
-    cmd = f"ffmpeg -y -r 6 -pattern_type glob -i \"{video_path}/v-%d.png\" -pix_fmt yuv420p -crf 24 -s:v {width}x{height} -vcodec libx264 {video_path}"
+    # 计算视频长度
+    fps = 4
+    image_count = len(glob.glob(video_path + "/v-%03.png"))
+    video_length = int(image_count / fps)
+
+    # 添加淡入效果, 添加淡出效果, 添加背景音乐, 添加logo
+    
+    started_at = time.time()
+    cmd = f"ffmpeg -y -r {fps} -i \"{video_path}/v-%03d.png\" -vf \"fade=in:st=0:d=2, fade=out:st={video_length - 2}:d=2\" -pix_fmt yuv420p -crf 24 -s:v {width}x{height} -vcodec libx264 {video_path}-tmp.mp4"
     os.system(cmd)
+    log(f"to-video: {time.time() - started_at}")
+    
+    started_at = time.time()
+    cmd = f"ffmpeg -y -i {video_path}-tmp.mp4 -i ~/autodl-tmp/var/cache/hello-weibo-{width}x{height}.mp4 -filter_complex \"[0:v][1:v] concat=n=2:v=1:a=0\" {video_full_path}.mp4"
+    os.system(cmd)
+    log(f"add-logo: {time.time() - started_at}")
 
     return video_url

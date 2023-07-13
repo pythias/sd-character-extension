@@ -22,6 +22,7 @@ hDN = Histogram('character_nsfw_latency_seconds', 'Detect nsfw latency')
 hCaption = Histogram('character_caption_latency_seconds', 'Caption latency')
 hSegment = Histogram('character_segment_latency_seconds', 'Segment latency')
 hRepair = Histogram('character_repair_latency_seconds', 'Repair latency')
+hVideo = Histogram('character_video_latency_seconds', 'Video latency')
 
 cImages = Counter('character_images', 'Images generated')
 cFace = Counter('character_faces', 'Detect face')

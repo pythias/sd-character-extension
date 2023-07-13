@@ -270,7 +270,7 @@ def prepare_for_t2i(request):
     
 
 def prepare_for_i2v(request):
-    sights = names.random_sights(33)
+    sights = names.random_sights(24)
     request.prompt = ";".join(sights)
 
     prepare_request(request)
